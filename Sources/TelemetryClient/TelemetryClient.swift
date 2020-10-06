@@ -17,7 +17,7 @@ public struct TelemetryManagerConfiguration {
     public let telemetryAppID: String
     public let telemetryServerBaseURL: URL
     
-    init(appID: String, baseURL: URL? = nil) {
+    public init(appID: String, baseURL: URL? = nil) {
         self.telemetryAppID = appID
         
         if let baseURL = baseURL {
