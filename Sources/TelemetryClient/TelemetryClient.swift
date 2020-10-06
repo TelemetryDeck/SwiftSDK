@@ -14,12 +14,12 @@ import UIKit
 
 public typealias TelemetrySignalType = String
 public struct TelemetryManagerConfiguration {
-    let telemetryAppID: String
-    let telemetryBaseURL: URL = URL(string: "https://apptelemetry.io")!
+    public let telemetryAppID: String
+    public let telemetryBaseURL: URL = URL(string: "https://apptelemetry.io")!
 }
 
 public class TelemetryManager {
-    init(configuration: TelemetryManagerConfiguration) {
+    public init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
     }
     
@@ -31,9 +31,9 @@ public class TelemetryManager {
         let payload: Dictionary<String, String>?
     }
 
-    func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
+    public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
         // Do not send telemetry from simulator
-         guard !isSimulator else { return }
+        guard !isSimulator else { return }
 
         DispatchQueue.main.async { [self] in
             let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/"
