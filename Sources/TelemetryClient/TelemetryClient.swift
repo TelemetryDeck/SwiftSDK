@@ -15,7 +15,17 @@ import UIKit
 public typealias TelemetrySignalType = String
 public struct TelemetryManagerConfiguration {
     public let telemetryAppID: String
-    public let telemetryBaseURL: URL = URL(string: "https://apptelemetry.io")!
+    public let telemetryServerBaseURL: URL
+    
+    init(appID: String, baseURL: URL? = nil) {
+        self.telemetryAppID = appID
+        
+        if let baseURL = baseURL {
+            self.telemetryServerBaseURL = baseURL
+        } else {
+            self.telemetryServerBaseURL = URL(string: "https://apptelemetry.io")!
+        }
+    }
 }
 
 public class TelemetryManager {
@@ -37,7 +47,7 @@ public class TelemetryManager {
 
         DispatchQueue.main.async { [self] in
             let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/"
-            let url = configuration.telemetryBaseURL.appendingPathComponent(path)
+            let url = configuration.telemetryServerBaseURL.appendingPathComponent(path)
 
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"

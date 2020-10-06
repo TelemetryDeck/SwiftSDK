@@ -13,7 +13,7 @@ enum TelemetrySignalType: String {
 Init the Telemetry Manager and store it somewhere:
 
 ````
-let configuration = TelemetryManagerConfiguration(telemetryAppID: "<YOUR-APP-ID>")
+let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
 let telemetryManager = TelemetryManager(configuration: configuration)
 ````
 

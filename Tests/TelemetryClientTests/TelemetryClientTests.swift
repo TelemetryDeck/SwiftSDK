@@ -9,7 +9,7 @@ final class TelemetryClientTests: XCTestCase {
         XCTAssertEqual("Hello, World!", "Hello, World!")
         
         
-        let configuration = TelemetryManagerConfiguration(telemetryAppID: "<YOUR-APP-ID>")
+        let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
         let telemetryManager = TelemetryManager(configuration: configuration)
         telemetryManager.send("appOpenedRegularly")
         telemetryManager.send("userLoggedIn", for: "email")
