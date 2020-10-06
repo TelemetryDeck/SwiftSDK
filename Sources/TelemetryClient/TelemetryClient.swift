@@ -12,13 +12,13 @@ import CommonCrypto
 import UIKit
 #endif
 
-typealias TelemetrySignalType = String
-struct TelemetryManagerConfiguration {
+public typealias TelemetrySignalType = String
+public struct TelemetryManagerConfiguration {
     let telemetryAppID: String
     let telemetryBaseURL: URL = URL(string: "https://apptelemetry.io")!
 }
 
-final class TelemetryManager {
+public class TelemetryManager {
     init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
     }
@@ -68,7 +68,7 @@ final class TelemetryManager {
     }
 }
 
-extension TelemetryManager {
+private extension TelemetryManager {
     var isSimulatorOrTestFlight: Bool {
         return (isSimulator || isTestFlight)
     }
@@ -138,7 +138,7 @@ extension TelemetryManager {
     }
 }
 
-extension TelemetryManager {
+private extension TelemetryManager {
     /**
      * Example SHA 256 Hash using CommonCrypto
      * CC_SHA256 API exposed from from CommonCrypto-60118.50.1:
