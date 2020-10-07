@@ -11,9 +11,9 @@ final class TelemetryClientTests: XCTestCase {
         
         let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
         TelemetryManager.initialize(with: configuration)
-        TelemetryManager.shared.send("appOpenedRegularly")
-        TelemetryManager.shared.send("userLoggedIn", for: "email")
-        TelemetryManager.shared.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
+        TelemetryManager.send("appOpenedRegularly")
+        TelemetryManager.send("userLoggedIn", for: "email")
+        TelemetryManager.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
 
     }
 

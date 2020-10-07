@@ -33,6 +33,10 @@ public class TelemetryManager {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
     
+    public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
+        TelemetryManager.shared.send(signalType, for: clientUser, with: additionalPayload)
+    }
+    
     public static var shared: TelemetryManager {
         guard let telemetryManager = initializedTelemetryManager else {
             fatalError("Please call TelemetryManager.initialize(...) before accessing the shared telemetryManager instance.")
@@ -41,20 +45,6 @@ public class TelemetryManager {
         return telemetryManager
     }
     
-    private init(configuration: TelemetryManagerConfiguration) {
-        self.configuration = configuration
-    }
-    
-    private static var initializedTelemetryManager: TelemetryManager?
-    
-    private let configuration: TelemetryManagerConfiguration
-    
-    private struct SignalPostBody: Codable {
-        let type: String
-        let clientUser: String
-        let payload: Dictionary<String, String>?
-    }
-
     public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
         // Do not send telemetry from simulator
         guard !isSimulator else { return }
@@ -90,6 +80,21 @@ public class TelemetryManager {
             task.resume()
         }
     }
+    
+    private init(configuration: TelemetryManagerConfiguration) {
+        self.configuration = configuration
+    }
+    
+    private static var initializedTelemetryManager: TelemetryManager?
+    
+    private let configuration: TelemetryManagerConfiguration
+    
+    private struct SignalPostBody: Codable {
+        let type: String
+        let clientUser: String
+        let payload: Dictionary<String, String>?
+    }
+
 }
 
 private extension TelemetryManager {

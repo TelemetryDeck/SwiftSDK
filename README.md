@@ -45,19 +45,19 @@ struct TelemetryTestApp: App {
 Then send signals like so: 
 
 ```
-TelemetryManager.shared.send("appOpenedRegularly")
+TelemetryManager.send("appOpenedRegularly")
 ```
 
 Telemetry Manager will create a user identifier for you user that is specific to app installation and device. If you have a better user identifier available, you can use that instead: (the identifier will be hashed before sending it) 
 
 ```
-TelemetryManager.shared.send("userLoggedIn", for: "email")
+TelemetryManager.send("userLoggedIn", for: "email")
 ```
 
 You can also send additional payload data with each signal:
 
 ```
-TelemetryManager.shared.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
+TelemetryManager.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
 ```
 
 Telemetry Manager will automatically send a base payload with these keys: 
