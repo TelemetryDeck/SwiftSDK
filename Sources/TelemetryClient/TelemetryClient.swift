@@ -29,9 +29,23 @@ public struct TelemetryManagerConfiguration {
 }
 
 public class TelemetryManager {
-    public init(configuration: TelemetryManagerConfiguration) {
+    public static func initialize(with configuration: TelemetryManagerConfiguration) {
+        initializedTelemetryManager = TelemetryManager(configuration: configuration)
+    }
+    
+    public static var shared: TelemetryManager {
+        guard let telemetryManager = initializedTelemetryManager else {
+            fatalError("Please call TelemetryManager.initialize(...) before accessing the shared telemetryManager instance.")
+        }
+        
+        return telemetryManager
+    }
+    
+    private init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
     }
+    
+    private static var initializedTelemetryManager: TelemetryManager?
     
     private let configuration: TelemetryManagerConfiguration
     
