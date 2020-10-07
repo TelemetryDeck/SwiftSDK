@@ -70,6 +70,7 @@ public class TelemetryManager {
                 "isSimulator": "\(isSimulator)",
                 "isTestFlight": "\(isTestFlight)",
                 "isAppStore": "\(isAppStore)",
+                "modelName": "\(modelName)",
             ].merging(additionalPayload, uniquingKeysWith: { (_, last) in last })
             
             let signalPostBody: SignalPostBody = SignalPostBody(type: "\(signalType)", clientUser: sha256(str: clientUser ?? defaultUserIdentifier), payload: payLoad)
@@ -170,6 +171,17 @@ private extension TelemetryManager {
         #else
         return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(systemVersion) \(buildNumber)"
         #endif
+    }
+    
+    var modelName: String {
+        var systemInfo = utsname()
+        uname(&systemInfo)
+        let machineMirror = Mirror(reflecting: systemInfo.machine)
+        let identifier = machineMirror.children.reduce("") { identifier, element in
+            guard let value = element.value as? Int8, value != 0 else { return identifier }
+            return identifier + String(UnicodeScalar(UInt8(value)))
+        }
+        return identifier
     }
 }
 
