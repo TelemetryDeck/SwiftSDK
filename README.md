@@ -69,3 +69,5 @@ Telemetry Manager will automatically send a base payload with these keys:
 - isSimulator
 - isTestFlight
 - isAppStore 
+
+NOTE: Telemetry Manager will *not* send any signals if you are in DEBUG Mode, or if you are running on a simulator. 

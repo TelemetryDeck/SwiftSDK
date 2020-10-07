@@ -46,6 +46,11 @@ public class TelemetryManager {
     }
     
     public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
+        // Do not send telemetry in DEBUG mode
+        #if DEBUG
+        return
+        #else
+        
         // Do not send telemetry from simulator
         guard !isSimulator else { return }
 
@@ -79,6 +84,7 @@ public class TelemetryManager {
             }
             task.resume()
         }
+        #endif
     }
     
     private init(configuration: TelemetryManagerConfiguration) {
