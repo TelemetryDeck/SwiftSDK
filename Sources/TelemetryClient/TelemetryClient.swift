@@ -50,9 +50,6 @@ public class TelemetryManager {
         #if DEBUG
         return
         #else
-        
-        // Do not send telemetry from simulator
-        guard !isSimulator else { return }
 
         DispatchQueue.global().async { [self] in
             let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/"
