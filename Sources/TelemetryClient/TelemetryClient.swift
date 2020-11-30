@@ -68,6 +68,9 @@ public class TelemetryManager {
                 "isTestFlight": "\(isTestFlight)",
                 "isAppStore": "\(isAppStore)",
                 "modelName": "\(modelName)",
+                "architecture": architecture,
+                "operatingSystem": operatingSystem,
+                "targetEnvironment": targetEnvironment
             ].merging(additionalPayload, uniquingKeysWith: { (_, last) in last })
             
             let signalPostBody: SignalPostBody = SignalPostBody(type: "\(signalType)", clientUser: sha256(str: clientUser ?? defaultUserIdentifier), payload: payLoad)
@@ -107,10 +110,11 @@ private extension TelemetryManager {
     }
 
     var isSimulator: Bool {
-        guard let path = Bundle.main.appStoreReceiptURL?.path else {
-            return false
-        }
-        return (path.contains("CoreSimulator") || path.contains("XCTestDevices"))
+        #if targetEnvironment(simulator)
+        return true
+        #else
+        return false
+        #endif
     }
 
     var isTestFlight: Bool {
@@ -123,7 +127,8 @@ private extension TelemetryManager {
     var isAppStore: Bool {
         return !isSimulatorOrTestFlight
     }
-    
+
+    /// The operating system and its version
     var systemVersion: String {
         #if os(macOS)
         return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.patchVersion)"
@@ -137,31 +142,22 @@ private extension TelemetryManager {
         return "\(platform)"
         #endif
     }
-    
-    var platform: String {
-        #if os(macOS)
-        return "macOS"
-        #elseif os(iOS)
-        return "iOS"
-        #elseif os(watchOS)
-        return "watchOS"
-        #elseif os(tvOS)
-        return "tvOS"
-        #else
-        return "Unknown Platform"
-        #endif
-    }
 
+    /// The Bundle Short Version String, as described in Info.plist
     var appVersion: String {
         let appVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String
         return appVersion ?? "0"
     }
 
+    /// The Bundle Version String, as described in Info.plist
     var buildNumber: String {
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
         return buildNumber ?? "0"
     }
-    
+
+    /// The default user identifier. If the platform supports it, the identifierForVendor. Otherwise, system version
+    /// and build number (in which case it's strongly recommended to supply an email or UUID or similar identifier for
+    /// your user yourself.
     var defaultUserIdentifier: String {
         #if os(macOS)
         return "unknown user \(systemVersion) \(buildNumber)"
@@ -169,7 +165,8 @@ private extension TelemetryManager {
         return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(systemVersion) \(buildNumber)"
         #endif
     }
-    
+
+    /// The modelname as reported by systemInfo.machine
     var modelName: String {
         var systemInfo = utsname()
         uname(&systemInfo)
@@ -179,6 +176,75 @@ private extension TelemetryManager {
             return identifier + String(UnicodeScalar(UInt8(value)))
         }
         return identifier
+    }
+
+    /// The build architecture
+    var architecture: String {
+        #if arch(x86_64)
+        return "x86_64"
+        #elseif arch(arm)
+        return "arm"
+        #elseif arch(arm64)
+        return "arm64"
+        #elseif arch(i386)
+        return "i386"
+        #elseif arch(powerpc64)
+        return "powerpc64"
+        #elseif arch(powerpc64le)
+        return "powerpc64le"
+        #elseif arch(s390x)
+        return "s390x"
+        #else
+        return "unknown"
+        #endif
+    }
+
+    /// The operating system as reported by Swift. Note that this will report catalyst apps and iOS apps running on
+    /// macOS as "iOS". See `platform` for an alternative.
+    var operatingSystem: String {
+        #if os(macOS)
+        return "macOS"
+        #elseif os(iOS)
+        return "iOS"
+        #elseif os(watchOS)
+        return "watchOS"
+        #elseif os(tvOS)
+        return "tvOS"
+        #else
+        return "Unknown Operating System"
+        #endif
+    }
+
+    /// Based on the operating version reported by swift, but adding some smartness to better detect the actual
+    /// platform. Should correctly identify catalyst apps on macOS. Will probably not detect iOS apps running on
+    /// ARM based Macs.
+    var platform: String {
+        #if os(macOS)
+        return "macOS"
+        #elseif os(iOS)
+            #if targetEnvironment(macCatalyst)
+            return "macCatalyst"
+            #else
+            return "iOS"
+            #endif
+        #elseif os(watchOS)
+        return "watchOS"
+        #elseif os(tvOS)
+        return "tvOS"
+        #else
+        return "Unknown Platform"
+        #endif
+    }
+
+    /// The target environment as reported by swift. Either "simulator", "macCatalyst" or
+    var targetEnvironment: String {
+        #if targetEnvironment(simulator)
+        return "simulator"
+        #elseif targetEnvironment(macCatalyst)
+        return "macCatalyst"
+        #else
+        return "native"
+        #endif
     }
 }
 

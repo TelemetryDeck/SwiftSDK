@@ -1,15 +1,5 @@
 # TelemetryClient
 
-It's recommended you create an enum of signal types:
-
-```
-enum TelemetrySignalType: String {
-    case appLaunchedRegularly
-    case appLaunchedFromNotification
-    case pizzaModeActivated
-}
-```
-
 Init the Telemetry Manager at app startup, so it knows your App ID (you can retrieve the App ID in the Telemetry Viewer app, under App Settings)
 
 ````
@@ -41,11 +31,10 @@ struct TelemetryTestApp: App {
 }
 ```
 
-
 Then send signals like so: 
 
 ```
-TelemetryManager.send("appOpenedRegularly")
+TelemetryManager.send("appLaunchedRegularly")
 ```
 
 Telemetry Manager will create a user identifier for you user that is specific to app installation and device. If you have a better user identifier available, you can use that instead: (the identifier will be hashed before sending it) 
@@ -69,5 +58,10 @@ Telemetry Manager will automatically send a base payload with these keys:
 - isSimulator
 - isTestFlight
 - isAppStore 
+- modelName
+- architecture
+- operatingSystem
+- targetEnvironment
 
-NOTE: Telemetry Manager will *not* send any signals if you are in DEBUG Mode, or if you are running on a simulator. 
+NOTE: Telemetry Manager will *not* send any signals if you are in DEBUG Mode. To try out if your configuration works, temporarily
+set your Run schema to RELEASE instead. 
