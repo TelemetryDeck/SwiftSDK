@@ -12,6 +12,14 @@ import CommonCrypto
 import UIKit
 #endif
 
+#if os(watchOS)
+import WatchKit
+#endif
+
+#if os(tvOS)
+import TVUIKit
+#endif
+
 public typealias TelemetrySignalType = String
 public struct TelemetryManagerConfiguration {
     public let telemetryAppID: String
@@ -135,7 +143,7 @@ private extension TelemetryManager {
         #elseif os(iOS)
         return "\(platform)  \(UIDevice.current.systemVersion)"
         #elseif os(watchOS)
-        return "\(platform) \(UIDevice.current.systemVersion)"
+        return "\(platform) \(WKInterfaceDevice.current().systemVersion)"
         #elseif os(tvOS)
         return "\(platform) \(UIDevice.current.systemVersion)"
         #else
@@ -159,10 +167,16 @@ private extension TelemetryManager {
     /// and build number (in which case it's strongly recommended to supply an email or UUID or similar identifier for
     /// your user yourself.
     var defaultUserIdentifier: String {
-        #if os(macOS)
-        return "unknown user \(systemVersion) \(buildNumber)"
-        #else
+        #if os(iOS)
         return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(systemVersion) \(buildNumber)"
+        #elseif os(watchOS)
+        if #available(watchOS 6.2, *) {
+            return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(systemVersion) \(buildNumber)"
+        } else {
+            return "unknown user \(platform) \(systemVersion) \(buildNumber)"
+        }
+        #else
+        return "unknown user \(platform) \(systemVersion) \(buildNumber)"
         #endif
     }
 
