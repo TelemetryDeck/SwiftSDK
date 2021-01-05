@@ -2,14 +2,14 @@
 
 Init the Telemetry Manager at app startup, so it knows your App ID (you can retrieve the App ID in the Telemetry Viewer app, under App Settings)
 
-````
+````swift
 let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
 TelemetryManager.initialize(with: configuration)
 ````
 
 For example, if you're building a scene based app, in the `init()` function for your `App`:
 
-```
+```swift
 import SwiftUI
 import TelemetryClient
 
@@ -33,19 +33,19 @@ struct TelemetryTestApp: App {
 
 Then send signals like so: 
 
-```
+```swift
 TelemetryManager.send("appLaunchedRegularly")
 ```
 
 Telemetry Manager will create a user identifier for you user that is specific to app installation and device. If you have a better user identifier available, you can use that instead: (the identifier will be hashed before sending it) 
 
-```
+```swift
 TelemetryManager.send("userLoggedIn", for: "email")
 ```
 
 You can also send additional payload data with each signal:
 
-```
+```swift
 TelemetryManager.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
 ```
 
