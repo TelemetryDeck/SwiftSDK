@@ -63,5 +63,4 @@ Telemetry Manager will automatically send a base payload with these keys:
 - operatingSystem
 - targetEnvironment
 
-NOTE: Telemetry Manager will *not* send any signals if you are in DEBUG Mode. To try out if your configuration works, temporarily
-set your Run schema to RELEASE instead. 
+NOTE: Telemetry Manager will *not* send any signals if you are in DEBUG Mode. You can override this by setting `configuration.telemetryAllowDebugBuilds = true` on your `TelemetryManagerConfiguration` instance.

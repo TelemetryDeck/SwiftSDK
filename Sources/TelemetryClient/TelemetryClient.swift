@@ -21,9 +21,10 @@ import TVUIKit
 #endif
 
 public typealias TelemetrySignalType = String
-public struct TelemetryManagerConfiguration {
+public final class TelemetryManagerConfiguration {
     public let telemetryAppID: String
     public let telemetryServerBaseURL: URL
+    public var telemetryAllowDebugBuilds: Bool = false
     
     public init(appID: String, baseURL: URL? = nil) {
         self.telemetryAppID = appID
@@ -56,8 +57,11 @@ public class TelemetryManager {
     public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
         // Do not send telemetry in DEBUG mode
         #if DEBUG
-        return
-        #else
+        if configuration.telemetryAllowDebugBuilds == false
+        {
+            return
+        }
+        #endif
 
         DispatchQueue.global().async { [self] in
             let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/"
@@ -93,7 +97,6 @@ public class TelemetryManager {
             }
             task.resume()
         }
-        #endif
     }
     
     private init(configuration: TelemetryManagerConfiguration) {
