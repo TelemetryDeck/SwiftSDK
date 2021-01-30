@@ -59,6 +59,7 @@ public class TelemetryManager {
         #if DEBUG
         if configuration.telemetryAllowDebugBuilds == false
         {
+            print("[Telemetry] Debug is enabled, signal type \(signalType) will not be sent to server.")
             return
         }
         #endif
@@ -179,6 +180,9 @@ private extension TelemetryManager {
             return "unknown user \(platform) \(systemVersion) \(buildNumber)"
         }
         #else
+        #if DEBUG
+        print("[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://apptelemetry.io/pages/telemetry-swift-client-reference.html")
+        #endif
         return "unknown user \(platform) \(systemVersion) \(buildNumber)"
         #endif
     }
