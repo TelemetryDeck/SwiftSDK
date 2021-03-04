@@ -1,5 +1,5 @@
-import XCTest
 @testable import TelemetryClient
+import XCTest
 
 final class TelemetryClientTests: XCTestCase {
     func testExample() {
@@ -7,14 +7,12 @@ final class TelemetryClientTests: XCTestCase {
         // Use XCTAssert and related functions to verify your tests produce the correct
         // results.
         XCTAssertEqual("Hello, World!", "Hello, World!")
-        
-        
+
         let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
         TelemetryManager.initialize(with: configuration)
         TelemetryManager.send("appOpenedRegularly")
         TelemetryManager.send("userLoggedIn", for: "email")
         TelemetryManager.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
-
     }
 
     static var allTests = [
