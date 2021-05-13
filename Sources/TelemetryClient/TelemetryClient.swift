@@ -199,7 +199,7 @@ private extension TelemetryManager {
             }
         #else
             #if DEBUG
-                print("[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://apptelemetry.io/pages/telemetry-swift-client-reference.html")
+                print("[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://apptelemetry.io/pages/client-spec.html")
             #endif
             return "unknown user \(platform) \(systemVersion) \(buildNumber)"
         #endif
