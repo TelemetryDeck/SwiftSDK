@@ -96,6 +96,7 @@ public class TelemetryManager {
                 "architecture": architecture,
                 "operatingSystem": operatingSystem,
                 "targetEnvironment": targetEnvironment,
+                "locale": locale,
             ].merging(additionalPayload, uniquingKeysWith: { _, last in last })
 
             let signalPostBody = SignalPostBody(
@@ -283,6 +284,11 @@ private extension TelemetryManager {
         #else
             return "native"
         #endif
+    }
+    
+    /// The locale identifier
+    var locale: String {
+        return Locale.current.identifier
     }
 }
 
