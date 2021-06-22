@@ -100,6 +100,7 @@ public class TelemetryManager {
             ].merging(additionalPayload, uniquingKeysWith: { _, last in last })
 
             let signalPostBody = SignalPostBody(
+                receivedAt: Date(),
                 type: "\(signalType)",
                 clientUser: sha256(str: clientUser ?? defaultUserIdentifier),
                 sessionID: configuration.sessionID.uuidString,
@@ -125,13 +126,6 @@ public class TelemetryManager {
     private static var initializedTelemetryManager: TelemetryManager?
 
     private let configuration: TelemetryManagerConfiguration
-
-    private struct SignalPostBody: Codable {
-        let type: String
-        let clientUser: String
-        let sessionID: String
-        let payload: [String: String]?
-    }
 }
 
 private extension TelemetryManager {
