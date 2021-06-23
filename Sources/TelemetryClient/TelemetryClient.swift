@@ -24,11 +24,12 @@ public typealias TelemetrySignalType = String
 public final class TelemetryManagerConfiguration {
     public let telemetryAppID: String
     public let telemetryServerBaseURL: URL
-    public var telemetryAllowDebugBuilds: Bool = false
+    public let telemetryAllowDebugBuilds: Bool
     public var sessionID = UUID()
 
-    public init(appID: String, baseURL: URL? = nil) {
+    public init(appID: String, baseURL: URL? = nil, sendSignalsInDebug: Bool = false) {
         telemetryAppID = appID
+        telemetryAllowDebugBuilds = sendSignalsInDebug
 
         if let baseURL = baseURL {
             telemetryServerBaseURL = baseURL
@@ -113,15 +114,19 @@ public class TelemetryManager {
 
     @objc
     private func checkForSignalsAndSend() {
-        let queuedSignals = signalCache.pop()
+        var queuedSignals: [SignalPostBody] = signalCache.pop()
 
-        for signal in queuedSignals {
-            send(signal) { [unowned self] _, _, error in
-                if error != nil {
-                    // the send failed, put the signal back into the queue
-                    self.signalCache.push(signal)
+        while !queuedSignals.isEmpty {
+            for signal in queuedSignals {
+                send(signal) { [unowned self] _, _, error in
+                    if error != nil {
+                        // the send failed, put the signal back into the queue
+                        self.signalCache.push(signal)
+                    }
                 }
             }
+
+            queuedSignals = signalCache.pop()
         }
     }
 
