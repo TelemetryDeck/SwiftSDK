@@ -133,7 +133,7 @@ public class TelemetryManager {
         urlRequest.httpMethod = "POST"
         urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        urlRequest.httpBody = try! JSONEncoder().encode(signalPostBody)
+        urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBody)
 
         let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
         task.resume()
@@ -290,7 +290,7 @@ private extension TelemetryManager {
         #endif
     }
 
-    /// The target environment as reported by swift. Either "simulator", "macCatalyst" or
+    /// The target environment as reported by swift. Either "simulator", "macCatalyst" or "native".
     var targetEnvironment: String {
         #if targetEnvironment(simulator)
             return "simulator"
