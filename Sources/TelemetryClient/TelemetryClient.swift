@@ -25,7 +25,7 @@ public final class TelemetryManagerConfiguration {
     public let telemetryAppID: String
     public let telemetryServerBaseURL: URL
     public var telemetryAllowDebugBuilds: Bool = false
-    public var sessionID: UUID = UUID()
+    public var sessionID = UUID()
 
     public init(appID: String, baseURL: URL? = nil) {
         telemetryAppID = appID
@@ -39,6 +39,10 @@ public final class TelemetryManagerConfiguration {
 }
 
 public class TelemetryManager {
+    private var signalCache = SignalCache()
+    private let minimumWaitTimeBetweenRequests: Double = 10 // seconds
+    private var sendTimer: Timer?
+
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
@@ -54,19 +58,22 @@ public class TelemetryManager {
 
         return telemetryManager
     }
-    
+
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
     ///
     /// It is recommended to call this function when returning from background. If you never call it, your session lasts until your
-    /// app is killed and the user restarts it. 
+    /// app is killed and the user restarts it.
     public static func generateNewSession() {
         TelemetryManager.shared.generateNewSession()
     }
-    
+
     public func generateNewSession() {
         configuration.sessionID = UUID()
     }
 
+    /// Send a Telemetry Signal to the server
+    ///
+    /// The signal might be cached and sent together with other signals
     public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
         // Do not send telemetry in DEBUG mode
         #if DEBUG
@@ -77,13 +84,6 @@ public class TelemetryManager {
         #endif
 
         DispatchQueue.global().async { [self] in
-            let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/"
-            let url = configuration.telemetryServerBaseURL.appendingPathComponent(path)
-
-            var urlRequest = URLRequest(url: url)
-            urlRequest.httpMethod = "POST"
-            urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
-
             let payLoad: [String: String] = [
                 "platform": platform,
                 "systemVersion": systemVersion,
@@ -107,20 +107,41 @@ public class TelemetryManager {
                 payload: payLoad
             )
 
-            urlRequest.httpBody = try! JSONEncoder().encode(signalPostBody)
+            signalCache.push(signalPostBody)
+        }
+    }
 
-            let task = URLSession.shared.dataTask(with: urlRequest) { data, response, error in
-                if let error = error { print(error, data as Any, response as Any) }
-                if let data = data, let dataAsUTF8 = String(data: data, encoding: .utf8) {
-                    print(dataAsUTF8)
+    @objc
+    private func checkForSignalsAndSend() {
+        let queuedSignals = signalCache.pop()
+
+        for signal in queuedSignals {
+            send(signal) { [unowned self] _, _, error in
+                if error != nil {
+                    // the send failed, put the signal back into the queue
+                    self.signalCache.push(signal)
                 }
             }
-            task.resume()
         }
+    }
+
+    private func send(_ signalPostBody: SignalPostBody, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
+        let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/"
+        let url = configuration.telemetryServerBaseURL.appendingPathComponent(path)
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "POST"
+        urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
+
+        urlRequest.httpBody = try! JSONEncoder().encode(signalPostBody)
+
+        let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
+        task.resume()
     }
 
     private init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
+        sendTimer = Timer.scheduledTimer(timeInterval: minimumWaitTimeBetweenRequests, target: self, selector: #selector(checkForSignalsAndSend), userInfo: nil, repeats: true)
     }
 
     private static var initializedTelemetryManager: TelemetryManager?
@@ -130,7 +151,7 @@ public class TelemetryManager {
 
 private extension TelemetryManager {
     var isSimulatorOrTestFlight: Bool {
-        (isSimulator || isTestFlight)
+        isSimulator || isTestFlight
     }
 
     var isSimulator: Bool {
