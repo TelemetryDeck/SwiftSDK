@@ -39,12 +39,11 @@ class SignalCache {
     /// (e.g. sending them to a server) you should reinsert them into the cache with the `push` function.
     func pop() -> [SignalPostBody] {
         pthread_mutex_lock(&mutex)
+        defer { pthread_mutex_unlock(&mutex) }
         
         let sliceSize = min(maximumNumberOfSignalsToPopAtOnce, cachedSignals.count)
         let poppedSignals = cachedSignals[..<sliceSize]
         cachedSignals.removeFirst(sliceSize)
-        
-        pthread_mutex_unlock(&mutex)
         
         return Array(poppedSignals)
     }

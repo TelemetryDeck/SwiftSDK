@@ -117,12 +117,10 @@ public class TelemetryManager {
         var queuedSignals: [SignalPostBody] = signalCache.pop()
 
         while !queuedSignals.isEmpty {
-            for signal in queuedSignals {
-                send(signal) { [unowned self] _, _, error in
-                    if error != nil {
-                        // the send failed, put the signal back into the queue
-                        self.signalCache.push(signal)
-                    }
+            send(queuedSignals) { [unowned self] _, _, error in
+                if error != nil {
+                    // the send failed, put the signal back into the queue
+                    self.signalCache.push(queuedSignals)
                 }
             }
 
@@ -130,15 +128,15 @@ public class TelemetryManager {
         }
     }
 
-    private func send(_ signalPostBody: SignalPostBody, completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
-        let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/"
+    private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
+        let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/multiple/"
         let url = configuration.telemetryServerBaseURL.appendingPathComponent(path)
 
         var urlRequest = URLRequest(url: url)
         urlRequest.httpMethod = "POST"
         urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-        urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBody)
+        urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
 
         let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
         task.resume()
