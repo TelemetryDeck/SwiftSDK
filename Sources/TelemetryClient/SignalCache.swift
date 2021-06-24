@@ -22,15 +22,17 @@ class SignalCache {
     /// Insert a Signal into the cache
     func push(_ signal: SignalPostBody) {
         pthread_mutex_lock(&mutex)
+        defer { pthread_mutex_unlock(&mutex) }
+        
         cachedSignals.append(signal)
-        pthread_mutex_unlock(&mutex)
     }
     
     /// Insert a number of Signals into the cache
     func push(_ signals: [SignalPostBody]) {
         pthread_mutex_lock(&mutex)
+        defer { pthread_mutex_unlock(&mutex) }
+        
         cachedSignals.append(contentsOf: signals)
-        pthread_mutex_unlock(&mutex)
     }
 
     /// Remove a number of Signals from the cache and return them
