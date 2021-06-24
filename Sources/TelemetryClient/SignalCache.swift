@@ -17,22 +17,20 @@ import Foundation
 class SignalCache {
     private var cachedSignals: [SignalPostBody] = []
     private let maximumNumberOfSignalsToPopAtOnce = 10
-    var mutex: pthread_mutex_t = pthread_mutex_t()
+    let queue = DispatchQueue(label: "apptelemetry-signal-cache", attributes: .concurrent)
 
     /// Insert a Signal into the cache
     func push(_ signal: SignalPostBody) {
-        pthread_mutex_lock(&mutex)
-        defer { pthread_mutex_unlock(&mutex) }
-        
-        cachedSignals.append(signal)
+        queue.async(flags: .barrier) {
+            self.cachedSignals.append(signal)
+        }
     }
-    
+
     /// Insert a number of Signals into the cache
     func push(_ signals: [SignalPostBody]) {
-        pthread_mutex_lock(&mutex)
-        defer { pthread_mutex_unlock(&mutex) }
-        
-        cachedSignals.append(contentsOf: signals)
+        queue.async(flags: .barrier) {
+            self.cachedSignals.append(contentsOf: signals)
+        }
     }
 
     /// Remove a number of Signals from the cache and return them
@@ -40,13 +38,14 @@ class SignalCache {
     /// You should hold on to the signals returned by this function. If the action you are trying to do with them fails
     /// (e.g. sending them to a server) you should reinsert them into the cache with the `push` function.
     func pop() -> [SignalPostBody] {
-        pthread_mutex_lock(&mutex)
-        defer { pthread_mutex_unlock(&mutex) }
+        var poppedSignals: [SignalPostBody]!
         
-        let sliceSize = min(maximumNumberOfSignalsToPopAtOnce, cachedSignals.count)
-        let poppedSignals = cachedSignals[..<sliceSize]
-        cachedSignals.removeFirst(sliceSize)
+        queue.sync {
+            let sliceSize = min(maximumNumberOfSignalsToPopAtOnce, cachedSignals.count)
+            poppedSignals = Array(cachedSignals[..<sliceSize])
+            cachedSignals.removeFirst(sliceSize)
+        }
         
-        return Array(poppedSignals)
+        return poppedSignals
     }
 }
