@@ -9,14 +9,14 @@ import Foundation
 
 /// A local cache for signals to be sent to the AppTelemetry ingestion service
 ///
-/// This class tries to be thread safe, with mutexes being managed in all push and pop functions.
-///
 /// There is no guarantee that Signals come out in the same order you put them in. This shouldn't matter though,
 /// since all Signals automatically get a `receivedAt` property with a date, allowing the server to reorder them
 /// correctly.
+///
+/// Currently the cache is only in-memory. This will probably change in the near future.
 class SignalCache {
     private var cachedSignals: [SignalPostBody] = []
-    private let maximumNumberOfSignalsToPopAtOnce = 10
+    private let maximumNumberOfSignalsToPopAtOnce = 100
     let queue = DispatchQueue(label: "apptelemetry-signal-cache", attributes: .concurrent)
 
     /// Insert a Signal into the cache
