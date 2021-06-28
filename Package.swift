@@ -5,6 +5,12 @@ import PackageDescription
 
 let package = Package(
     name: "TelemetryClient",
+    platforms: [
+        .macOS(.v10_13),
+        .iOS(.v12),
+        .watchOS(.v4),
+        .tvOS(.v9)
+    ],
     products: [
         // Products define the executables and libraries a package produces, and make them visible to other packages.
         .library(
@@ -21,11 +27,13 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "TelemetryClient",
-            dependencies: []
+            dependencies: [],
+            exclude: ["SwiftClientTester"]
         ),
         .testTarget(
             name: "TelemetryClientTests",
-            dependencies: ["TelemetryClient"]
-        ),
+            dependencies: ["TelemetryClient"],
+            exclude: ["SwiftClientTester"]
+        )
     ]
 )
