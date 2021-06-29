@@ -19,7 +19,8 @@ internal class SignalCache<T> where T: Codable {
     public var showDebugLogs: Bool = false
     
     private var cachedSignals: [T] = []
-    private let maximumNumberOfSignalsToPopAtOnce = 25
+    private let maximumNumberOfSignalsToPopAtOnce = 100
+    
     let queue = DispatchQueue(label: "apptelemetry-signal-cache", attributes: .concurrent)
     
     /// How many Signals are cached
