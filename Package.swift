@@ -27,13 +27,11 @@ let package = Package(
         // Targets can depend on other targets in this package, and on products in packages this package depends on.
         .target(
             name: "TelemetryClient",
-            dependencies: [],
-            exclude: ["SwiftClientTester"]
+            dependencies: []
         ),
         .testTarget(
             name: "TelemetryClientTests",
-            dependencies: ["TelemetryClient"],
-            exclude: ["SwiftClientTester"]
+            dependencies: ["TelemetryClient"]
         )
     ]
 )
