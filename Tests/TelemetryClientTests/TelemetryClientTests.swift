@@ -16,7 +16,7 @@ final class TelemetryClientTests: XCTestCase {
     }
     
     func testPushAndPop() {
-        let signalCache = SignalCache<SignalPostBody>()
+        let signalCache = SignalCache<SignalPostBody>(showDebugLogs: false)
         
         let signals: [SignalPostBody] = [
             .init(receivedAt: Date(), type: "01", clientUser: "01", sessionID: "01", payload: nil),
