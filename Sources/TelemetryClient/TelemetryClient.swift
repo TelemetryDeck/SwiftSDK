@@ -17,7 +17,7 @@ public final class TelemetryManagerConfiguration {
     public var telemetryAllowDebugBuilds: Bool = false
     public var sessionID: UUID = UUID()
     public var showDebugLogs: Bool = false
-    
+
     /// Instead of specifying a user identifier with each `send` call, you can set your user's name/email/identifier here and
     /// it will be sent with every signal from now on.
     ///
@@ -52,7 +52,7 @@ public class TelemetryManager {
 
         return telemetryManager
     }
-    
+
     /// Change the default user identifier sent with each signal.
     ///
     /// Instead of specifying a user identifier with each `send` call, you can set your user's name/email/identifier here and
@@ -69,15 +69,15 @@ public class TelemetryManager {
     public func updateDefaultUser(to newDefaultUser: String?) {
         configuration.defaultUser = newDefaultUser
     }
-    
+
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
     ///
     /// It is recommended to call this function when returning from background. If you never call it, your session lasts until your
-    /// app is killed and the user restarts it. 
+    /// app is killed and the user restarts it.
     public static func generateNewSession() {
         TelemetryManager.shared.generateNewSession()
     }
-    
+
     public func generateNewSession() {
         configuration.sessionID = UUID()
     }
@@ -90,18 +90,18 @@ public class TelemetryManager {
                 return
             }
         #endif
-        
+
         signalManager.processSignal(signalType, for: clientUser, with: additionalPayload, configuration: configuration)
     }
 
     private init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
-        self.signalManager = SignalManager(configuration: configuration)
+        signalManager = SignalManager(configuration: configuration)
     }
 
     private static var initializedTelemetryManager: TelemetryManager?
 
     private let configuration: TelemetryManagerConfiguration
-    
+
     private let signalManager: SignalManager
 }

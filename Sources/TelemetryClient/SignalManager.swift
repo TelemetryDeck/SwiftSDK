@@ -2,17 +2,16 @@ import CommonCrypto
 import Foundation
 
 #if os(iOS)
-    import UIKit
+import UIKit
 #elseif os(macOS)
-    import AppKit
+import AppKit
 #elseif os(watchOS)
-    import WatchKit
+import WatchKit
 #elseif os(tvOS)
-    import TVUIKit
+import TVUIKit
 #endif
 
 internal class SignalManager {
-    
     private let minimumWaitTimeBetweenRequests: Double = 10 // seconds
     
     private var signalCache: SignalCache<SignalPostBody>
@@ -20,18 +19,17 @@ internal class SignalManager {
     private var sendTimer: Timer?
     
     init(configuration: TelemetryManagerConfiguration) {
-        
         self.configuration = configuration
         
         // We automatically load any old signals from disk on initialisation
         signalCache = SignalCache(showDebugLogs: configuration.showDebugLogs)
         
-        /// Before the app terminates, we want to save any pending signals to disk
-        /// We need to monitor different notifications for different devices.
-        /// iOS and macOS - We can simply wait for the app to terminate at which point we get enough time to save the cache
-        /// which is then restored when the app is cold started and all init's fire.
-        /// watchOS and tvOS - We can only really monitor moving to background and foreground to save/load the cache.
-        /// watchOS pre7.0 - Doesn't have any kind of notification to monitor.
+        // Before the app terminates, we want to save any pending signals to disk
+        // We need to monitor different notifications for different devices.
+        // iOS and macOS - We can simply wait for the app to terminate at which point we get enough time to save the cache
+        // which is then restored when the app is cold started and all init's fire.
+        // watchOS and tvOS - We can only really monitor moving to background and foreground to save/load the cache.
+        // watchOS pre7.0 - Doesn't have any kind of notification to monitor.
         #if os(iOS)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillTerminate), name: UIApplication.willTerminateNotification, object: nil)
         #elseif os(macOS)
@@ -59,7 +57,6 @@ internal class SignalManager {
     
     /// Setup a timer to send the Signals
     private func startTimer() {
-        
         sendTimer?.invalidate()
         
         sendTimer = Timer.scheduledTimer(timeInterval: minimumWaitTimeBetweenRequests, target: self, selector: #selector(checkForSignalsAndSend), userInfo: nil, repeats: true)
@@ -70,7 +67,6 @@ internal class SignalManager {
     
     /// Adds a signal to the process queue
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
-        
         DispatchQueue.global(qos: .utility).async { [self] in
 
             let payLoad = SignalPayload(additionalPayload: additionalPayload)
@@ -83,7 +79,7 @@ internal class SignalManager {
                 payload: payLoad.toDictionary()
             )
             
-            if (configuration.showDebugLogs) {
+            if configuration.showDebugLogs {
                 print("Process signal: \(signalPostBody)")
             }
             
@@ -95,21 +91,19 @@ internal class SignalManager {
     /// If any fail to send, we put them back into the cache to send later.
     @objc
     private func checkForSignalsAndSend() {
-        
-        if (configuration.showDebugLogs) {
+        if configuration.showDebugLogs {
             print("Current signal cache count: \(signalCache.count())")
         }
         
         let queuedSignals: [SignalPostBody] = signalCache.pop()
-        if !queuedSignals.isEmpty
-        {
-            if (configuration.showDebugLogs) {
+        if !queuedSignals.isEmpty {
+            if configuration.showDebugLogs {
                 print("Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
             }
             send(queuedSignals) { [unowned self] data, response, error in
                 
                 if let error = error {
-                    if (configuration.showDebugLogs) {
+                    if configuration.showDebugLogs {
                         print(error)
                     }
                     // The send failed, put the signal back into the queue
@@ -120,7 +114,7 @@ internal class SignalManager {
                 // Check for valid status code response
                 guard response?.statusCodeError() == nil else {
                     let statusError = response!.statusCodeError()!
-                    if (configuration.showDebugLogs) {
+                    if configuration.showDebugLogs {
                         print(statusError)
                     }
                     // The send failed, put the signal back into the queue
@@ -129,7 +123,7 @@ internal class SignalManager {
                 }
                 
                 if let data = data {
-                    if (configuration.showDebugLogs) {
+                    if configuration.showDebugLogs {
                         print(String(data: data, encoding: .utf8)!)
                     }
                 }
@@ -139,10 +133,10 @@ internal class SignalManager {
 }
 
 // MARK: - Notifications
+
 private extension SignalManager {
-    
     @objc func appWillTerminate() {
-        if (configuration.showDebugLogs) {
+        if configuration.showDebugLogs {
             print(#function)
         }
         
@@ -155,12 +149,12 @@ private extension SignalManager {
     /// so we merge them into the new cache.
     #if os(watchOS) || os(tvOS)
     @objc func didEnterForeground() {
-        if (configuration.showDebugLogs) {
+        if configuration.showDebugLogs {
             print(#function)
         }
         
         let currentCache = signalCache.pop()
-        if (configuration.showDebugLogs) {
+        if configuration.showDebugLogs {
             print("current cache is \(currentCache.count) signals")
         }
         signalCache = SignalCache(showDebugLogs: configuration.showDebugLogs)
@@ -170,7 +164,7 @@ private extension SignalManager {
     }
     
     @objc func didEnterBackground() {
-        if (configuration.showDebugLogs) {
+        if configuration.showDebugLogs {
             print(#function)
         }
         
@@ -183,10 +177,9 @@ private extension SignalManager {
 }
 
 // MARK: - Comms
+
 private extension SignalManager {
-    
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
-        
         DispatchQueue.global(qos: .utility).async { [self] in
             let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/multiple/"
             let url = configuration.telemetryServerBaseURL.appendingPathComponent(path)
@@ -196,7 +189,7 @@ private extension SignalManager {
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
             urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
-            if (configuration.showDebugLogs) {
+            if configuration.showDebugLogs {
                 print(String(data: urlRequest.httpBody!, encoding: .utf8)!)
             }
             
@@ -207,8 +200,8 @@ private extension SignalManager {
 }
 
 // MARK: - Helpers
+
 private extension SignalManager {
-    
     /// The default user identifier. If the platform supports it, the identifierForVendor. Otherwise, system version
     /// and build number (in which case it's strongly recommended to supply an email or UUID or similar identifier for
     /// your user yourself.
@@ -218,15 +211,15 @@ private extension SignalManager {
         #if os(iOS)
         return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
         #elseif os(watchOS)
-            if #available(watchOS 6.2, *) {
-                return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
-            } else {
-                return "unknown user \(SignalPayload.platform) \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
-            }
+        if #available(watchOS 6.2, *) {
+            return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+        } else {
+            return "unknown user \(SignalPayload.platform) \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+        }
         #else
-            #if DEBUG
-                print("[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://apptelemetry.io/pages/signal-reference.html")
-            #endif
+        #if DEBUG
+        print("[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://apptelemetry.io/pages/signal-reference.html")
+        #endif
         return "unknown user \(SignalPayload.platform) \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
         #endif
     }
@@ -265,7 +258,6 @@ private extension SignalManager {
 }
 
 private extension URLResponse {
-    
     /// Returns the HTTP status code
     func statusCode() -> Int? {
         if let httpResponse = self as? HTTPURLResponse {
@@ -276,10 +268,8 @@ private extension URLResponse {
     
     /// Returns an `Error` if not a valid statusCode
     func statusCodeError() -> Error? {
-        
         // Check for valid response in the 200-299 range
-        guard (200...299).contains(statusCode() ?? 0) else {
-            
+        guard (200 ... 299).contains(statusCode() ?? 0) else {
             if statusCode() == 401 {
                 return TelemetryError.Unauthorised
             } else if statusCode() == 403 {
@@ -295,11 +285,12 @@ private extension URLResponse {
 }
 
 // MARK: - Errors
+
 private enum TelemetryError: Error {
     case Unauthorised
     case Forbidden
     case PayloadTooLarge
-    case InvalidStatusCode(statusCode:Int)
+    case InvalidStatusCode(statusCode: Int)
 }
 
 extension TelemetryError: LocalizedError {

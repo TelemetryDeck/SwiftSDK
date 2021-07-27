@@ -31,12 +31,11 @@ internal struct SignalPayload: Codable {
     var operatingSystem: String = Self.operatingSystem
     var targetEnvironment: String = Self.targetEnvironment
     var locale: String = Self.locale
-    
+
     let additionalPayload: [String: String]
 }
 
 extension SignalPayload {
-    
     /// Converts the `additionalPayload` to a `[String: String]` dictionary
     func toDictionary() -> [String: String] {
         // We need to convert the additionalPayload into new key/value pairs
@@ -51,18 +50,17 @@ extension SignalPayload {
             // Add the additionalPayload as new key/value pairs
             return dict?.merging(additionalPayload, uniquingKeysWith: { _, last in last }) as? [String: String] ?? [:]
         }
-        catch
-        {
+        catch {
             return [:]
         }
     }
 }
 
 // MARK: - Helpers
+
 extension SignalPayload {
-    
     static var isSimulatorOrTestFlight: Bool {
-        (isSimulator || isTestFlight)
+        isSimulator || isTestFlight
     }
 
     static var isSimulator: Bool {
@@ -191,7 +189,7 @@ extension SignalPayload {
             return "native"
         #endif
     }
-    
+
     /// The locale identifier
     static var locale: String {
         return Locale.current.identifier
