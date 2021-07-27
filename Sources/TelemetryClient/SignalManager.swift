@@ -220,6 +220,8 @@ private extension SignalManager {
     /// and build number (in which case it's strongly recommended to supply an email or UUID or similar identifier for
     /// your user yourself.
     var defaultUserIdentifier: String {
+        guard configuration.defaultUser == nil else { return configuration.defaultUser! }
+        
         #if os(iOS)
         return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
         #elseif os(watchOS)

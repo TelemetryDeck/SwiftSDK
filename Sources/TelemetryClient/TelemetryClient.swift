@@ -24,6 +24,13 @@ public final class TelemetryManagerConfiguration {
     public var telemetryAllowDebugBuilds: Bool = false
     public var sessionID: UUID = UUID()
     public var showDebugLogs: Bool = false
+    
+    /// Instead of specifying a user identifier with each `send` call, you can set your user's name/email/identifier here and
+    /// it will be sent with every signal from now on.
+    ///
+    /// Note that just as with specifying the user identifier with the `send` call, the identifier will never leave the device.
+    /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
+    public var defaultUser: String?
 
     public init(appID: String, baseURL: URL? = nil) {
         telemetryAppID = appID
@@ -51,6 +58,23 @@ public class TelemetryManager {
         }
 
         return telemetryManager
+    }
+    
+    /// Change the default user identifier sent with each signal.
+    ///
+    /// Instead of specifying a user identifier with each `send` call, you can set your user's name/email/identifier here and
+    /// it will be sent with every signal from now on. If you still specify a user in the `send` call, that takes precedence.
+    ///
+    /// Set to `nil` to disable this behavior.
+    ///
+    /// Note that just as with specifying the user identifier with the `send` call, the identifier will never leave the device.
+    /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
+    public static func updateDefaultUser(to newDefaultUser: String?) {
+        TelemetryManager.shared.updateDefaultUser(to: newDefaultUser)
+    }
+
+    public func updateDefaultUser(to newDefaultUser: String?) {
+        configuration.defaultUser = newDefaultUser
     }
     
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
