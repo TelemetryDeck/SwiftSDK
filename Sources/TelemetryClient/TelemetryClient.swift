@@ -1,10 +1,3 @@
-//
-//  Telemetry
-//
-//  Created by Daniel Jilg on 27.11.19.
-//  Copyright © 2019 breakthesystem. All rights reserved.
-//
-
 import Foundation
 
 #if os(iOS)

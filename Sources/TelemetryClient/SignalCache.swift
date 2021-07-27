@@ -1,10 +1,3 @@
-//
-//  SignalCache.swift
-//
-//
-//  Created by Daniel Jilg on 22.06.21.
-//
-
 import Foundation
 
 /// A local cache for signals to be sent to the AppTelemetry ingestion service

@@ -1,10 +1,3 @@
-//
-//  File.swift
-//  
-//
-//  Created by Daniel Jilg on 22.06.21.
-//
-
 import Foundation
 
 #if os(iOS)
@@ -188,7 +181,7 @@ extension SignalPayload {
         #endif
     }
 
-    /// The target environment as reported by swift. Either "simulator", "macCatalyst" or
+    /// The target environment as reported by swift. Either "simulator", "macCatalyst" or "native"
     static var targetEnvironment: String {
         #if targetEnvironment(simulator)
             return "simulator"

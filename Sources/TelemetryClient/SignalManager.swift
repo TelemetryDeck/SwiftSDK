@@ -1,10 +1,3 @@
-//
-//  SignalManager.swift
-//  SwiftClientTester
-//
-//  Created by Darren Jones on 24/06/2021.
-//
-
 import CommonCrypto
 import Foundation
 

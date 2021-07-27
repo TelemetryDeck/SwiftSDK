@@ -1,10 +1,3 @@
-//
-//  TelemetryClient.h
-//  TelemetryClient
-//
-//  Created by Darren Jones on 25/06/2021.
-//
-
 #import <Foundation/Foundation.h>
 
 //! Project version number for TelemetryClient.

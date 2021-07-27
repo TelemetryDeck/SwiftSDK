@@ -1,10 +1,3 @@
-//
-//  JSONFormatting.swift
-//
-//
-//  Created by Daniel Jilg on 23.06.21.
-//
-
 import Foundation
 
 extension Formatter {
