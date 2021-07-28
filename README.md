@@ -4,6 +4,7 @@ Init the Telemetry Manager at app startup, so it knows your App ID (you can retr
 
 ````swift
 let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
+// optional: modify the configuration here
 TelemetryManager.initialize(with: configuration)
 ````
 
@@ -37,12 +38,21 @@ Then send signals like so:
 TelemetryManager.send("appLaunchedRegularly")
 ```
 
-Telemetry Manager will create a user identifier for you user that is specific to app installation and device. If you have a better user identifier available, you can use that instead: (the identifier will be hashed before sending it) 
+## Debug Mode
+
+Telemetry Manager will *not* send any signals if your scheme's build configuration is set to "Debug", e.g if `#if DEBUG` would evaluate to `true`. You can override this by setting `configuration.sendSignalsInDebugConfiguration = true` on your `TelemetryManagerConfiguration` instance.
+
+
+## User Identifiers
+Telemetry Manager will create a user identifier for you user that is specific to app installation and device. If you have a better user identifier available, such as an email address or a username, you can use that instead, by passing it on to the `TelemetryManagerConfiguration` (the identifier will be hashed before sending it).
 
 ```swift
-TelemetryManager.send("userLoggedIn", for: "email")
+configuration.defaultUser = "myuser@example.com"
 ```
 
+You can update the configuration after TelemetryManager is already initialized.
+
+## Payload
 You can also send additional payload data with each signal:
 
 ```swift
@@ -63,43 +73,8 @@ Telemetry Manager will automatically send a base payload with these keys:
 - operatingSystem
 - targetEnvironment
 
-NOTE: Telemetry Manager will *not* send any signals if you are in DEBUG Mode. You can override this by setting `configuration.telemetryAllowDebugBuilds = true` on your `TelemetryManagerConfiguration` instance.
-
 ## Sessions
 
 With each Signal, the client sends a hash of your user ID as well as a *session ID*. This gets automatically generated when the client is initialized, so if you do nothing, you'll get a new session each time your app is started from cold storage.
 
-If you want to manually start a new sesion, call `TelemetryManager.generateNewSession()`. For example, with mobile apps, you usually want to start a new session when the app returns from background. In Swiftui, you can do this by listening to the `scenePhase` property of a your `App`. Here's how to do that in your `Your_App.swift`, the main entry point into you app:
-
-```swift
-import SwiftUI
-import TelemetryClient
-
-@main
-struct TelemetryTestApp: App {
-    var body: some Scene {
-        
-        // (1) Add the scenePhase env var to your App
-        @Environment(\.scenePhase) var scenePhase
-    
-        WindowGroup {
-            ContentView()
-        }
-        
-        // (2) Generate a new session whenever the scenePhase returns back to "active", i.e. the app returns from background
-        .onChange(of: scenePhase) { newScenePhase in
-            if newScenePhase == .active {
-                TelemetryManager.generateNewSession()
-            }
-        }
-    }
-    
-    init() {
-        // Note: Do not add this code to `WindowGroup.onAppear`, which will be called 
-        //       *after* your window has been initialized, and might lead to out initialization
-        //       occurring too late.
-        let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
-        TelemetryManager.initialize(with: configuration)
-    }
-}
-```
+On iOS, tvOS, and watchOS, the session identifier will automatically update whenever your app returns from background, or if it is launched from cold storage. On other platforms, a new identifier will be generated each time your app launches. If you'd like more fine-grained session support, write a new random session identifier into the `TelemetryManagerConfiguration`'s `sessionID` property each time a new session begins.

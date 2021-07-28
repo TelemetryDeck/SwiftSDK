@@ -182,7 +182,7 @@ private extension SignalManager {
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async { [self] in
             let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/multiple/"
-            let url = configuration.telemetryServerBaseURL.appendingPathComponent(path)
+            let url = configuration.apiBaseURL.appendingPathComponent(path)
 
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
