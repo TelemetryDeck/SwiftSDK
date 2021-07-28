@@ -31,6 +31,7 @@ internal struct SignalPayload: Codable {
     var operatingSystem: String = Self.operatingSystem
     var targetEnvironment: String = Self.targetEnvironment
     var locale: String = Self.locale
+    var telemetryClientVersion: String = TelemetryClientVersion
 
     let additionalPayload: [String: String]
 }
