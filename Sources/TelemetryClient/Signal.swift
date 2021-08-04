@@ -12,10 +12,11 @@ import Foundation
 
 internal struct SignalPostBody: Codable, Equatable {
     let receivedAt: Date
-    let type: String
+    let appID: UUID
     let clientUser: String
     let sessionID: String
-    let payload: [String: String]?
+    let type: String
+    let payload: [String]
 }
 
 internal struct SignalPayload: Codable {
@@ -54,6 +55,10 @@ extension SignalPayload {
         catch {
             return [:]
         }
+    }
+    
+    func toMultiValueDimension() -> [String] {
+        return self.toDictionary().map { key, value in key.replacingOccurrences(of: ":", with: "_") + ":" + value }
     }
 }
 

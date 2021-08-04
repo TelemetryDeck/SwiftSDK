@@ -70,14 +70,14 @@ internal class SignalManager {
         DispatchQueue.global(qos: .utility).async { [self] in
 
             let payLoad = SignalPayload(additionalPayload: additionalPayload)
-
+            
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
-                type: "\(signalType)",
+                appID: UUID(uuidString: configuration.telemetryAppID)!,
                 clientUser: sha256(str: clientUser ?? defaultUserIdentifier),
                 sessionID: configuration.sessionID.uuidString,
-                payload: payLoad.toDictionary()
-            )
+                type: "\(signalType)",
+                payload: payLoad.toMultiValueDimension())
             
             if configuration.showDebugLogs {
                 print("Process signal: \(signalPostBody)")
