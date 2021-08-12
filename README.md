@@ -24,7 +24,7 @@ struct TelemetryTestApp: App {
     
     init() {
         // Note: Do not add this code to `WindowGroup.onAppear`, which will be called 
-        //       *after* your window has been initialized, and might lead to out initialization
+        //       *after* your window has been initialized, and might lead to our initialization
         //       occurring too late.
         let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
         TelemetryManager.initialize(with: configuration)
