@@ -26,13 +26,12 @@ internal class SignalManager {
         
         // Before the app terminates, we want to save any pending signals to disk
         // We need to monitor different notifications for different devices.
-        // iOS and macOS - We can simply wait for the app to terminate at which point we get enough time to save the cache
+        // macOS - We can simply wait for the app to terminate at which point we get enough time to save the cache
         // which is then restored when the app is cold started and all init's fire.
+        // iOS - App termination is an unreliable method to do work, so we use moving to background and foreground to save/load the cache.
         // watchOS and tvOS - We can only really monitor moving to background and foreground to save/load the cache.
         // watchOS pre7.0 - Doesn't have any kind of notification to monitor.
-        #if os(iOS)
-        NotificationCenter.default.addObserver(self, selector: #selector(appWillTerminate), name: UIApplication.willTerminateNotification, object: nil)
-        #elseif os(macOS)
+        #if os(macOS)
         NotificationCenter.default.addObserver(self, selector: #selector(appWillTerminate), name: NSApplication.willTerminateNotification, object: nil)
         #elseif os(watchOS)
         if #available(watchOS 7.0, *) {
@@ -44,7 +43,7 @@ internal class SignalManager {
         } else {
             // Pre watchOS 7.0, this library will not use disk caching at all as there are no notifications we can observe.
         }
-        #elseif os(tvOS)
+        #elseif os(tvOS) || os(iOS)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             // We need to use a delay with these type of notifications because they fire on app load which causes a double load of the cache from disk
             NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -147,7 +146,7 @@ private extension SignalManager {
     /// This means our `init()` above doesn't always run when coming back to foreground, so we have to manually
     /// reload the cache. This also means we miss any signals sent during watchDidEnterForeground
     /// so we merge them into the new cache.
-    #if os(watchOS) || os(tvOS)
+    #if os(watchOS) || os(tvOS) || os(iOS)
     @objc func didEnterForeground() {
         if configuration.showDebugLogs {
             print(#function)
