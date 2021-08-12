@@ -25,6 +25,7 @@ internal struct SignalPayload: Codable {
     var appVersion: String = Self.appVersion
     var buildNumber: String = Self.buildNumber
     var isSimulator: String = "\(Self.isSimulator)"
+    var isDebug: String = "\(Self.isDebug)"
     var isTestFlight: String = "\(Self.isTestFlight)"
     var isAppStore: String = "\(Self.isAppStore)"
     var modelName: String = Self.modelName
@@ -77,8 +78,16 @@ extension SignalPayload {
         #endif
     }
 
+    static var isDebug: Bool {
+        #if DEBUG
+            return true
+        #else
+            return false
+        #endif
+    }
+
     static var isTestFlight: Bool {
-        guard let path = Bundle.main.appStoreReceiptURL?.path else {
+        guard !isDebug, let path = Bundle.main.appStoreReceiptURL?.path else {
             return false
         }
         return path.contains("sandboxReceipt")
