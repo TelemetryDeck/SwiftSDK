@@ -35,14 +35,19 @@ public final class TelemetryManagerConfiguration {
     /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
     public var defaultUser: String?
 
+    /// If `true`, sends a "newSessionBegan" Signal on each app foreground or cold launch
+    ///
+    /// Defaults to true. Set to false to prevent automatically sending this signal.
+    public var sendNewSessionBeganSignal: Bool = true
+
     /// A random identifier for the current user session.
     ///
     /// On iOS, tvOS, and watchOS, the session identifier will automatically update whenever your app returns from background, or if it is
     /// launched from cold storage. On other platforms, a new identifier will be generated each time your app launches. If you'd like
     /// more fine-grained session support, write a new random session identifier into this property each time a new session begins.
     ///
-    /// Beginning a new session automatically sends a "newSessionBegan" Signal.
-    public var sessionID = UUID() { didSet { TelemetryManager.send("newSessionBegan") } }
+    /// Beginning a new session automatically sends a "newSessionBegan" Signal if `sendNewSessionBeganSignal` is `true`
+    public var sessionID = UUID() { didSet { if sendNewSessionBeganSignal { TelemetryManager.send("newSessionBegan") } } }
 
     /// If `true`, sends signals even if your scheme's build configuration is set to Debug.
     ///
