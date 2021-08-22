@@ -102,6 +102,13 @@ extension SignalPayload {
         #if os(macOS)
             return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.patchVersion)"
         #elseif os(iOS)
+            if #available(iOS 14.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
+                var size = 0
+                sysctlbyname("kern.osproductversion", nil, &size, nil, 0)
+                var machine = [CChar](repeating: 0,  count: size)
+                sysctlbyname("kern.osproductversion", &machine, &size, nil, 0)
+                return "\(platform) \(String(cString: machine))"
+            }
             return "\(platform)  \(UIDevice.current.systemVersion)"
         #elseif os(watchOS)
             return "\(platform) \(WKInterfaceDevice.current().systemVersion)"
@@ -126,6 +133,13 @@ extension SignalPayload {
 
     /// The modelname as reported by systemInfo.machine
     static var modelName: String {
+        if #available(iOS 14.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
+            var size = 0
+            sysctlbyname("hw.model", nil, &size, nil, 0)
+            var machine = [CChar](repeating: 0,  count: size)
+            sysctlbyname("hw.model", &machine, &size, nil, 0)
+            return String(cString: machine)
+        }
         var systemInfo = utsname()
         uname(&systemInfo)
         let machineMirror = Mirror(reflecting: systemInfo.machine)
@@ -174,8 +188,7 @@ extension SignalPayload {
     }
 
     /// Based on the operating version reported by swift, but adding some smartness to better detect the actual
-    /// platform. Should correctly identify catalyst apps on macOS. Will probably not detect iOS apps running on
-    /// ARM based Macs.
+    /// platform. Should correctly identify catalyst apps and iOS apps on macOS.
     static var platform: String {
         #if os(macOS)
             return "macOS"
@@ -183,6 +196,9 @@ extension SignalPayload {
             #if targetEnvironment(macCatalyst)
                 return "macCatalyst"
             #else
+                if #available(iOS 14.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
+                    return "macOS"
+                }
                 return "iOS"
             #endif
         #elseif os(watchOS)
