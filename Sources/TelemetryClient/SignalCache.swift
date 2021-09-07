@@ -1,6 +1,6 @@
 import Foundation
 
-/// A local cache for signals to be sent to the AppTelemetry ingestion service
+/// A local cache for signals to be sent to the TelemetryDeck ingestion service
 ///
 /// There is no guarantee that Signals come out in the same order you put them in. This shouldn't matter though,
 /// since all Signals automatically get a `receivedAt` property with a date, allowing the server to reorder them
@@ -13,7 +13,7 @@ internal class SignalCache<T> where T: Codable {
     private var cachedSignals: [T] = []
     private let maximumNumberOfSignalsToPopAtOnce = 100
     
-    let queue = DispatchQueue(label: "apptelemetry-signal-cache", attributes: .concurrent)
+    let queue = DispatchQueue(label: "telemetrydeck-signal-cache", attributes: .concurrent)
     
     /// How many Signals are cached
     func count() -> Int {

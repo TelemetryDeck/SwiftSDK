@@ -63,7 +63,7 @@ public final class TelemetryManagerConfiguration {
         if let baseURL = baseURL {
             apiBaseURL = baseURL
         } else {
-            apiBaseURL = URL(string: "https://nom.apptelemetry.io")!
+            apiBaseURL = URL(string: "https://nom.telemetrydeck.io")!
         }
 
         #if os(iOS)
