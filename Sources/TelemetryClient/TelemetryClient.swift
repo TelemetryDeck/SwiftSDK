@@ -69,9 +69,13 @@ public final class TelemetryManagerConfiguration {
         #if os(iOS)
             NotificationCenter.default.addObserver(self, selector: #selector(didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
         #elseif os(watchOS)
+        if #available(watchOS 7.0, *) {
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
             }
+        } else {
+            // Pre watchOS 7.0, this library will not use multiple sessions after backgrounding since there are no notifications we can observe.
+        }
         #elseif os(tvOS)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
