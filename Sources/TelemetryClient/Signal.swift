@@ -57,9 +57,9 @@ extension SignalPayload {
             return [:]
         }
     }
-    
+
     func toMultiValueDimension() -> [String] {
-        return self.toDictionary().map { key, value in key.replacingOccurrences(of: ":", with: "_") + ":" + value }
+        return toDictionary().map { key, value in key.replacingOccurrences(of: ":", with: "_") + ":" + value }
     }
 }
 
@@ -105,7 +105,7 @@ extension SignalPayload {
             if #available(iOS 14.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
                 var size = 0
                 sysctlbyname("kern.osproductversion", nil, &size, nil, 0)
-                var machine = [CChar](repeating: 0,  count: size)
+                var machine = [CChar](repeating: 0, count: size)
                 sysctlbyname("kern.osproductversion", &machine, &size, nil, 0)
                 return "\(platform) \(String(cString: machine))"
             }
@@ -133,10 +133,10 @@ extension SignalPayload {
 
     /// The modelname as reported by systemInfo.machine
     static var modelName: String {
-        if #available(iOS 14.0, watchOS 7.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
+        if #available(iOS 14.0, watchOS 7.0, macOS 11, *), ProcessInfo.processInfo.isiOSAppOnMac {
             var size = 0
             sysctlbyname("hw.model", nil, &size, nil, 0)
-            var machine = [CChar](repeating: 0,  count: size)
+            var machine = [CChar](repeating: 0, count: size)
             sysctlbyname("hw.model", &machine, &size, nil, 0)
             return String(cString: machine)
         }
