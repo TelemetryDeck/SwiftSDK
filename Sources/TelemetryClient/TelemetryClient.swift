@@ -11,7 +11,7 @@ import Foundation
 #endif
 
 
-let TelemetryClientVersion = "SwiftClient 1.1.1"
+let TelemetryClientVersion = "SwiftClient 1.1.5"
 
 public typealias TelemetrySignalType = String
 
