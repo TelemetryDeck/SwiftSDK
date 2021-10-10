@@ -296,7 +296,7 @@ extension TelemetryError: LocalizedError {
     public var errorDescription: String? {
         switch self {
         case .InvalidStatusCode(let statusCode):
-            return "Invaid status code \(statusCode)"
+            return "Invalid status code \(statusCode)"
         case .Unauthorised:
             return "Unauthorized (401)"
         case .Forbidden:
