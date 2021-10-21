@@ -137,11 +137,7 @@ extension SignalPayload {
 
     /// The major system version, i.e. iOS 15
     static var majorSystemVersion: String {
-        #if os(macOS)
-            return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
-        #else
-            return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
-        #endif
+        return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
     }
 
     /// The Bundle Short Version String, as described in Info.plist
