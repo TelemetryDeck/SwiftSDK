@@ -13,23 +13,23 @@ import Foundation
 internal struct SignalPostBody: Codable, Equatable {
     /// When was this signal generated
     let receivedAt: Date
-    
+
     /// The App ID of this signal
     let appID: UUID
-    
+
     /// A user identifier. This should be hashed on the client, and will be hashed + salted again
     /// on the server to break any connection to personally identifiable data.
     let clientUser: String
-    
+
     /// A randomly generated session identifier. Should be the same over the course of the session
     let sessionID: String
-    
+
     /// A type name for this signal that describes the event that triggered the signal
     let type: String
-    
+
     /// Tags in the form "key:value" to attach to the signal
     let payload: [String]
-    
+
     /// If "true", mark the signal as a testing signal and only show it in a dedicated test mode UI
     let isTestMode: String
 }
@@ -37,6 +37,7 @@ internal struct SignalPostBody: Codable, Equatable {
 internal struct SignalPayload: Codable {
     var platform: String = Self.platform
     var systemVersion: String = Self.systemVersion
+    var majorSystemVersion: String = Self.majorSystemVersion
     var appVersion: String = Self.appVersion
     var buildNumber: String = Self.buildNumber
     var isSimulator: String = "\(Self.isSimulator)"
@@ -131,6 +132,15 @@ extension SignalPayload {
             return "\(platform) \(UIDevice.current.systemVersion)"
         #else
             return "\(platform)"
+        #endif
+    }
+
+    /// The major system version, i.e. iOS 15
+    static var majorSystemVersion: String {
+        #if os(macOS)
+            return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
+        #else
+            return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
         #endif
     }
 
