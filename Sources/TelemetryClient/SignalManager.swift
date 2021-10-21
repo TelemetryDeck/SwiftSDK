@@ -76,7 +76,9 @@ internal class SignalManager {
                 clientUser: sha256(str: clientUser ?? defaultUserIdentifier),
                 sessionID: configuration.sessionID.uuidString,
                 type: "\(signalType)",
-                payload: payLoad.toMultiValueDimension())
+                payload: payLoad.toMultiValueDimension(),
+                isTestMode: configuration.testMode ? "true" : "false"
+            )
             
             if configuration.showDebugLogs {
                 print("Process signal: \(signalPostBody)")

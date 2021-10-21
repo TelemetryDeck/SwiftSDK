@@ -49,10 +49,30 @@ public final class TelemetryManagerConfiguration {
     /// Beginning a new session automatically sends a "newSessionBegan" Signal if `sendNewSessionBeganSignal` is `true`
     public var sessionID = UUID() { didSet { if sendNewSessionBeganSignal { TelemetryManager.send("newSessionBegan") } } }
 
-    /// If `true`, sends signals even if your scheme's build configuration is set to Debug.
-    ///
-    /// Defaults to false, which only sends signals if your scheme's build configuration is set to Release.
+    @available(*, deprecated, message: "Please use the testMode property instead")
     public var sendSignalsInDebugConfiguration: Bool = false
+    
+    
+    /// If `true` any signals sent will be marked as *Testing* signals.
+    ///
+    /// Testing signals are only shown when your Telemetry Viewer App is in Testing mode. In live mode, they are ignored.
+    ///
+    /// By default, this is the same value as `DEBUG`, i.e. you'll be in Testing Mode when you develop and in live mode when
+    /// you release. You can manually override this, however.
+    public var testMode: Bool {
+        get {
+            if let testMode = _testMode { return testMode }
+            
+            #if DEBUG
+            return true
+            #else
+            return false
+            #endif
+        }
+        
+        set { _testMode = newValue }
+    }
+    private var _testMode: Bool?
 
     /// Log the current status to the signal cache to the console.
     public var showDebugLogs: Bool = false
@@ -143,15 +163,12 @@ public class TelemetryManager {
         configuration.sessionID = UUID()
     }
 
+    /// Send a Signal to TelemetryDeck, to record that an event has occurred.
+    ///
+    /// If you specify a user identifier here, it will take precedence over the default user identifier specified in the `TelemetryManagerConfiguration`.
+    ///
+    /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
-        // Do not send telemetry in DEBUG mode
-        #if DEBUG
-            if configuration.sendSignalsInDebugConfiguration == false {
-                print("[Telemetry] Debug is enabled, signal type \(signalType) will not be sent to server.")
-                return
-            }
-        #endif
-
         signalManager.processSignal(signalType, for: clientUser, with: additionalPayload, configuration: configuration)
     }
 
