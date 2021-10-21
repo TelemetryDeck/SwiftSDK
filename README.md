@@ -78,3 +78,7 @@ Telemetry Manager will automatically send a base payload with these keys:
 With each Signal, the client sends a hash of your user ID as well as a *session ID*. This gets automatically generated when the client is initialized, so if you do nothing, you'll get a new session each time your app is started from cold storage.
 
 On iOS, tvOS, and watchOS, the session identifier will automatically update whenever your app returns from background, or if it is launched from cold storage. On other platforms, a new identifier will be generated each time your app launches. If you'd like more fine-grained session support, write a new random session identifier into the `TelemetryManagerConfiguration`'s `sessionID` property each time a new session begins.
+
+## Developing this SDK
+
+Your PRs on TelemetryDeck's Swift Client are very much welcome. Check out the [SwiftClientTester](https://github.com/TelemetryDeck/SwiftClientTester) project, which provides a harness you can use to work on the library and try out new things.
