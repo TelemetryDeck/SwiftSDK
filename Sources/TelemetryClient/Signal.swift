@@ -38,6 +38,7 @@ internal struct SignalPayload: Codable {
     var platform: String = Self.platform
     var systemVersion: String = Self.systemVersion
     var majorSystemVersion: String = Self.majorSystemVersion
+    var majorMinorSystemVersion: String = Self.majorMinorSystemVersion
     var appVersion: String = Self.appVersion
     var buildNumber: String = Self.buildNumber
     var isSimulator: String = "\(Self.isSimulator)"
@@ -115,29 +116,17 @@ extension SignalPayload {
 
     /// The operating system and its version
     static var systemVersion: String {
-        #if os(macOS)
-            return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.patchVersion)"
-        #elseif os(iOS)
-            if #available(iOS 14.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
-                var size = 0
-                sysctlbyname("kern.osproductversion", nil, &size, nil, 0)
-                var machine = [CChar](repeating: 0, count: size)
-                sysctlbyname("kern.osproductversion", &machine, &size, nil, 0)
-                return "\(platform) \(String(cString: machine))"
-            }
-            return "\(platform)  \(UIDevice.current.systemVersion)"
-        #elseif os(watchOS)
-            return "\(platform) \(WKInterfaceDevice.current().systemVersion)"
-        #elseif os(tvOS)
-            return "\(platform) \(UIDevice.current.systemVersion)"
-        #else
-            return "\(platform)"
-        #endif
+        return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.patchVersion)"
     }
 
     /// The major system version, i.e. iOS 15
     static var majorSystemVersion: String {
         return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
+    }
+    
+    /// The major system version, i.e. iOS 15
+    static var majorMinorSystemVersion: String {
+        return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion)"
     }
 
     /// The Bundle Short Version String, as described in Info.plist
@@ -218,7 +207,7 @@ extension SignalPayload {
                 return "macCatalyst"
             #else
                 if #available(iOS 14.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
-                    return "macOS"
+                    return "isiOSAppOnMac"
                 }
                 return "iOS"
             #endif
