@@ -38,9 +38,8 @@ Then send signals like so:
 TelemetryManager.send("appLaunchedRegularly")
 ```
 
-## Debug Mode
-
-Telemetry Manager will *not* send any signals if your scheme's build configuration is set to "Debug", e.g if `#if DEBUG` would evaluate to `true`. You can override this by setting `configuration.sendSignalsInDebugConfiguration = true` on your `TelemetryManagerConfiguration` instance.
+## Debug -> Test Mode
+If your app's build configuration is set to "Debug", all signals sent will be marked as testing signals. In the Telemetry Viewer app, actvivate **Test Mode** to see those.
 
 
 ## User Identifiers
