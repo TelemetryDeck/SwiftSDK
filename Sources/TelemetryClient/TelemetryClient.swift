@@ -124,6 +124,13 @@ public class TelemetryManager {
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
+    
+    /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
+    ///
+    /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
+    public static func terminate() {
+        initializedTelemetryManager = nil
+    }
 
     public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
         TelemetryManager.shared.send(signalType, for: clientUser, with: additionalPayload)
