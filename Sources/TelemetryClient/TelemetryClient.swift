@@ -121,6 +121,11 @@ public final class TelemetryManagerConfiguration {
 ///
 /// Use an instance of `TelemetryManagerConfiguration` to configure this at initialization and during its lifetime.
 public class TelemetryManager {
+    /// Returns `true` when the TelemetryManager already has been initialized correctly, `false` otherwise.
+    public static var isInitialized: Bool {
+        initializedTelemetryManager != nil
+    }
+    
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
