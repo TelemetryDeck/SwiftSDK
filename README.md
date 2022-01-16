@@ -1,5 +1,9 @@
 # TelemetryClient
 
+This package allows you to send signals to [TelemetryDeck](https://telemetrydeck.com) from your Swift code. Sign up for a free account at telemetrydeck.com
+
+## Initialization
+
 Init the Telemetry Manager at app startup, so it knows your App ID (you can retrieve the App ID in the Telemetry Viewer app, under App Settings)
 
 ````swift
