@@ -193,8 +193,11 @@ private extension SignalManager {
             if configuration.showDebugLogs {
                 print(String(data: urlRequest.httpBody!, encoding: .utf8)!)
             }
-            
-            let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
+            /// Wait for connectivity
+            let config = URLSessionConfiguration.default
+            config.waitsForConnectivity = true
+            let session = URLSession(configuration: config)
+            let task = session.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
         }
     }
