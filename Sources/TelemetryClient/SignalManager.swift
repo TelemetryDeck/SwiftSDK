@@ -197,7 +197,7 @@ private extension SignalManager {
             let config = URLSessionConfiguration.default
             config.waitsForConnectivity = true
             let session = URLSession(configuration: config)
-            let task = session.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
+            let task = session.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
         }
     }
