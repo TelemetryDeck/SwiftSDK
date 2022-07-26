@@ -151,6 +151,7 @@ extension SignalPayload {
             return String(cString: machine)
         }
 
+        #if os(macOS)
         if #available(macOS 11, *) {
             let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
             var modelIdentifier: String?
@@ -166,6 +167,7 @@ extension SignalPayload {
                 return modelIdentifier
             }
         }
+        #endif
 
         var systemInfo = utsname()
         uname(&systemInfo)
