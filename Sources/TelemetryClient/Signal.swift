@@ -123,7 +123,7 @@ extension SignalPayload {
     static var majorSystemVersion: String {
         return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
     }
-    
+
     /// The major system version, i.e. iOS 15
     static var majorMinorSystemVersion: String {
         return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion)"
@@ -150,6 +150,23 @@ extension SignalPayload {
             sysctlbyname("hw.model", &machine, &size, nil, 0)
             return String(cString: machine)
         }
+
+        if #available(macOS 11, *) {
+            let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
+            var modelIdentifier: String?
+            
+            if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data {
+                if let modelIdentifierCString = String(data: modelData, encoding: .utf8)?.cString(using: .utf8) {
+                    modelIdentifier = String(cString: modelIdentifierCString)
+                }
+            }
+            
+            IOObjectRelease(service)
+            if let modelIdentifier = modelIdentifier {
+                return modelIdentifier
+            }
+        }
+
         var systemInfo = utsname()
         uname(&systemInfo)
         let machineMirror = Mirror(reflecting: systemInfo.machine)
