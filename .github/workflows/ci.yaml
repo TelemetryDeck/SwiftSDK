@@ -17,7 +17,7 @@ jobs:
       - name: Lint
         run: swiftlint
   test:
-    name: Test  ${{ matrix.platform }} using Xcode ${{ matrix.xcode }}
+    name: Test  ${{ matrix.platform }} ${{ matrix.sdk }} using Xcode ${{ matrix.xcode }}
     runs-on: "macos-latest"
     strategy:
       fail-fast: false
@@ -28,7 +28,7 @@ jobs:
         scheme: ["TelemetryClient"]
         command: ["test"]
         platform: ["macOS", "iOS"]
-        sdk: ["iphonesimulator14.5", "iphonesimulator15.2"]
+        sdk: ["iphonesimulator"]
     steps:
       - name: Repository checkout
         uses: actions/checkout@v2
@@ -37,4 +37,4 @@ jobs:
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build and Test
-        run: xcodebuild test -scheme TelemetryClient -sdk ${{ matrix.sdk }} -destination "name=iPhone 13 Mini"
+        run: xcodebuild test -scheme TelemetryClient -sdk ${{ matrix.sdk }} -destination "platform=iOS Simulator,name=iPhone 11"
