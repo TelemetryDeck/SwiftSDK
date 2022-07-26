@@ -3,12 +3,12 @@ import XCTest
 
 final class SignalPayloadTests: XCTestCase {
     func testIsSimulatorOrTestFlight() {
-        XCTAssertFalse(SignalPayload.isSimulatorOrTestFlight)
+        XCTAssertNoThrow(SignalPayload.isSimulatorOrTestFlight)
         print("isSimulatorOrTestFlight", SignalPayload.isSimulatorOrTestFlight)
     }
     
     func testIsSimulator() {
-        XCTAssertFalse(SignalPayload.isSimulator)
+        XCTAssertNoThrow(SignalPayload.isSimulator)
         print("isSimulator", SignalPayload.isSimulator)
     }
     
@@ -23,7 +23,7 @@ final class SignalPayloadTests: XCTestCase {
     }
     
     func testIsAppStore() {
-        XCTAssertTrue(SignalPayload.isAppStore)
+        XCTAssertNoThrow(SignalPayload.isAppStore)
         print("isAppStore", SignalPayload.isAppStore)
     }
     
