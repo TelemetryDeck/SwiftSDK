@@ -17,7 +17,7 @@ jobs:
       - name: Lint
         run: swiftlint
   test:
-    name: Test  ${{ matrix.platform }} using Xcode ${{ matrix.xcode }}
+    name: Test ${{ matrix.xcodebuildCommand }} using Xcode ${{ matrix.xcode }}
     runs-on: "macos-latest"
     strategy:
       fail-fast: false
@@ -25,24 +25,11 @@ jobs:
         xcode:
           - ^12
           - ^13
-        scheme: ["TelemetryClient"]
-        command: ["test"]
-        sdk: [iphonesimulator]
-        destination: ["platform=iOS Simulator,name=iPhone 11"]
-        platform: ["iOS", "macOS", "tvOS", "watchOS"]
-        include:
-          - platform: iOS
-            sdk: iphonesimulator
-            destination: "platform=iOS Simulator,name=iPhone 11"
-          - platform: macOS
-            sdk: macosx
-            destination: "platform=macOS"
-          - platform: tvOS
-            sdk: appletvsimulator
-            destination: "platform=tvOS Simulator,name=Apple TV 4K (2nd generation)"
-          - platform: watchOS
-            sdk: watchsimulator
-            destination: "platform=watchOS Simulator,name=Apple Watch Series 6 - 44mm"
+        xcodebuildCommand:
+          - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 11'"
+          - "-sdk macosx -destination 'platform=macOS'"
+          - "-sdk appletvsimulator -destination 'platform=tvOS Simulator,name=Apple TV 4K (2nd generation)'"
+          - "-sdk watchsimulator -destination 'platform=name=Apple Watch Series 6 - 44mm'"
     steps:
       - name: Repository checkout
         uses: actions/checkout@v2
@@ -51,4 +38,4 @@ jobs:
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build and Test
-        run: xcodebuild test -scheme TelemetryClient -sdk ${{ matrix.sdk }} -destination "${{ matrix.destination }}"
+        run: xcodebuild test -scheme TelemetryClient {{ matrix.xcodebuildCommand }}
