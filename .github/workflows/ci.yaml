@@ -28,6 +28,7 @@ jobs:
         scheme: ["TelemetryClient"]
         command: ["test"]
         platform: ["macOS", "iOS"]
+        sdk: ["iphoneos15.5"]
     steps:
       - name: Repository checkout
         uses: actions/checkout@v2
@@ -36,4 +37,4 @@ jobs:
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build and Test
-        run: xcodebuild test -scheme TelemetryClient -sdk iphonesimulator15.0 -destination "OS=15.0,name=iPhone 13 Mini"
+        run: xcodebuild test -scheme TelemetryClient -sdk ${{ matrix.sdk }} -destination "name=iPhone 13 Mini"
