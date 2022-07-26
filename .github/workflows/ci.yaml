@@ -23,7 +23,6 @@ jobs:
       fail-fast: true
       matrix:
         xcode:
-          - ^11
           - ^12
           - ^13
         macos: ["macos-11"]
