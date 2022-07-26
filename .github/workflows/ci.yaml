@@ -29,13 +29,13 @@ jobs:
         command: ["test"]
         sdk: [iphonesimulator]
         destination: ["platform=iOS Simulator,name=iPhone 11"]
-        platform: ["iOS"]
+        platform: ["iOS", "macOS", "tvOS", "watchOS"]
         include:
           - platform: iOS
             sdk: iphonesimulator
             destination: "platform=iOS Simulator,name=iPhone 11"
           - platform: macOS
-            sdk: macos
+            sdk: macosx
             destination: "platform=macOS"
           - platform: tvOS
             sdk: appletvsimulator
@@ -50,7 +50,5 @@ jobs:
         uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: ${{ matrix.xcode }}
-      - name: Show SDKs
-        run: xcodebuild -showsdks
       - name: Build and Test
         run: xcodebuild test -scheme TelemetryClient -sdk ${{ matrix.sdk }} -destination "${{ matrix.destination }}"
