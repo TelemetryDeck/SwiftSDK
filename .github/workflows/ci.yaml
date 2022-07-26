@@ -37,4 +37,4 @@ jobs:
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build and Test
-        run: xcodebuild test -scheme TelemetryClient -sdk ${{ matrix.sdk }} -destination "name=iPhone 13 Mini"
+        run: xcodebuild -showsdks
