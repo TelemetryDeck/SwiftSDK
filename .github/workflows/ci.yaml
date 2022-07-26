@@ -27,8 +27,9 @@ jobs:
           - ^13
         scheme: ["TelemetryClient"]
         command: ["test"]
-        sdk: []
-        destionation: []
+        sdk: [iphonesimulator]
+        destination: ["platform=iOS Simulator,name=iPhone 11"]
+        platform: ["iOS"]
         include:
           - platform: iOS
             sdk: iphonesimulator
