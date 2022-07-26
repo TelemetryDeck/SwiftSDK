@@ -10,7 +10,6 @@ import Foundation
     import TVUIKit
 #endif
 
-
 let TelemetryClientVersion = "SwiftClient 1.1.5"
 
 public typealias TelemetrySignalType = String
@@ -51,8 +50,7 @@ public final class TelemetryManagerConfiguration {
 
     @available(*, deprecated, message: "Please use the testMode property instead")
     public var sendSignalsInDebugConfiguration: Bool = false
-    
-    
+
     /// If `true` any signals sent will be marked as *Testing* signals.
     ///
     /// Testing signals are only shown when your Telemetry Viewer App is in Testing mode. In live mode, they are ignored.
@@ -62,14 +60,14 @@ public final class TelemetryManagerConfiguration {
     public var testMode: Bool {
         get {
             if let testMode = _testMode { return testMode }
-            
+
             #if DEBUG
             return true
             #else
             return false
             #endif
         }
-        
+
         set { _testMode = newValue }
     }
     private var _testMode: Bool?
@@ -125,11 +123,11 @@ public class TelemetryManager {
     public static var isInitialized: Bool {
         initializedTelemetryManager != nil
     }
-    
+
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
-    
+
     /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
     ///
     /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.

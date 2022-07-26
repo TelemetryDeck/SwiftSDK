@@ -12,17 +12,17 @@ import TVUIKit
 
 internal class SignalManager {
     private let minimumWaitTimeBetweenRequests: Double = 10 // seconds
-    
+
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
     private var sendTimer: Timer?
-    
+
     init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
-        
+
         // We automatically load any old signals from disk on initialisation
         signalCache = SignalCache(showDebugLogs: configuration.showDebugLogs)
-        
+
         // Before the app terminates, we want to save any pending signals to disk
         // We need to monitor different notifications for different devices.
         // macOS - We can simply wait for the app to terminate at which point we get enough time to save the cache
@@ -49,26 +49,26 @@ internal class SignalManager {
             NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
         }
         #endif
-        
+
         startTimer()
     }
-    
+
     /// Setup a timer to send the Signals
     private func startTimer() {
         sendTimer?.invalidate()
-        
+
         sendTimer = Timer.scheduledTimer(timeInterval: minimumWaitTimeBetweenRequests, target: self, selector: #selector(checkForSignalsAndSend), userInfo: nil, repeats: true)
-        
+
         // Fire the timer to attempt to send any cached Signals from a previous session
         checkForSignalsAndSend()
     }
-    
+
     /// Adds a signal to the process queue
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
         DispatchQueue.global(qos: .utility).async { [self] in
 
             let payLoad = SignalPayload(additionalPayload: additionalPayload)
-            
+
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
                 appID: UUID(uuidString: configuration.telemetryAppID)!,
@@ -78,15 +78,15 @@ internal class SignalManager {
                 payload: payLoad.toMultiValueDimension(),
                 isTestMode: configuration.testMode ? "true" : "false"
             )
-            
+
             if configuration.showDebugLogs {
                 print("Process signal: \(signalPostBody)")
             }
-            
+
             signalCache.push(signalPostBody)
         }
     }
-    
+
     /// Send signals once we have more than the minimum.
     /// If any fail to send, we put them back into the cache to send later.
     @objc
@@ -94,14 +94,14 @@ internal class SignalManager {
         if configuration.showDebugLogs {
             print("Current signal cache count: \(signalCache.count())")
         }
-        
+
         let queuedSignals: [SignalPostBody] = signalCache.pop()
         if !queuedSignals.isEmpty {
             if configuration.showDebugLogs {
                 print("Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
             }
             send(queuedSignals) { [unowned self] data, response, error in
-                
+
                 if let error = error {
                     if configuration.showDebugLogs {
                         print(error)
@@ -110,7 +110,7 @@ internal class SignalManager {
                     self.signalCache.push(queuedSignals)
                     return
                 }
-                
+
                 // Check for valid status code response
                 guard response?.statusCodeError() == nil else {
                     let statusError = response!.statusCodeError()!
@@ -121,7 +121,7 @@ internal class SignalManager {
                     self.signalCache.push(queuedSignals)
                     return
                 }
-                
+
                 if let data = data {
                     if configuration.showDebugLogs {
                         print(String(data: data, encoding: .utf8)!)
@@ -139,10 +139,10 @@ private extension SignalManager {
         if configuration.showDebugLogs {
             print(#function)
         }
-        
+
         signalCache.backupCache()
     }
-    
+
     /// WatchOS doesn't have a notification before it's killed, so we have to use background/foreground
     /// This means our `init()` above doesn't always run when coming back to foreground, so we have to manually
     /// reload the cache. This also means we miss any signals sent during watchDidEnterForeground
@@ -152,25 +152,25 @@ private extension SignalManager {
         if configuration.showDebugLogs {
             print(#function)
         }
-        
+
         let currentCache = signalCache.pop()
         if configuration.showDebugLogs {
             print("current cache is \(currentCache.count) signals")
         }
         signalCache = SignalCache(showDebugLogs: configuration.showDebugLogs)
         signalCache.push(currentCache)
-        
+
         startTimer()
     }
-    
+
     @objc func didEnterBackground() {
         if configuration.showDebugLogs {
             print(#function)
         }
-        
+
         sendTimer?.invalidate()
         sendTimer = nil
-        
+
         signalCache.backupCache()
     }
     #endif
@@ -210,7 +210,7 @@ private extension SignalManager {
     /// your user yourself.
     var defaultUserIdentifier: String {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
-        
+
         #if os(iOS)
         return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
         #elseif os(watchOS)
@@ -236,7 +236,7 @@ private extension URLResponse {
         }
         return nil
     }
-    
+
     /// Returns an `Error` if not a valid statusCode
     func statusCodeError() -> Error? {
         // Check for valid response in the 200-299 range

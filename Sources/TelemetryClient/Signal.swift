@@ -69,8 +69,7 @@ extension SignalPayload {
             dict?.removeValue(forKey: "additionalPayload")
             // Add the additionalPayload as new key/value pairs
             return dict?.merging(additionalPayload, uniquingKeysWith: { _, last in last }) as? [String: String] ?? [:]
-        }
-        catch {
+        } catch {
             return [:]
         }
     }
@@ -154,13 +153,13 @@ extension SignalPayload {
         if #available(macOS 11, *) {
             let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
             var modelIdentifier: String?
-            
+
             if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data {
                 if let modelIdentifierCString = String(data: modelData, encoding: .utf8)?.cString(using: .utf8) {
                     modelIdentifier = String(cString: modelIdentifierCString)
                 }
             }
-            
+
             IOObjectRelease(service)
             if let modelIdentifier = modelIdentifier {
                 return modelIdentifier
