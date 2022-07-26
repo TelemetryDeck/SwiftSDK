@@ -20,7 +20,7 @@ jobs:
     name: ${{ matrix.command }} on  ${{ matrix.platform }} (xcode ${{ matrix.xcode }}, ${{ matrix.macos }})
     runs-on: ${{ matrix.macos }}
     strategy:
-      fail-fast: true
+      fail-fast: false
       matrix:
         xcode:
           - ^12
@@ -32,10 +32,12 @@ jobs:
     steps:
       - name: Repository checkout
         uses: actions/checkout@v2
-      - uses: maxim-lobanov/setup-xcode@v1
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: ${{ matrix.xcode }}
-      - uses: mxcl/xcodebuild@v1
+      - name: Build and Test
+        uses: mxcl/xcodebuild@v1
         with:
           platform: ${{ matrix.platform }}
           scheme: ${{ matrix.scheme }}
