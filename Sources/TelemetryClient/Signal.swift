@@ -4,6 +4,7 @@ import Foundation
     import UIKit
 #elseif os(macOS)
     import AppKit
+    import IOKit
 #elseif os(watchOS)
     import WatchKit
 #elseif os(tvOS)
