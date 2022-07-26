@@ -17,7 +17,7 @@ jobs:
       - name: Lint
         run: swiftlint
   test:
-    name: Test ${{ matrix.xcodebuildCommand }} using Xcode ${{ matrix.xcode }}
+    name: Test Xcode ${{ matrix.xcode }} - ${{ matrix.xcodebuildCommand }}
     runs-on: "macos-latest"
     strategy:
       fail-fast: false
@@ -38,4 +38,4 @@ jobs:
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build and Test
-        run: xcodebuild test -scheme TelemetryClient {{ matrix.xcodebuildCommand }}
+        run: xcodebuild test -scheme TelemetryClient ${{ matrix.xcodebuildCommand }}
