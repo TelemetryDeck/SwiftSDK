@@ -1,4 +1,4 @@
-name: CI
+name: Test and Lint
 
 on:
   push:
@@ -6,19 +6,21 @@ on:
   pull_request:
     branches:
       - "*"
+
 jobs:
-  unit_tests:
-    runs-on: macos-latest
+  build:
+    name: Swift ${{ matrix.swift }} on ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        swift: ["5.2", "5.3", "5.4", "5.5", "5.6"]
+    runs-on: ${{ matrix.os }}
     steps:
-      - name: Repository checkout
-        uses: actions/checkout@v2
-      - name: Lint
-        run: swiftlint
-      - name: Build for macOS
-        run: swift build -v
-      - name: Run macOS tests
-        run: swift test -v
-      - name: Build for iOS
-        run: set -o pipefail && env NSUnbufferedIO=YES xcodebuild build-for-testing -scheme IndexedDataStore -destination "platform=iOS Simulator,OS=latest,name=iPhone 12" | xcpretty
-      - name: Run iOS tests
-        run: set -o pipefail && env NSUnbufferedIO=YES xcodebuild test-without-building -scheme IndexedDataStore -destination "platform=iOS Simulator,OS=latest,name=iPhone 12" | xcpretty
+      - uses: fwal/setup-swift@2040b795e5c453c3a05fcb8316496afc8a74f192
+        with:
+          swift-version: ${{ matrix.swift }}
+      - uses: actions/checkout@v3
+      - name: Build
+        run: swift build
+      - name: Run tests
+        run: swift test
