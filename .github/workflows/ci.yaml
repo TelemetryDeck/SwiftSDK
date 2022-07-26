@@ -17,18 +17,17 @@ jobs:
       - name: Lint
         run: swiftlint
   test:
-    name: ${{ matrix.command }} on  ${{ matrix.platform }} (xcode ${{ matrix.xcode }}, ${{ matrix.macos }})
-    runs-on: ${{ matrix.macos }}
+    name: Test  ${{ matrix.platform }} using Xcode ${{ matrix.xcode }}
+    runs-on: "macos-latest"
     strategy:
       fail-fast: false
       matrix:
         xcode:
-          - ^14
+          - ^12
           - ^13
-        macos: ["macos-11"]
         scheme: ["TelemetryClient"]
         command: ["test"]
-        platform: ["macOS", "iOS", "tvOS", "watchOS", "mac-catalyst"]
+        platform: ["macOS", "iOS"]
     steps:
       - name: Repository checkout
         uses: actions/checkout@v2
@@ -37,13 +36,4 @@ jobs:
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build and Test
-        uses: mxcl/xcodebuild@v1
-        with:
-          platform: ${{ matrix.platform }}
-          scheme: ${{ matrix.scheme }}
-          action: ${{ matrix.command }}
-          code-coverage: false
-          verbosity: xcpretty
-          upload-logs: always
-          sdk: "iphonesimulator15.0"
-          destination: "OS=15.0,name=iPhone 13 Mini"
+        run: xcodebuild test -scheme TelemetryClient -sdk iphonesimulator15.0 -destination "OS=15.0,name=iPhone 13 Mini"
