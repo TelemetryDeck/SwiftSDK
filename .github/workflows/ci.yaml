@@ -23,7 +23,7 @@ jobs:
       fail-fast: false
       matrix:
         xcode:
-          - ^12
+          - ^14
           - ^13
         macos: ["macos-11"]
         scheme: ["TelemetryClient"]
@@ -45,3 +45,5 @@ jobs:
           code-coverage: false
           verbosity: xcpretty
           upload-logs: always
+          sdk: "iphonesimulator15.0"
+          destination: "OS=15.0,name=iPhone 13 Mini"
