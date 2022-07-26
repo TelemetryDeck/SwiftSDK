@@ -20,9 +20,12 @@ jobs:
     name: ${{ matrix.command }} on  ${{ matrix.platform }} (xcode ${{ matrix.xcode }}, ${{ matrix.macos }})
     runs-on: ${{ matrix.macos }} #os switching
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
-        xcode: ["13.0", "12.5.1", "latest"]
+        xcode:
+          - ^11
+          - ^12
+          - ^13
         macos: ["macos-11"]
         scheme: ["TelemetryClient"]
         command: ["test"]
@@ -31,11 +34,11 @@ jobs:
       - uses: maxim-lobanov/setup-xcode@v1
         with:
           xcode-version: ${{ matrix.xcode }}
-      - uses: mxcl/xcodebuild@v1.9.2
+      - uses: mxcl/xcodebuild@v1
         with:
           platform: ${{ matrix.platform }}
           scheme: ${{ matrix.scheme }}
           action: ${{ matrix.command }}
-          code-coverage: true
+          code-coverage: false
           verbosity: xcpretty
           upload-logs: always
