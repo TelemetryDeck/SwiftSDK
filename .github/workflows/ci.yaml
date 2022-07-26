@@ -41,7 +41,7 @@ jobs:
             destination: "platform=tvOS Simulator,name=Apple TV 4K (2nd generation)"
           - platform: watchOS
             sdk: watchsimulator
-            destination: "platform=watchOS Simulator,name=Apple Watch Series 7 - 41mm"
+            destination: "platform=watchOS Simulator,name=Apple Watch Series 6 - 44mm"
     steps:
       - name: Repository checkout
         uses: actions/checkout@v2
