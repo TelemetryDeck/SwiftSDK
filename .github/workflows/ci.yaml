@@ -27,6 +27,8 @@ jobs:
           - ^13
         scheme: ["TelemetryClient"]
         command: ["test"]
+        sdk: []
+        destionation: []
         include:
           - platform: iOS
             sdk: iphonesimulator
