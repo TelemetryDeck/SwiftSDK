@@ -20,10 +20,9 @@ jobs:
     name: Test Xcode ${{ matrix.xcode }} - ${{ matrix.xcodebuildCommand }}
     runs-on: "macos-latest"
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         xcode:
-          - ^11
           - ^12
           - ^13
         xcodebuildCommand:
