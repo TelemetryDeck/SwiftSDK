@@ -23,7 +23,7 @@ final class SignalPayloadTests: XCTestCase {
     }
     
     func testIsAppStore() {
-        XCTAssertNoThrow(SignalPayload.isAppStore)
+        XCTAssertFalse(SignalPayload.isAppStore)
         print("isAppStore", SignalPayload.isAppStore)
     }
     

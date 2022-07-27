@@ -111,7 +111,25 @@ extension SignalPayload {
     }
 
     static var isAppStore: Bool {
-        !isSimulatorOrTestFlight
+        #if DEBUG
+            return false
+        #endif
+
+        #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+            return false
+        #endif
+
+        #if targetEnvironment(simulator)
+            return false
+        #else
+
+            if let appStoreReceiptURL = Bundle.main.appStoreReceiptURL, appStoreReceiptURL.lastPathComponent == "sandboxReceipt" {
+                return true
+            } else {
+                return false
+            }
+
+        #endif
     }
 
     /// The operating system and its version
@@ -152,21 +170,21 @@ extension SignalPayload {
         }
 
         #if os(macOS)
-        if #available(macOS 11, *) {
-            let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
-            var modelIdentifier: String?
+            if #available(macOS 11, *) {
+                let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
+                var modelIdentifier: String?
 
-            if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data {
-                if let modelIdentifierCString = String(data: modelData, encoding: .utf8)?.cString(using: .utf8) {
-                    modelIdentifier = String(cString: modelIdentifierCString)
+                if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data {
+                    if let modelIdentifierCString = String(data: modelData, encoding: .utf8)?.cString(using: .utf8) {
+                        modelIdentifier = String(cString: modelIdentifierCString)
+                    }
+                }
+
+                IOObjectRelease(service)
+                if let modelIdentifier = modelIdentifier {
+                    return modelIdentifier
                 }
             }
-
-            IOObjectRelease(service)
-            if let modelIdentifier = modelIdentifier {
-                return modelIdentifier
-            }
-        }
         #endif
 
         var systemInfo = utsname()
