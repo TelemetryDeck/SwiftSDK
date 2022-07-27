@@ -9,12 +9,12 @@ import Foundation
 /// Currently the cache is only in-memory. This will probably change in the near future.
 internal class SignalCache<T> where T: Codable {
     public var showDebugLogs: Bool = false
-    
+
     private var cachedSignals: [T] = []
     private let maximumNumberOfSignalsToPopAtOnce = 100
-    
+
     let queue = DispatchQueue(label: "telemetrydeck-signal-cache", attributes: .concurrent)
-    
+
     /// How many Signals are cached
     func count() -> Int {
         queue.sync(flags: .barrier) {
@@ -42,16 +42,16 @@ internal class SignalCache<T> where T: Codable {
     /// (e.g. sending them to a server) you should reinsert them into the cache with the `push` function.
     func pop() -> [T] {
         var poppedSignals: [T]!
-        
+
         queue.sync {
             let sliceSize = min(maximumNumberOfSignalsToPopAtOnce, cachedSignals.count)
             poppedSignals = Array(cachedSignals[..<sliceSize])
             cachedSignals.removeFirst(sliceSize)
         }
-        
+
         return poppedSignals
     }
-    
+
     private func fileURL() -> URL {
         let cacheFolderURL = try! FileManager.default.url(
             for: .cachesDirectory,
@@ -59,10 +59,10 @@ internal class SignalCache<T> where T: Codable {
             appropriateFor: nil,
             create: false
         )
-        
+
         return cacheFolderURL.appendingPathComponent("telemetrysignalcache")
     }
-    
+
     /// Save the entire signal cache to disk
     func backupCache() {
         queue.sync {
@@ -82,11 +82,11 @@ internal class SignalCache<T> where T: Codable {
             }
         }
     }
-    
+
     /// Loads any previous signal cache from disk
     init(showDebugLogs: Bool) {
         self.showDebugLogs = showDebugLogs
-        
+
         queue.sync {
             if showDebugLogs {
                 print("Loading Telemetry cache from: \(fileURL())")
@@ -94,7 +94,7 @@ internal class SignalCache<T> where T: Codable {
             if let data = try? Data(contentsOf: fileURL()) {
                 // Loaded cache file, now delete it to stop it being loaded multiple times
                 try? FileManager.default.removeItem(at: fileURL())
-                
+
                 // Decode the data into a new cache
                 if let signals = try? JSONDecoder().decode([T].self, from: data) {
                     if showDebugLogs {

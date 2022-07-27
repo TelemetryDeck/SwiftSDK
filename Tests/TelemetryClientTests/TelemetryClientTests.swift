@@ -3,11 +3,7 @@ import XCTest
 
 final class TelemetryClientTests: XCTestCase {
     
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct
-        // results.
-        XCTAssertEqual("Hello, World!", "Hello, World!")
+    func testSending() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
         let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)

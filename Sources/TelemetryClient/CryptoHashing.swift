@@ -7,8 +7,10 @@ import Foundation
 /// A wrapper for crypto hash algorithms.
 enum CryptoHashing {
     /// Returns a String representation of the SHA256 digest created with Apples CryptoKit library if available, else falls back to the ``commonCryptoSha256(strData:)`` function.
-    /// [CryptoKit](https://developer.apple.com/documentation/cryptokit) is Apples modern, safe & performant crypto library that should be preferred where available.
-    /// [CommonCrypto](https://github.com/apple-oss-distributions/CommonCrypto) provides compatibility with older OS versions, apps built with Xcode versions lower than 11 and non-Apple platforms like Linux.
+    /// [CryptoKit](https://developer.apple.com/documentation/cryptokit) is Apples modern, safe & performant crypto library that
+    /// should be preferred where available.
+    /// [CommonCrypto](https://github.com/apple-oss-distributions/CommonCrypto) provides compatibility with older OS versions,
+    /// apps built with Xcode versions lower than 11 and non-Apple platforms like Linux.
     static func sha256(str: String) -> String {
         if let strData = str.data(using: String.Encoding.utf8) {
             #if canImport(CryptoKit)
