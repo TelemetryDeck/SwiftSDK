@@ -65,14 +65,13 @@ internal class SignalManager {
 
     /// Adds a signal to the process queue
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
-        DispatchQueue.global(qos: .utility).async { [self] in
-
+        DispatchQueue.global(qos: .utility).async {
             let payLoad = SignalPayload(additionalPayload: additionalPayload)
 
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
                 appID: UUID(uuidString: configuration.telemetryAppID)!,
-                clientUser: CryptoHashing.sha256(str: clientUser ?? defaultUserIdentifier, salt: configuration.salt),
+                clientUser: CryptoHashing.sha256(str: clientUser ?? self.defaultUserIdentifier, salt: configuration.salt),
                 sessionID: configuration.sessionID.uuidString,
                 type: "\(signalType)",
                 payload: payLoad.toMultiValueDimension(),
@@ -83,7 +82,7 @@ internal class SignalManager {
                 print("Process signal: \(signalPostBody)")
             }
 
-            signalCache.push(signalPostBody)
+            self.signalCache.push(signalPostBody)
         }
     }
 
@@ -103,7 +102,7 @@ internal class SignalManager {
             send(queuedSignals) { [unowned self] data, response, error in
 
                 if let error = error {
-                    if configuration.showDebugLogs {
+                    if self.configuration.showDebugLogs {
                         print(error)
                     }
                     // The send failed, put the signal back into the queue
@@ -114,7 +113,7 @@ internal class SignalManager {
                 // Check for valid status code response
                 guard response?.statusCodeError() == nil else {
                     let statusError = response!.statusCodeError()!
-                    if configuration.showDebugLogs {
+                    if self.configuration.showDebugLogs {
                         print(statusError)
                     }
                     // The send failed, put the signal back into the queue
@@ -123,7 +122,7 @@ internal class SignalManager {
                 }
 
                 if let data = data {
-                    if configuration.showDebugLogs {
+                    if self.configuration.showDebugLogs {
                         print(String(data: data, encoding: .utf8)!)
                     }
                 }
@@ -180,16 +179,16 @@ private extension SignalManager {
 
 private extension SignalManager {
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
-        DispatchQueue.global(qos: .utility).async { [self] in
-            let path = "/api/v1/apps/\(configuration.telemetryAppID)/signals/multiple/"
-            let url = configuration.apiBaseURL.appendingPathComponent(path)
+        DispatchQueue.global(qos: .utility).async {
+            let path = "/api/v1/apps/\(self.configuration.telemetryAppID)/signals/multiple/"
+            let url = self.configuration.apiBaseURL.appendingPathComponent(path)
 
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
             urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
-            if configuration.showDebugLogs {
+            if self.configuration.showDebugLogs {
                 print(String(data: urlRequest.httpBody!, encoding: .utf8)!)
             }
             /// Wait for connectivity
