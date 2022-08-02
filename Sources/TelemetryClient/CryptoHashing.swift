@@ -11,8 +11,8 @@ enum CryptoHashing {
     /// should be preferred where available.
     /// [CommonCrypto](https://github.com/apple-oss-distributions/CommonCrypto) provides compatibility with older OS versions,
     /// apps built with Xcode versions lower than 11 and non-Apple platforms like Linux.
-    static func sha256(str: String) -> String {
-        if let strData = str.data(using: String.Encoding.utf8) {
+    static func sha256(str: String, salt: String) -> String {
+        if let strData = (str + salt).data(using: String.Encoding.utf8) {
             #if canImport(CryptoKit)
                 if #available(iOS 13.0, macOS 10.15, tvOS 13.0, watchOS 6.0, *) {
                     let digest = SHA256.hash(data: strData)

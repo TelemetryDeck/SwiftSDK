@@ -26,6 +26,15 @@ public final class TelemetryManagerConfiguration {
     /// The domain to send signals to. Defaults to the default Telemetry API server.
     /// (Don't change this unless you know exactly what you're doing)
     public let apiBaseURL: URL
+    
+    /// This string will be appended to to all user identifiers before hashing them.
+    ///
+    /// Set the salt to a random string of 64 letters, integers and special characters to prevent the unlikely
+    /// possibility of uncovering the original user identifiers through calculation.
+    ///
+    /// Note: Once you set the salt, it should not change. If you change the salt, every single one of your
+    /// user identifers wll be different, so even existing users will look like new users to TelemetryDeck.
+    public let salt: String
 
     /// Instead of specifying a user identifier with each `send` call, you can set your user's name/email/identifier here and
     /// it will be sent with every signal from now on.
@@ -75,13 +84,19 @@ public final class TelemetryManagerConfiguration {
     /// Log the current status to the signal cache to the console.
     public var showDebugLogs: Bool = false
 
-    public init(appID: String, baseURL: URL? = nil) {
+    public init(appID: String, salt: String? = nil, baseURL: URL? = nil) {
         telemetryAppID = appID
 
         if let baseURL = baseURL {
             apiBaseURL = baseURL
         } else {
             apiBaseURL = URL(string: "https://nom.telemetrydeck.com")!
+        }
+        
+        if let salt = salt {
+            self.salt = salt
+        } else {
+            self.salt = ""
         }
 
         #if os(iOS)
