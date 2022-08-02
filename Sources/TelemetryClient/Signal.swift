@@ -164,7 +164,7 @@ extension SignalPayload {
     /// The modelname as reported by systemInfo.machine
     static var modelName: String {
         #if os(iOS) || os(macOS)
-            if #available(iOS 14.0, macOS 11, *) {
+            if #available(iOS 14.0, macOS 11) {
                 if ProcessInfo.processInfo.isiOSAppOnMac {
                     var size = 0
                     sysctlbyname("hw.model", nil, &size, nil, 0)
