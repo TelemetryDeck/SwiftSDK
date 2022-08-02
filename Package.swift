@@ -7,8 +7,8 @@ let package = Package(
     name: "TelemetryClient",
     platforms: [
         .macOS(.v10_13),
-        .iOS(.v13),
-        .watchOS(.v6),
+        .iOS(.v12),
+        .watchOS(.v5),
         .tvOS(.v13)
     ],
     products: [
