@@ -163,16 +163,6 @@ extension SignalPayload {
 
     /// The modelname as reported by systemInfo.machine
     static var modelName: String {
-        
-        
-        #if !os(watchOS)
-            if #available(iOS 14.0, macOS 11, *) {
-              if ProcessInfo.processInfo.isiOSAppOnMac { return "iosONMAc" }
-            }
-        #endif
-        
-        
-        
         #if os(iOS)
             if #available(iOS 14.0, *) {
                 if ProcessInfo.processInfo.isiOSAppOnMac {
