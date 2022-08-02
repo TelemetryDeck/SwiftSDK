@@ -7,10 +7,10 @@ import CryptoKit
 final class CryptoHashingTests: XCTestCase {
    #if canImport(CryptoKit)
    func testCryptoKitAndCommonCryptoHaveSameDigestStringResults() {
-      let stringToHash = "I ... can't be a wizard. I'm just Harry – just Harry!"
+      let stringToHash = "how do i get cowboy paint off a dog ."
       let dataToHash = stringToHash.data(using: .utf8)!
 
-      let expectedDigestString = "a83adf48122e22cf86cd139b846a5b3fa486982d3bb13413a6f46efa078edfa5"
+      let expectedDigestString = "5b8fab7cf45fcece0e99a05950611b7b355917e4fb6daa73fd3d7590764fa53b"
 
       XCTAssertEqual(expectedDigestString, CryptoHashing.sha256(str: stringToHash))
       XCTAssertEqual(expectedDigestString, CryptoHashing.commonCryptoSha256(strData: dataToHash))

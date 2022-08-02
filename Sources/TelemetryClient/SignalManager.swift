@@ -72,7 +72,7 @@ internal class SignalManager {
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
                 appID: UUID(uuidString: configuration.telemetryAppID)!,
-                clientUser: CryptoHashing.sha256(str: clientUser ?? defaultUserIdentifier),
+                clientUser: CryptoHashing.sha256(str: (clientUser ?? defaultUserIdentifier) + configuration.salt),
                 sessionID: configuration.sessionID.uuidString,
                 type: "\(signalType)",
                 payload: payLoad.toMultiValueDimension(),
