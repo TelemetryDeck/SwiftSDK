@@ -10,7 +10,7 @@ import Foundation
     import TVUIKit
 #endif
 
-let TelemetryClientVersion = "SwiftClient 1.1.5"
+let TelemetryClientVersion = "SwiftClient 1.2.0"
 
 public typealias TelemetrySignalType = String
 
