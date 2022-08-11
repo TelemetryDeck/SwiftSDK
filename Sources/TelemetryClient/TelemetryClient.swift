@@ -26,7 +26,7 @@ public final class TelemetryManagerConfiguration {
     /// The domain to send signals to. Defaults to the default Telemetry API server.
     /// (Don't change this unless you know exactly what you're doing)
     public let apiBaseURL: URL
-    
+
     /// This string will be appended to to all user identifiers before hashing them.
     ///
     /// Set the salt to a random string of 64 letters, integers and special characters to prevent the unlikely
@@ -71,14 +71,15 @@ public final class TelemetryManagerConfiguration {
             if let testMode = _testMode { return testMode }
 
             #if DEBUG
-            return true
+                return true
             #else
-            return false
+                return false
             #endif
         }
 
         set { _testMode = newValue }
     }
+
     private var _testMode: Bool?
 
     /// Log the current status to the signal cache to the console.
@@ -92,7 +93,7 @@ public final class TelemetryManagerConfiguration {
         } else {
             apiBaseURL = URL(string: "https://nom.telemetrydeck.com")!
         }
-        
+
         if let salt = salt {
             self.salt = salt
         } else {
@@ -102,13 +103,13 @@ public final class TelemetryManagerConfiguration {
         #if os(iOS)
             NotificationCenter.default.addObserver(self, selector: #selector(didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
         #elseif os(watchOS)
-        if #available(watchOS 7.0, *) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
+            if #available(watchOS 7.0, *) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
+                }
+            } else {
+                // Pre watchOS 7.0, this library will not use multiple sessions after backgrounding since there are no notifications we can observe.
             }
-        } else {
-            // Pre watchOS 7.0, this library will not use multiple sessions after backgrounding since there are no notifications we can observe.
-        }
         #elseif os(tvOS)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
                 NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
