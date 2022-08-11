@@ -23,7 +23,6 @@ jobs:
       fail-fast: false
       matrix:
         xcode:
-          - ^11
           - ^12
           - ^13
         xcodebuildCommand:
