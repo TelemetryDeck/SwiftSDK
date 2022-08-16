@@ -109,3 +109,5 @@ let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>", baseUR
 ## Developing this SDK
 
 Your PRs on TelemetryDeck's Swift Client are very much welcome. Check out the [SwiftClientTester](https://github.com/TelemetryDeck/SwiftClientTester) project, which provides a harness you can use to work on the library and try out new things.
+
+When making a new release, run `./tag-release.sh MAJOR.MINOR.PATCH` to bump the version string in the SDK, create a new commit and tag that commit accordingly all in one step.
