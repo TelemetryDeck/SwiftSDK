@@ -22,18 +22,16 @@ enum CryptoHashing {
                     return commonCryptoSha256(strData: strData)
                 }
             #else
-                // Linux, etc. (and iOS when compiled with < Xcode 11.)
+                // Linux, etc. (and iOS when compiled with < Xcode 11)
                 return commonCryptoSha256(strData: strData)
             #endif
         }
         return ""
     }
 
-    /**
-     * Example SHA 256 Hash using CommonCrypto
-     * CC_SHA256 API exposed from from CommonCrypto-60118.50.1:
-     * https://opensource.apple.com/source/CommonCrypto/CommonCrypto-60118.50.1/include/CommonDigest.h.auto.html
-     **/
+    /// Example SHA 256 Hash using CommonCrypto
+    /// CC_SHA256 API exposed from from CommonCrypto-60118.50.1:
+    /// https://opensource.apple.com/source/CommonCrypto/CommonCrypto-60118.50.1/include/CommonDigest.h.auto.html
     static func commonCryptoSha256(strData: Data) -> String {
         /// #define CC_SHA256_DIGEST_LENGTH     32
         /// Creates an array of unsigned 8 bit integers that contains 32 zeros
