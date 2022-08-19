@@ -208,7 +208,7 @@ private extension SignalManager {
     /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
     private var customDefaults: UserDefaults? {
         let appIdHash = CryptoHashing.sha256(str: self.configuration.telemetryAppID, salt: "")
-        return UserDefaults(suiteName: "\(appIdHash).TelemetryDeck")
+        return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
     }
     #endif
 
