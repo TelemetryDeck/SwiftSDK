@@ -82,6 +82,28 @@ public final class TelemetryManagerConfiguration {
 
     private var _testMode: Bool?
 
+    /// If `true` no signals will be sent.
+    ///
+    /// SwiftUI previews are built by Xcode automatically and events sent during this mode are not considered actual user-initiated usage.
+    ///
+    /// By default, this checks for the `XCODE_RUNNING_FOR_PREVIEWS` environment variable as described in this StackOverflow answer:
+    /// https://stackoverflow.com/a/61741858/3451975
+    public var swiftUIPreviewMode: Bool {
+        get {
+            if let swiftUIPreviewMode = _swiftUIPreviewMode { return swiftUIPreviewMode }
+
+            if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+                return true
+            } else {
+                return false
+            }
+        }
+
+        set { _swiftUIPreviewMode = newValue }
+    }
+
+    private var _swiftUIPreviewMode: Bool?
+
     /// Log the current status to the signal cache to the console.
     public var showDebugLogs: Bool = false
 
@@ -156,11 +178,16 @@ public class TelemetryManager {
     }
 
     public static var shared: TelemetryManager {
-        guard let telemetryManager = initializedTelemetryManager else {
+        if let telemetryManager = initializedTelemetryManager {
+           return telemetryManager
+        } else if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
+            // Xcode is building and running the app for SwiftUI Previews, this is not a real launch of the app, therefore mock data is used
+            self.initializedTelemetryManager = .init(configuration: .init(appID: ""))
+            return self.initializedTelemetryManager!
+        } else {
             fatalError("Please call TelemetryManager.initialize(...) before accessing the shared telemetryManager instance.")
         }
 
-        return telemetryManager
     }
 
     /// Change the default user identifier sent with each signal.
@@ -195,6 +222,9 @@ public class TelemetryManager {
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
+        // make sure to not send any signals when run by Xcode via SwiftUI previews
+        guard !self.configuration.swiftUIPreviewMode else { return }
+
         signalManager.processSignal(signalType, for: clientUser, with: additionalPayload, configuration: configuration)
     }
 
