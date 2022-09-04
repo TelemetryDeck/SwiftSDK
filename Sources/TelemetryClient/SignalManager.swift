@@ -10,7 +10,11 @@ import WatchKit
 import TVUIKit
 #endif
 
-internal class SignalManager {
+internal protocol SignalManageable {
+    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, with additionalPayload: [String: String], configuration: TelemetryManagerConfiguration)
+}
+
+internal class SignalManager: SignalManageable {
     private let minimumWaitTimeBetweenRequests: Double = 10 // seconds
 
     private var signalCache: SignalCache<SignalPostBody>

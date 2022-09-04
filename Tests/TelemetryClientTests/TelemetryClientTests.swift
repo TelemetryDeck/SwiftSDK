@@ -53,4 +53,71 @@ final class TelemetryClientTests: XCTestCase {
         
         XCTAssertEqual(signals, allPoppedSignals)
     }
+    
+    func testSendsSignals_withAnalyticsImplicitlyEnabled() {
+        let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
+
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        
+        let signalManager = FakeSignalManager()
+        TelemetryManager.initialize(with: configuration, signalManager: signalManager)
+        
+        TelemetryManager.send("appOpenedRegularly")
+        
+        XCTAssertEqual(signalManager.processedSignals.count, 1)
+    }
+    
+    func testSendsSignals_withAnalyticsExplicitlyEnabled() {
+        let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
+
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        configuration.analyticsDisabled = false
+        
+        let signalManager = FakeSignalManager()
+        TelemetryManager.initialize(with: configuration, signalManager: signalManager)
+        
+        TelemetryManager.send("appOpenedRegularly")
+        
+        XCTAssertEqual(signalManager.processedSignals.count, 1)
+    }
+    
+    func testDoesNotSendSignals_withAnalyticsExplicitlyDisabled() {
+        let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
+
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        configuration.analyticsDisabled = true
+        
+        let signalManager = FakeSignalManager()
+        TelemetryManager.initialize(with: configuration, signalManager: signalManager)
+        
+        TelemetryManager.send("appOpenedRegularly")
+        
+        XCTAssertTrue(signalManager.processedSignals.isEmpty)
+    }
+    
+    func testDoesNotSendSignals_withAnalyticsExplicitlyEnabled_inPreviewMode() {
+        setenv("XCODE_RUNNING_FOR_PREVIEWS", "1", 1)
+
+        let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
+
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        configuration.analyticsDisabled = false
+        
+        let signalManager = FakeSignalManager()
+        TelemetryManager.initialize(with: configuration, signalManager: signalManager)
+        
+        TelemetryManager.send("appOpenedRegularly")
+        
+        XCTAssertTrue(signalManager.processedSignals.isEmpty)
+        
+        setenv("XCODE_RUNNING_FOR_PREVIEWS", "0", 1)
+    }
+}
+
+private class FakeSignalManager: SignalManageable {
+    var processedSignals = [TelemetrySignalType]()
+    
+    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, with additionalPayload: [String : String], configuration: TelemetryManagerConfiguration) {
+        processedSignals.append(signalType)
+    }
 }
