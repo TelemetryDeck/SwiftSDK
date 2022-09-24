@@ -103,6 +103,15 @@ public final class TelemetryManagerConfiguration {
     }
 
     private var _swiftUIPreviewMode: Bool?
+    
+    /// If `true` no signals will be sent.
+    ///
+    /// Can be used to manually opt out users of tracking.
+    ///
+    /// Works together with `swiftUIPreviewMode` if either of those values is `true` no analytics events are sent.
+    /// However it won't interfere with SwiftUI Previews, when explicitly settings this value to `false`.
+    
+    public var analyticsDisabled: Bool = false
 
     /// Log the current status to the signal cache to the console.
     public var showDebugLogs: Bool = false
@@ -165,7 +174,10 @@ public class TelemetryManager {
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
-
+    
+    internal static func initialize(with configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
+        initializedTelemetryManager = TelemetryManager(configuration: configuration, signalManager: signalManager)
+    }
     /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
     ///
     /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
@@ -223,7 +235,7 @@ public class TelemetryManager {
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
         // make sure to not send any signals when run by Xcode via SwiftUI previews
-        guard !self.configuration.swiftUIPreviewMode else { return }
+        guard !self.configuration.swiftUIPreviewMode, !self.configuration.analyticsDisabled else { return }
 
         signalManager.processSignal(signalType, for: clientUser, with: additionalPayload, configuration: configuration)
     }
@@ -232,10 +244,15 @@ public class TelemetryManager {
         self.configuration = configuration
         signalManager = SignalManager(configuration: configuration)
     }
+    
+    private init(configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
+        self.configuration = configuration
+        self.signalManager = signalManager
+    }
 
     private static var initializedTelemetryManager: TelemetryManager?
 
     private let configuration: TelemetryManagerConfiguration
 
-    private let signalManager: SignalManager
+    private let signalManager: SignalManageable
 }
