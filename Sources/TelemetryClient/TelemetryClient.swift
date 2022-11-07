@@ -303,7 +303,7 @@ public final class TelemetryManagerConfigurationObjCProxy: NSObject {
         }
         
         set {
-            telemetryManagerConfiguration = newValue
+            telemetryManagerConfiguration.analyticsDisabled = newValue
         }
     }
 }
