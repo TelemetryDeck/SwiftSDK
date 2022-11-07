@@ -103,14 +103,14 @@ public final class TelemetryManagerConfiguration {
     }
 
     private var _swiftUIPreviewMode: Bool?
-    
+
     /// If `true` no signals will be sent.
     ///
     /// Can be used to manually opt out users of tracking.
     ///
     /// Works together with `swiftUIPreviewMode` if either of those values is `true` no analytics events are sent.
     /// However it won't interfere with SwiftUI Previews, when explicitly settings this value to `false`.
-    
+
     public var analyticsDisabled: Bool = false
 
     /// Log the current status to the signal cache to the console.
@@ -174,7 +174,7 @@ public class TelemetryManager {
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
-    
+
     internal static func initialize(with configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration, signalManager: signalManager)
     }
@@ -244,7 +244,7 @@ public class TelemetryManager {
         self.configuration = configuration
         signalManager = SignalManager(configuration: configuration)
     }
-    
+
     private init(configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
         self.configuration = configuration
         self.signalManager = signalManager
@@ -260,48 +260,48 @@ public class TelemetryManager {
 @objc(TelemetryManagerConfiguration)
 public final class TelemetryManagerConfigurationObjCProxy: NSObject {
     fileprivate var telemetryManagerConfiguration: TelemetryManagerConfiguration
-    
+
     @objc public init(appID: String, salt: String, baseURL: URL) {
         self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt, baseURL: baseURL)
     }
-    
+
     @objc public init(appID: String, baseURL: URL) {
         self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, baseURL: baseURL)
     }
-    
+
     @objc public init(appID: String, salt: String) {
         self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt)
     }
-    
+
     @objc public init(appID: String) {
         self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID)
     }
-    
+
     @objc public var sendNewSessionBeganSignal: Bool {
         get {
             telemetryManagerConfiguration.sendNewSessionBeganSignal
         }
-        
+
         set {
             telemetryManagerConfiguration.sendNewSessionBeganSignal = newValue
         }
     }
-    
+
     @objc public var testMode: Bool {
         get {
             telemetryManagerConfiguration.testMode
         }
-        
+
         set {
             telemetryManagerConfiguration.testMode = newValue
         }
     }
-    
+
     @objc public var analyticsDisabled: Bool {
         get {
             telemetryManagerConfiguration.analyticsDisabled
         }
-        
+
         set {
             telemetryManagerConfiguration.analyticsDisabled = newValue
         }
@@ -321,7 +321,7 @@ public final class TelemetryManagerObjCProxy: NSObject {
     @objc public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
         TelemetryManager.send(signalType, for: clientUser, with: additionalPayload)
     }
-    
+
     @objc public static func send(_ signalType: TelemetrySignalType, with additionalPayload: [String: String] = [:]) {
         TelemetryManager.send(signalType, with: additionalPayload)
     }
@@ -329,11 +329,11 @@ public final class TelemetryManagerObjCProxy: NSObject {
     @objc public static func send(_ signalType: TelemetrySignalType) {
         TelemetryManager.send(signalType)
     }
-    
+
     @objc public static func updateDefaultUser(to newDefaultUser: String?) {
         TelemetryManager.updateDefaultUser(to: newDefaultUser)
     }
-    
+
     @objc public static func generateNewSession() {
         TelemetryManager.generateNewSession()
     }
