@@ -4,7 +4,7 @@ This package allows you to send signals to [TelemetryDeck](https://telemetrydeck
 
 ## Initialization
 
-Init the Telemetry Manager at app startup, so it knows your App ID (you can retrieve the App ID in the Telemetry Viewer app, under App Settings)
+Init the Telemetry Manager at app startup, so it knows your App ID (you can retrieve the App ID from your [TelemetryDeck Dashboard](https://dashboard.telemetrydeck.com/) under Set Up App)
 
 ```swift
 let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
