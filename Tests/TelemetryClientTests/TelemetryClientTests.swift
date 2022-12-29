@@ -17,21 +17,21 @@ final class TelemetryClientTests: XCTestCase {
         let signalCache = SignalCache<SignalPostBody>(showDebugLogs: false)
         
         let signals: [SignalPostBody] = [
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "01", sessionID: "01", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "02", sessionID: "02", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "03", sessionID: "03", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "04", sessionID: "04", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "05", sessionID: "05", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "06", sessionID: "06", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "07", sessionID: "07", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "08", sessionID: "08", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "09", sessionID: "09", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "10", sessionID: "10", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "11", sessionID: "11", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "12", sessionID: "12", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "13", sessionID: "13", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "14", sessionID: "14", type: "test", payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "15", sessionID: "15", type: "test", payload: [], isTestMode: "true")
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "01", sessionID: "01", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "02", sessionID: "02", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "03", sessionID: "03", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "04", sessionID: "04", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "05", sessionID: "05", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "06", sessionID: "06", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "07", sessionID: "07", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "08", sessionID: "08", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "09", sessionID: "09", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "10", sessionID: "10", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "11", sessionID: "11", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "12", sessionID: "12", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "13", sessionID: "13", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "14", sessionID: "14", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "15", sessionID: "15", type: "test", floatValue: nil, payload: [], isTestMode: "true")
         ]
         
         for signal in signals {
@@ -64,7 +64,7 @@ final class TelemetryClientTests: XCTestCase {
         
         TelemetryManager.send("appOpenedRegularly")
         
-        XCTAssertEqual(signalManager.processedSignals.count, 1)
+        XCTAssertEqual(signalManager.processedSignalTypes.count, 1)
     }
     
     func testSendsSignals_withAnalyticsExplicitlyEnabled() {
@@ -78,7 +78,7 @@ final class TelemetryClientTests: XCTestCase {
         
         TelemetryManager.send("appOpenedRegularly")
         
-        XCTAssertEqual(signalManager.processedSignals.count, 1)
+        XCTAssertEqual(signalManager.processedSignalTypes.count, 1)
     }
     
     func testDoesNotSendSignals_withAnalyticsExplicitlyDisabled() {
@@ -92,7 +92,7 @@ final class TelemetryClientTests: XCTestCase {
         
         TelemetryManager.send("appOpenedRegularly")
         
-        XCTAssertTrue(signalManager.processedSignals.isEmpty)
+        XCTAssertTrue(signalManager.processedSignalTypes.isEmpty)
     }
     
     func testDoesNotSendSignals_withAnalyticsExplicitlyEnabled_inPreviewMode() {
@@ -108,16 +108,44 @@ final class TelemetryClientTests: XCTestCase {
         
         TelemetryManager.send("appOpenedRegularly")
         
-        XCTAssertTrue(signalManager.processedSignals.isEmpty)
+        XCTAssertTrue(signalManager.processedSignalTypes.isEmpty)
         
         setenv("XCODE_RUNNING_FOR_PREVIEWS", "0", 1)
+    }
+    
+    func testSendsSignals_withNumercalValue() {
+        let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
+
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        
+        let signalManager = FakeSignalManager()
+        TelemetryManager.initialize(with: configuration, signalManager: signalManager)
+        
+        TelemetryManager.send("appOpenedRegularly", floatValue: 42)
+        
+        XCTAssertEqual(signalManager.processedSignals.first?.floatValue, 42)
     }
 }
 
 private class FakeSignalManager: SignalManageable {
-    var processedSignals = [TelemetrySignalType]()
+    var processedSignalTypes = [TelemetrySignalType]()
+    var processedSignals = [SignalPostBody]()
     
-    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, with additionalPayload: [String : String], configuration: TelemetryManagerConfiguration) {
-        processedSignals.append(signalType)
+    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String : String], configuration: TelemetryManagerConfiguration) {
+        processedSignalTypes.append(signalType)
+        
+        let payLoad = SignalPayload(additionalPayload: additionalPayload)
+        
+        let signalPostBody = SignalPostBody(
+            receivedAt: Date(),
+            appID: UUID(uuidString: configuration.telemetryAppID)!,
+            clientUser: clientUser ?? "no user",
+            sessionID: configuration.sessionID.uuidString,
+            type: "\(signalType)",
+            floatValue: floatValue,
+            payload: payLoad.toMultiValueDimension(),
+            isTestMode: configuration.testMode ? "true" : "false"
+        )
+        processedSignals.append(signalPostBody)
     }
 }

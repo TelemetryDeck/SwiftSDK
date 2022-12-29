@@ -185,8 +185,8 @@ public class TelemetryManager {
         initializedTelemetryManager = nil
     }
 
-    public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.shared.send(signalType, for: clientUser, with: additionalPayload)
+    public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:]) {
+        TelemetryManager.shared.send(signalType, for: clientUser, floatValue: floatValue, with: additionalPayload)
     }
 
     public static var shared: TelemetryManager {
@@ -233,11 +233,11 @@ public class TelemetryManager {
     /// If you specify a user identifier here, it will take precedence over the default user identifier specified in the `TelemetryManagerConfiguration`.
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
-    public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
+    public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:]) {
         // make sure to not send any signals when run by Xcode via SwiftUI previews
         guard !self.configuration.swiftUIPreviewMode, !self.configuration.analyticsDisabled else { return }
 
-        signalManager.processSignal(signalType, for: clientUser, with: additionalPayload, configuration: configuration)
+        signalManager.processSignal(signalType, for: clientUser, floatValue: floatValue, with: additionalPayload, configuration: configuration)
     }
 
     private init(configuration: TelemetryManagerConfiguration) {

@@ -11,7 +11,7 @@ import TVUIKit
 #endif
 
 internal protocol SignalManageable {
-    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, with additionalPayload: [String: String], configuration: TelemetryManagerConfiguration)
+    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String: String], configuration: TelemetryManagerConfiguration)
 }
 
 internal class SignalManager: SignalManageable {
@@ -68,7 +68,7 @@ internal class SignalManager: SignalManageable {
     }
 
     /// Adds a signal to the process queue
-    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
+    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
         DispatchQueue.global(qos: .utility).async {
             let payLoad = SignalPayload(additionalPayload: additionalPayload)
 
@@ -78,6 +78,7 @@ internal class SignalManager: SignalManageable {
                 clientUser: CryptoHashing.sha256(str: clientUser ?? self.defaultUserIdentifier, salt: configuration.salt),
                 sessionID: configuration.sessionID.uuidString,
                 type: "\(signalType)",
+                floatValue: floatValue,
                 payload: payLoad.toMultiValueDimension(),
                 isTestMode: configuration.testMode ? "true" : "false"
             )

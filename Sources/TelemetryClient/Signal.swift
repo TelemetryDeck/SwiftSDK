@@ -28,6 +28,9 @@ internal struct SignalPostBody: Codable, Equatable {
     /// A type name for this signal that describes the event that triggered the signal
     let type: String
 
+    /// An optional numerical value to send along with the signal.
+    let floatValue: Double?
+
     /// Tags in the form "key:value" to attach to the signal
     let payload: [String]
 
