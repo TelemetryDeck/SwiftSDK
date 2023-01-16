@@ -104,30 +104,30 @@ internal class SignalManager: SignalManageable {
             if configuration.showDebugLogs {
                 print("Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
             }
-            send(queuedSignals) { [unowned self] data, response, error in
+            send(queuedSignals) { [configuration, signalCache] data, response, error in
 
                 if let error = error {
-                    if self.configuration.showDebugLogs {
+                    if configuration.showDebugLogs {
                         print(error)
                     }
                     // The send failed, put the signal back into the queue
-                    self.signalCache.push(queuedSignals)
+                    signalCache.push(queuedSignals)
                     return
                 }
 
                 // Check for valid status code response
                 guard response?.statusCodeError() == nil else {
                     let statusError = response!.statusCodeError()!
-                    if self.configuration.showDebugLogs {
+                    if configuration.showDebugLogs {
                         print(statusError)
                     }
                     // The send failed, put the signal back into the queue
-                    self.signalCache.push(queuedSignals)
+                    signalCache.push(queuedSignals)
                     return
                 }
 
                 if let data = data {
-                    if self.configuration.showDebugLogs {
+                    if configuration.showDebugLogs {
                         print(String(data: data, encoding: .utf8)!)
                     }
                 }
