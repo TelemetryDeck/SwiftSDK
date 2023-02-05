@@ -125,15 +125,9 @@ extension SignalPayload {
         #if targetEnvironment(simulator)
             return false
         #else
-
             // During development, this line will show a warning "Code after 'return' will never be executed"
             // However, you should ignore that warning.
-            if let appStoreReceiptURL = Bundle.main.appStoreReceiptURL, appStoreReceiptURL.lastPathComponent == "sandboxReceipt" {
-                return true
-            } else {
-                return false
-            }
-
+            return !isSimulatorOrTestFlight
         #endif
     }
 
