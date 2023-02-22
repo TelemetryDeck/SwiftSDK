@@ -208,12 +208,12 @@ private extension SignalManager {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
 
         #if os(iOS) || os(tvOS)
-            return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+            return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #elseif os(watchOS)
             if #available(watchOS 6.2, *) {
-                return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+                return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
             } else {
-                return "unknown user \(SignalPayload.platform) \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+                return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
             }
         #elseif os(macOS)
             if let customDefaults = self.customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
@@ -227,7 +227,7 @@ private extension SignalManager {
             #if DEBUG
                 configuration.logHandler?.log(message: "[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html")
             #endif
-            return "unknown user \(SignalPayload.platform) \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+            return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #endif
     }
 }
