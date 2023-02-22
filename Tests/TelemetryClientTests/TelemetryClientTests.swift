@@ -54,6 +54,47 @@ final class TelemetryClientTests: XCTestCase {
         XCTAssertEqual(signals, allPoppedSignals)
     }
     
+    func testSignalEnrichers() throws {
+        struct BasicEnricher: SignalEnricher {
+            func enrich(signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?) -> [String : String] {
+                ["isTestEnricher": "true"]
+            }
+        }
+        
+        let configuration = TelemetryManagerConfiguration(appID: UUID().uuidString)
+        configuration.metadataEnrichers.append(BasicEnricher())
+        
+        let signalManager = FakeSignalManager()
+        TelemetryManager.initialize(with: configuration, signalManager: signalManager)
+        TelemetryManager.send("testSignal")
+        
+        let bodyItems = signalManager.processedSignals
+        XCTAssertEqual(bodyItems.count, 1)
+        let bodyItem = try XCTUnwrap(bodyItems.first)
+        XCTAssert(bodyItem.payload.contains("isTestEnricher:true"))
+    }
+    
+    func testSignalEnrichers_precedence() throws {
+        struct BasicEnricher: SignalEnricher {
+            func enrich(signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?) -> [String : String] {
+                ["item": "A", "isDebug": "banana"]
+            }
+        }
+        
+        let configuration = TelemetryManagerConfiguration(appID: UUID().uuidString)
+        configuration.metadataEnrichers.append(BasicEnricher())
+        
+        let signalManager = FakeSignalManager()
+        TelemetryManager.initialize(with: configuration, signalManager: signalManager)
+        TelemetryManager.send("testSignal", with: ["item": "B"])
+        
+        let bodyItems = signalManager.processedSignals
+        XCTAssertEqual(bodyItems.count, 1)
+        let bodyItem = try XCTUnwrap(bodyItems.first)
+        XCTAssert(bodyItem.payload.contains("item:B")) // .send takes priority over enricher
+        XCTAssert(bodyItem.payload.contains("isDebug:banana")) // enricher takes priority over default payload
+    }
+    
     func testSendsSignals_withAnalyticsImplicitlyEnabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
@@ -133,8 +174,12 @@ private class FakeSignalManager: SignalManageable {
     
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String : String], configuration: TelemetryManagerConfiguration) {
         processedSignalTypes.append(signalType)
+        let enrichedMetadata: [String: String] = configuration.metadataEnrichers
+            .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
+            .reduce([String: String](), { $0.applying($1) })
         
         let payload = DefaultSignalPayload().toDictionary()
+            .applying(enrichedMetadata)
             .applying(additionalPayload)
         
         let signalPostBody = SignalPostBody(

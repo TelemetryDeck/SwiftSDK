@@ -70,8 +70,12 @@ internal class SignalManager: SignalManageable {
     /// Adds a signal to the process queue
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
         DispatchQueue.global(qos: .utility).async {
+            let enrichedMetadata: [String: String] = configuration.metadataEnrichers
+                .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
+                .reduce([String: String](), { $0.applying($1) })
+            
             let payload = DefaultSignalPayload().toDictionary()
-                .applying([:]) // enrichers
+                .applying(enrichedMetadata)
                 .applying(additionalPayload)
 
             let signalPostBody = SignalPostBody(
