@@ -54,6 +54,7 @@ internal struct SignalPayload: Codable {
     var operatingSystem: String = Self.operatingSystem
     var targetEnvironment: String = Self.targetEnvironment
     var locale: String = Self.locale
+    var extensionIdentifier: String? = Self.extensionIdentifier
     var telemetryClientVersion: String = TelemetryClientVersion
 
     let additionalPayload: [String: String]
@@ -156,6 +157,14 @@ extension SignalPayload {
     static var buildNumber: String {
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
         return buildNumber ?? "0"
+    }
+    
+    /// The extension identifer for the active resource, if available.
+    ///
+    /// This provides a value such as `com.apple.widgetkit-extension` when TelemetryDeck is run from a widget.
+    static var extensionIdentifier: String? {
+        let container = Bundle.main.infoDictionary?["NSExtension"] as? [String: Any]
+        return container?["NSExtensionPointIdentifier"] as? String
     }
 
     /// The modelname as reported by systemInfo.machine
