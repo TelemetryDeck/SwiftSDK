@@ -106,6 +106,12 @@ A very small subset of our customers will want to use a custom signal ingestion 
 let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>", baseURL: "https://nom.telemetrydeck.com")
 ```
 
+## Custom Logging Strategy
+
+By default, some logs helpful for monitoring TelemetryDeck are printed out to the console. This behaviour can be customised by overriding `configuration.logHandler`. This struct accepts a minimum allows log level (any log with the same or higher log level will be accepted) and a closure.
+
+This allows for compatibility with other logging solutions, such as [swift-log](https://github.com/apple/swift-log), by providing your own closure.
+
 ## Developing this SDK
 
 Your PRs on TelemetryDeck's Swift Client are very much welcome. Check out the [SwiftClientTester](https://github.com/TelemetryDeck/SwiftClientTester) project, which provides a harness you can use to work on the library and try out new things.
