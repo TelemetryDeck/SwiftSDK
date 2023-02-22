@@ -134,7 +134,8 @@ private class FakeSignalManager: SignalManageable {
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String : String], configuration: TelemetryManagerConfiguration) {
         processedSignalTypes.append(signalType)
         
-        let payLoad = SignalPayload(additionalPayload: additionalPayload)
+        let payload = DefaultSignalPayload().toDictionary()
+            .applying(additionalPayload)
         
         let signalPostBody = SignalPostBody(
             receivedAt: Date(),
@@ -143,7 +144,7 @@ private class FakeSignalManager: SignalManageable {
             sessionID: configuration.sessionID.uuidString,
             type: "\(signalType)",
             floatValue: floatValue,
-            payload: payLoad.toMultiValueDimension(),
+            payload: payload.toMultiValueDimension(),
             isTestMode: configuration.testMode ? "true" : "false"
         )
         processedSignals.append(signalPostBody)

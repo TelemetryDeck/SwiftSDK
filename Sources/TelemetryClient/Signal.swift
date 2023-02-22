@@ -38,55 +38,40 @@ internal struct SignalPostBody: Codable, Equatable {
     let isTestMode: String
 }
 
-internal struct SignalPayload: Codable {
-    var platform: String = Self.platform
-    var systemVersion: String = Self.systemVersion
-    var majorSystemVersion: String = Self.majorSystemVersion
-    var majorMinorSystemVersion: String = Self.majorMinorSystemVersion
-    var appVersion: String = Self.appVersion
-    var buildNumber: String = Self.buildNumber
-    var isSimulator: String = "\(Self.isSimulator)"
-    var isDebug: String = "\(Self.isDebug)"
-    var isTestFlight: String = "\(Self.isTestFlight)"
-    var isAppStore: String = "\(Self.isAppStore)"
-    var modelName: String = Self.modelName
-    var architecture: String = Self.architecture
-    var operatingSystem: String = Self.operatingSystem
-    var targetEnvironment: String = Self.targetEnvironment
-    var locale: String = Self.locale
+internal struct DefaultSignalPayload: Encodable {
+    let platform = Self.platform
+    let systemVersion = Self.systemVersion
+    let majorSystemVersion = Self.majorSystemVersion
+    let majorMinorSystemVersion = Self.majorMinorSystemVersion
+    let appVersion = Self.appVersion
+    let buildNumber = Self.buildNumber
+    let isSimulator = "\(Self.isSimulator)"
+    let isDebug = "\(Self.isDebug)"
+    let isTestFlight = "\(Self.isTestFlight)"
+    let isAppStore = "\(Self.isAppStore)"
+    let modelName = Self.modelName
+    let architecture = Self.architecture
+    let operatingSystem = Self.operatingSystem
+    let targetEnvironment = Self.targetEnvironment
+    let locale = Self.locale
     var extensionIdentifier: String? = Self.extensionIdentifier
-    var telemetryClientVersion: String = TelemetryClientVersion
-
-    let additionalPayload: [String: String]
-}
-
-extension SignalPayload {
-    /// Converts the `additionalPayload` to a `[String: String]` dictionary
+    let telemetryClientVersion = TelemetryClientVersion
+    
     func toDictionary() -> [String: String] {
-        // We need to convert the additionalPayload into new key/value pairs
-        let encoder = JSONEncoder()
-        encoder.dateEncodingStrategy = .iso8601
         do {
-            // Create a Dictionary
-            let jsonData = try encoder.encode(self)
-            var dict = try JSONSerialization.jsonObject(with: jsonData, options: []) as? [String: Any]
-            // Remove the additionalPayload sub dictionary
-            dict?.removeValue(forKey: "additionalPayload")
-            // Add the additionalPayload as new key/value pairs
-            return dict?.merging(additionalPayload, uniquingKeysWith: { _, last in last }) as? [String: String] ?? [:]
+            let encoder = JSONEncoder()
+            let data = try encoder.encode(self)
+            let dict = try JSONSerialization.jsonObject(with: data) as? [String: String]
+            return dict ?? [:]
         } catch {
             return [:]
         }
-    }
-
-    func toMultiValueDimension() -> [String] {
-        return toDictionary().map { key, value in key.replacingOccurrences(of: ":", with: "_") + ":" + value }
     }
 }
 
 // MARK: - Helpers
 
-extension SignalPayload {
+extension DefaultSignalPayload {
     static var isSimulatorOrTestFlight: Bool {
         isSimulator || isTestFlight
     }
