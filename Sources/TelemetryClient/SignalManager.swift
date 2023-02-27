@@ -73,7 +73,7 @@ internal class SignalManager: SignalManageable {
             let enrichedMetadata: [String: String] = configuration.metadataEnrichers
                 .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
                 .reduce([String: String](), { $0.applying($1) })
-            
+
             let payload = DefaultSignalPayload().toDictionary()
                 .applying(enrichedMetadata)
                 .applying(additionalPayload)
@@ -104,7 +104,7 @@ internal class SignalManager: SignalManageable {
         let queuedSignals: [SignalPostBody] = signalCache.pop()
         if !queuedSignals.isEmpty {
             configuration.logHandler?.log(message: "Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
-            
+
             send(queuedSignals) { [configuration, signalCache] data, response, error in
 
                 if let error = error {
@@ -181,7 +181,7 @@ private extension SignalManager {
 
             urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
             self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
-            
+
             /// Wait for connectivity
             let config = URLSessionConfiguration.default
             config.waitsForConnectivity = true

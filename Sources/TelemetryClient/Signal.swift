@@ -56,7 +56,7 @@ internal struct DefaultSignalPayload: Encodable {
     let locale = Self.locale
     var extensionIdentifier: String? = Self.extensionIdentifier
     let telemetryClientVersion = TelemetryClientVersion
-    
+
     func toDictionary() -> [String: String] {
         do {
             let encoder = JSONEncoder()
@@ -143,7 +143,7 @@ extension DefaultSignalPayload {
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String
         return buildNumber ?? "0"
     }
-    
+
     /// The extension identifer for the active resource, if available.
     ///
     /// This provides a value such as `com.apple.widgetkit-extension` when TelemetryDeck is run from a widget.
