@@ -87,7 +87,7 @@ internal class SignalCache<T> where T: Codable {
 
         queue.sync {
             logHandler?.log(message: "Loading Telemetry cache from: \(fileURL())")
-            
+
             if let data = try? Data(contentsOf: fileURL()) {
                 // Loaded cache file, now delete it to stop it being loaded multiple times
                 try? FileManager.default.removeItem(at: fileURL())

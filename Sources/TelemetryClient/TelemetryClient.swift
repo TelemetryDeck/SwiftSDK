@@ -115,12 +115,17 @@ public final class TelemetryManagerConfiguration {
     /// Log the current status to the signal cache to the console.
     @available(*, deprecated, message: "Please use the logHandler property instead")
     public var showDebugLogs: Bool = false
-    
+
     /// A strategy for handling logs.
     ///
     /// Defaults to `print` with info/errror messages - debug messages are not outputted. Set to `nil` to disable all logging from TelemetryDeck SDK.
     public var logHandler: LogHandler? = LogHandler.stdout(.info)
-    
+
+    /// An array of signal metadata enrichers: a system for adding dynamic metadata to signals as they are recorded.
+    ///
+    /// Defaults to an empty array.
+    public var metadataEnrichers: [SignalEnricher] = []
+
     public init(appID: String, salt: String? = nil, baseURL: URL? = nil) {
         telemetryAppID = appID
 

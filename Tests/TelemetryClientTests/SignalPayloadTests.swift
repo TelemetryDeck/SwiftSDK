@@ -1,65 +1,65 @@
 @testable import TelemetryClient
 import XCTest
 
-final class SignalPayloadTests: XCTestCase {
+final class DefaultSignalPayloadTests: XCTestCase {
     func testIsSimulatorOrTestFlight() {
-        XCTAssertNoThrow(SignalPayload.isSimulatorOrTestFlight)
-        print("isSimulatorOrTestFlight", SignalPayload.isSimulatorOrTestFlight)
+        XCTAssertNoThrow(DefaultSignalPayload.isSimulatorOrTestFlight)
+        print("isSimulatorOrTestFlight", DefaultSignalPayload.isSimulatorOrTestFlight)
     }
     
     func testIsSimulator() {
-        XCTAssertNoThrow(SignalPayload.isSimulator)
-        print("isSimulator", SignalPayload.isSimulator)
+        XCTAssertNoThrow(DefaultSignalPayload.isSimulator)
+        print("isSimulator", DefaultSignalPayload.isSimulator)
     }
     
     func testIsDebug() {
-        XCTAssertTrue(SignalPayload.isDebug)
-        print("isDebug", SignalPayload.isDebug)
+        XCTAssertTrue(DefaultSignalPayload.isDebug)
+        print("isDebug", DefaultSignalPayload.isDebug)
     }
     
     func testIsTestFlight() {
-        XCTAssertFalse(SignalPayload.isTestFlight)
-        print("isTestFlight", SignalPayload.isTestFlight)
+        XCTAssertFalse(DefaultSignalPayload.isTestFlight)
+        print("isTestFlight", DefaultSignalPayload.isTestFlight)
     }
     
     func testIsAppStore() {
-        XCTAssertFalse(SignalPayload.isAppStore)
-        print("isAppStore", SignalPayload.isAppStore)
+        XCTAssertFalse(DefaultSignalPayload.isAppStore)
+        print("isAppStore", DefaultSignalPayload.isAppStore)
     }
     
     func testSystemVersion() {
-        XCTAssertNoThrow(SignalPayload.systemVersion)
-        print("systemVersion", SignalPayload.systemVersion)
+        XCTAssertNoThrow(DefaultSignalPayload.systemVersion)
+        print("systemVersion", DefaultSignalPayload.systemVersion)
     }
     
     func testMajorSystemVersion() {
-        XCTAssertNoThrow(SignalPayload.majorSystemVersion)
-        print("majorSystemVersion", SignalPayload.majorSystemVersion)
+        XCTAssertNoThrow(DefaultSignalPayload.majorSystemVersion)
+        print("majorSystemVersion", DefaultSignalPayload.majorSystemVersion)
     }
     
     func testMajorMinorSystemVersion() {
-        XCTAssertNoThrow(SignalPayload.majorMinorSystemVersion)
-        print("majorMinorSystemVersion", SignalPayload.majorMinorSystemVersion)
+        XCTAssertNoThrow(DefaultSignalPayload.majorMinorSystemVersion)
+        print("majorMinorSystemVersion", DefaultSignalPayload.majorMinorSystemVersion)
     }
     
     func testAppVersion() {
-        XCTAssertNoThrow(SignalPayload.appVersion)
-        print("appVersion", SignalPayload.appVersion)
+        XCTAssertNoThrow(DefaultSignalPayload.appVersion)
+        print("appVersion", DefaultSignalPayload.appVersion)
     }
     
     func testBuildNumber() {
-        XCTAssertNoThrow(SignalPayload.buildNumber)
-        print("buildNumber", SignalPayload.buildNumber)
+        XCTAssertNoThrow(DefaultSignalPayload.buildNumber)
+        print("buildNumber", DefaultSignalPayload.buildNumber)
     }
     
     func testModelName() {
-        XCTAssertNoThrow(SignalPayload.modelName)
-        print("modelName", SignalPayload.modelName)
+        XCTAssertNoThrow(DefaultSignalPayload.modelName)
+        print("modelName", DefaultSignalPayload.modelName)
     }
     
     func testArchitecture() {
-        XCTAssertNoThrow(SignalPayload.architecture)
-        print("architecture", SignalPayload.architecture)
+        XCTAssertNoThrow(DefaultSignalPayload.architecture)
+        print("architecture", DefaultSignalPayload.architecture)
     }
     
     func testOperatingSystem() {
@@ -79,23 +79,23 @@ final class SignalPayloadTests: XCTestCase {
             return "Unknown Operating System"
         #endif
         
-        XCTAssertEqual(expectedResult, SignalPayload.operatingSystem)
+        XCTAssertEqual(expectedResult, DefaultSignalPayload.operatingSystem)
         
-        print("operatingSystem", SignalPayload.operatingSystem)
+        print("operatingSystem", DefaultSignalPayload.operatingSystem)
     }
     
     func testPlatform() {
-        XCTAssertNoThrow(SignalPayload.platform)
-        print("platform", SignalPayload.platform)
+        XCTAssertNoThrow(DefaultSignalPayload.platform)
+        print("platform", DefaultSignalPayload.platform)
     }
     
     func testTargetEnvironment() {
-        XCTAssertNoThrow(SignalPayload.targetEnvironment)
-        print("targetEnvironment", SignalPayload.targetEnvironment)
+        XCTAssertNoThrow(DefaultSignalPayload.targetEnvironment)
+        print("targetEnvironment", DefaultSignalPayload.targetEnvironment)
     }
     
     func testLocale() {
-        XCTAssertNoThrow(SignalPayload.locale)
-        print("locale", SignalPayload.locale)
+        XCTAssertNoThrow(DefaultSignalPayload.locale)
+        print("locale", DefaultSignalPayload.locale)
     }
 }

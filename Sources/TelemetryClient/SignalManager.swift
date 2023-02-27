@@ -70,7 +70,13 @@ internal class SignalManager: SignalManageable {
     /// Adds a signal to the process queue
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
         DispatchQueue.global(qos: .utility).async {
-            let payLoad = SignalPayload(additionalPayload: additionalPayload)
+            let enrichedMetadata: [String: String] = configuration.metadataEnrichers
+                .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
+                .reduce([String: String](), { $0.applying($1) })
+
+            let payload = DefaultSignalPayload().toDictionary()
+                .applying(enrichedMetadata)
+                .applying(additionalPayload)
 
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
@@ -79,7 +85,7 @@ internal class SignalManager: SignalManageable {
                 sessionID: configuration.sessionID.uuidString,
                 type: "\(signalType)",
                 floatValue: floatValue,
-                payload: payLoad.toMultiValueDimension(),
+                payload: payload.toMultiValueDimension(),
                 isTestMode: configuration.testMode ? "true" : "false"
             )
 
@@ -98,7 +104,7 @@ internal class SignalManager: SignalManageable {
         let queuedSignals: [SignalPostBody] = signalCache.pop()
         if !queuedSignals.isEmpty {
             configuration.logHandler?.log(message: "Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
-            
+
             send(queuedSignals) { [configuration, signalCache] data, response, error in
 
                 if let error = error {
@@ -175,7 +181,7 @@ private extension SignalManager {
 
             urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
             self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
-            
+
             /// Wait for connectivity
             let config = URLSessionConfiguration.default
             config.waitsForConnectivity = true
@@ -202,12 +208,12 @@ private extension SignalManager {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
 
         #if os(iOS) || os(tvOS)
-            return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+            return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #elseif os(watchOS)
             if #available(watchOS 6.2, *) {
-                return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+                return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
             } else {
-                return "unknown user \(SignalPayload.platform) \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+                return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
             }
         #elseif os(macOS)
             if let customDefaults = self.customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
@@ -221,7 +227,7 @@ private extension SignalManager {
             #if DEBUG
                 configuration.logHandler?.log(message: "[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html")
             #endif
-            return "unknown user \(SignalPayload.platform) \(SignalPayload.systemVersion) \(SignalPayload.buildNumber)"
+            return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #endif
     }
 }
