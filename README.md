@@ -44,9 +44,9 @@ TelemetryManager.send("appLaunchedRegularly")
 
 ## Debug -> Test Mode
 
-If your app's build configuration is set to "Debug", all signals sent will be marked as testing signals. In the Telemetry Viewer app, actvivate **Test Mode** to see those.
+If your app's build configuration is set to "Debug", all signals sent will be marked as testing signals. In the Telemetry Viewer app, activate **Test Mode** to see those.
 
-If you want to manually control wether test mode is active, you can set the `configuration.testMode` property.
+If you want to manually control whether test mode is active, you can set the `configuration.testMode` property.
 
 ## User Identifiers
 
