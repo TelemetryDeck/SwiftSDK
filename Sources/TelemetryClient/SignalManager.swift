@@ -19,10 +19,13 @@ internal class SignalManager: SignalManageable {
 
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
+    private let urlSession: URLSession
     private var sendTimer: Timer?
 
     init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
+
+        urlSession = URLSession(configuration: configuration.urlSessionConfiguration)
 
         // We automatically load any old signals from disk on initialisation
         signalCache = SignalCache(logHandler: configuration.logHandler)
@@ -183,10 +186,7 @@ private extension SignalManager {
             self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
 
             /// Wait for connectivity
-            let config = URLSessionConfiguration.default
-            config.waitsForConnectivity = true
-            let session = URLSession(configuration: config)
-            let task = session.dataTask(with: urlRequest, completionHandler: completionHandler)
+            let task = self.urlSession.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
         }
     }
