@@ -102,17 +102,11 @@ extension DefaultSignalPayload {
     static var isAppStore: Bool {
         #if DEBUG
             return false
-        #endif
-
-        #if TARGET_OS_OSX || TARGET_OS_MACCATALYST
+        #elseif TARGET_OS_OSX || TARGET_OS_MACCATALYST
             return false
-        #endif
-
-        #if targetEnvironment(simulator)
+        #elseif targetEnvironment(simulator)
             return false
         #else
-            // During development, this line will show a warning "Code after 'return' will never be executed"
-            // However, you should ignore that warning.
             return !isSimulatorOrTestFlight
         #endif
     }
