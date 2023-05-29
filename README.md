@@ -6,6 +6,8 @@ This package allows you to send signals to [TelemetryDeck](https://telemetrydeck
 
 The easiest way to install TelemetryDeck is using [Swift Package Manager](https://www.swift.org/package-manager/), Apple's solution which is built into Xcode. In Xcode, press _File > Add Packages..._, then in the resulting window enter `https://github.com/TelemetryDeck/SwiftClient` into the search field. Set the _Dependency Rule_ field to _Up to Next Major Version_, then press the _Add Package_ button. Xcode will download it, then you can choose which target of your app to add it to.
 
+See our [detailed setup guide](https://telemetrydeck.com/docs/guides/swift-setup/?source=github) for more information.
+
 ## Initialization
 
 Init the Telemetry Manager at app startup, so it knows your App ID (you can retrieve the App ID from your [TelemetryDeck Dashboard](https://dashboard.telemetrydeck.com/) under Set Up App)
