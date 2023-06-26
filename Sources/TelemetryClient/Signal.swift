@@ -226,6 +226,8 @@ extension SignalPayload {
     static var operatingSystem: String {
         #if os(macOS)
             return "macOS"
+        #elseif os(xrOS)
+            return "visionOS"
         #elseif os(iOS)
             return "iOS"
         #elseif os(watchOS)
