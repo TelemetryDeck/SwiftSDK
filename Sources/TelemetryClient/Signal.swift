@@ -242,6 +242,8 @@ extension SignalPayload {
     static var platform: String {
         #if os(macOS)
             return "macOS"
+        #elseif os(xrOS)
+            return "visionOS"
         #elseif os(iOS)
             #if targetEnvironment(macCatalyst)
                 return "macCatalyst"
