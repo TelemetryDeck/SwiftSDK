@@ -182,11 +182,7 @@ private extension SignalManager {
             urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
             self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
 
-            /// Wait for connectivity
-            let config = URLSessionConfiguration.default
-            config.waitsForConnectivity = true
-            let session = URLSession(configuration: config)
-            let task = session.dataTask(with: urlRequest, completionHandler: completionHandler)
+            let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
         }
     }
