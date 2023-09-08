@@ -23,7 +23,8 @@ jobs:
       fail-fast: true
       matrix:
         xcode:
-          - ^13
+          - ^14
+          - ^15
         xcodebuildCommand:
           - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 11'"
           - "-sdk macosx -destination 'platform=macOS'"
