@@ -178,8 +178,12 @@ private extension SignalManager {
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
+            
+            guard let body = try? JSONEncoder.telemetryEncoder.encode(signalPostBodies) else {
+                return
+            }
 
-            urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
+            urlRequest.httpBody = body
             self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
 
             let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
