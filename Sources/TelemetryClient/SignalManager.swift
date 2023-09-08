@@ -68,7 +68,13 @@ internal class SignalManager: SignalManageable {
     }
 
     /// Adds a signal to the process queue
-    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:], configuration: TelemetryManagerConfiguration) {
+    func processSignal(
+        _ signalType: TelemetrySignalType,
+        for clientUser: String? = nil,
+        floatValue: Double? = nil,
+        with additionalPayload: [String: String] = [:],
+        configuration: TelemetryManagerConfiguration
+    ) {
         DispatchQueue.global(qos: .utility).async {
             let enrichedMetadata: [String: String] = configuration.metadataEnrichers
                 .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
@@ -179,7 +185,11 @@ private extension SignalManager {
             urlRequest.httpMethod = "POST"
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
 
-            urlRequest.httpBody = try! JSONEncoder.telemetryEncoder.encode(signalPostBodies)
+            guard let body = try? JSONEncoder.telemetryEncoder.encode(signalPostBodies) else {
+                return
+            }
+
+            urlRequest.httpBody = body
             self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
 
             let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
@@ -221,7 +231,9 @@ private extension SignalManager {
             }
         #else
             #if DEBUG
-                configuration.logHandler?.log(message: "[Telemetry] On this platform, Telemetry can't generate a unique user identifier. It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html")
+                let line1 = "[Telemetry] On this platform, Telemetry can't generate a unique user identifier."
+                let line2 = "It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html"
+                configuration.logHandler?.log(message: "\(line1) \(line2)")
             #endif
             return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #endif

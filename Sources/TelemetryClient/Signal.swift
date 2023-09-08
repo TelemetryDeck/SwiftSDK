@@ -113,7 +113,10 @@ extension DefaultSignalPayload {
 
     /// The operating system and its version
     static var systemVersion: String {
-        return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.patchVersion)"
+        let majorVersion = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        let minorVersion = ProcessInfo.processInfo.operatingSystemVersion.minorVersion
+        let patchVersion = ProcessInfo.processInfo.operatingSystemVersion.patchVersion
+        return "\(platform) \(majorVersion).\(minorVersion).\(patchVersion)"
     }
 
     /// The major system version, i.e. iOS 15
@@ -123,7 +126,9 @@ extension DefaultSignalPayload {
 
     /// The major system version, i.e. iOS 15
     static var majorMinorSystemVersion: String {
-        return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion).\(ProcessInfo.processInfo.operatingSystemVersion.minorVersion)"
+        let majorVersion = ProcessInfo.processInfo.operatingSystemVersion.majorVersion
+        let minorVersion = ProcessInfo.processInfo.operatingSystemVersion.minorVersion
+        return "\(platform) \(majorVersion).\(minorVersion)"
     }
 
     /// The Bundle Short Version String, as described in Info.plist
