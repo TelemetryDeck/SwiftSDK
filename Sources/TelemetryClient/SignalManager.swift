@@ -184,7 +184,7 @@ private extension SignalManager {
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
-            
+
             guard let body = try? JSONEncoder.telemetryEncoder.encode(signalPostBodies) else {
                 return
             }
