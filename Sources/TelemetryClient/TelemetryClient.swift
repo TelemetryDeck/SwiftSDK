@@ -126,6 +126,32 @@ public final class TelemetryManagerConfiguration {
     /// Defaults to an empty array.
     public var metadataEnrichers: [SignalEnricher] = []
 
+    /// The ``URLSessionConfiguration`` to use for sending signals.
+    ///
+    /// You can use this to set a custom `URLSessionConfiguration`,
+    /// which can be useful for e.g.
+    /// - providing a background session configuration instead,
+    /// - changing configuration values like `tlsMinimumSupportedProtocol`,
+    ///   if your app has to comply with certain security standards.
+    ///
+    /// The actual ``URLSession`` used for sending signals will be created
+    /// on base of this configuration, but stays private to `SignalManager`.
+    /// 
+    /// Defaults to a URLSession on base of the default configuration.
+    ///
+    /// - Note: `waitsForConnectivity` will be always overriden and set
+    ///   to `true`. 
+    ///
+    public lazy var urlSessionConfiguration: URLSessionConfiguration = {
+        let config = URLSessionConfiguration.default
+        config.waitsForConnectivity = true
+        return config
+    }() {
+        willSet {
+            newValue.waitsForConnectivity = true
+        }
+    }
+
     public init(appID: String, salt: String? = nil, baseURL: URL? = nil) {
         telemetryAppID = appID
 
