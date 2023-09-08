@@ -23,12 +23,13 @@ jobs:
       fail-fast: true
       matrix:
         xcode:
-          - ^13
+          - ^14
+          # - ^15
         xcodebuildCommand:
-          - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 11'"
+          - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 14'"
           - "-sdk macosx -destination 'platform=macOS'"
           - "-sdk appletvsimulator -destination 'platform=tvOS Simulator,name=Apple TV 4K (2nd generation)'"
-          - "-sdk watchsimulator -destination 'platform=watchOS Simulator,name=Apple Watch Series 5 - 44mm'"
+          - "-sdk watchsimulator -destination 'platform=watchOS Simulator,name=Apple Watch Series 8 (45mm)'"
     steps:
       - name: Repository checkout
         uses: actions/checkout@v2
