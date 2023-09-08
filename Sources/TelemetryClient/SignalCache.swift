@@ -53,12 +53,14 @@ internal class SignalCache<T> where T: Codable {
     }
 
     private func fileURL() -> URL {
+        // swiftlint:disable force_try
         let cacheFolderURL = try! FileManager.default.url(
             for: .cachesDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: false
         )
+        // swiftlint:enable force_try
 
         return cacheFolderURL.appendingPathComponent("telemetrysignalcache")
     }
