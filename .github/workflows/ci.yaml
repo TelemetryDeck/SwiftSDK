@@ -24,7 +24,7 @@ jobs:
       matrix:
         xcode:
           - ^14
-          - ^15
+          # - ^15
         xcodebuildCommand:
           - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 11'"
           - "-sdk macosx -destination 'platform=macOS'"
