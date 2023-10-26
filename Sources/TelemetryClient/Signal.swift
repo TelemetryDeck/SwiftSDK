@@ -38,26 +38,29 @@ internal struct SignalPostBody: Codable, Equatable {
     let isTestMode: String
 }
 
-internal struct DefaultSignalPayload: Encodable {
-    let platform = Self.platform
-    let systemVersion = Self.systemVersion
-    let majorSystemVersion = Self.majorSystemVersion
-    let majorMinorSystemVersion = Self.majorMinorSystemVersion
-    let appVersion = Self.appVersion
-    let buildNumber = Self.buildNumber
-    let isSimulator = "\(Self.isSimulator)"
-    let isDebug = "\(Self.isDebug)"
-    let isTestFlight = "\(Self.isTestFlight)"
-    let isAppStore = "\(Self.isAppStore)"
-    let modelName = Self.modelName
-    let architecture = Self.architecture
-    let operatingSystem = Self.operatingSystem
-    let targetEnvironment = Self.targetEnvironment
-    let locale = Self.locale
-    var extensionIdentifier: String? = Self.extensionIdentifier
-    let telemetryClientVersion = TelemetryClientVersion
+/// The default payload that is included in payloads processed by TelemetryDeck.
+public struct DefaultSignalPayload: Encodable {
+    public let platform = Self.platform
+    public let systemVersion = Self.systemVersion
+    public let majorSystemVersion = Self.majorSystemVersion
+    public let majorMinorSystemVersion = Self.majorMinorSystemVersion
+    public let appVersion = Self.appVersion
+    public let buildNumber = Self.buildNumber
+    public let isSimulator = "\(Self.isSimulator)"
+    public let isDebug = "\(Self.isDebug)"
+    public let isTestFlight = "\(Self.isTestFlight)"
+    public let isAppStore = "\(Self.isAppStore)"
+    public let modelName = Self.modelName
+    public let architecture = Self.architecture
+    public let operatingSystem = Self.operatingSystem
+    public let targetEnvironment = Self.targetEnvironment
+    public let locale = Self.locale
+    public let extensionIdentifier: String? = Self.extensionIdentifier
+    public let telemetryClientVersion = TelemetryClientVersion
 
-    func toDictionary() -> [String: String] {
+    public init() { }
+
+    public func toDictionary() -> [String: String] {
         do {
             let encoder = JSONEncoder()
             let data = try encoder.encode(self)
