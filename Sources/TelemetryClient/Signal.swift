@@ -225,7 +225,12 @@ extension DefaultSignalPayload {
         #elseif os(xrOS)
             return "visionOS"
         #elseif os(iOS)
-            return "iOS"
+            if UIDevice.current.userInterfaceIdiom == .pad {
+                return = "iPadOS"
+            }
+            else {
+                 return "iOS"
+            }
         #elseif os(watchOS)
             return "watchOS"
         #elseif os(tvOS)
@@ -249,7 +254,12 @@ extension DefaultSignalPayload {
                 if #available(iOS 14.0, *), ProcessInfo.processInfo.isiOSAppOnMac {
                     return "isiOSAppOnMac"
                 }
-                return "iOS"
+                if UIDevice.current.userInterfaceIdiom == .pad {
+                return = "iPadOS"
+                }
+                else {
+                     return "iOS"
+                }
             #endif
         #elseif os(watchOS)
             return "watchOS"
