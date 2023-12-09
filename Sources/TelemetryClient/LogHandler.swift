@@ -1,4 +1,5 @@
 import Foundation
+import OSLog
 
 public struct LogHandler {
     public enum LogLevel: Int, CustomStringConvertible {
@@ -29,7 +30,16 @@ public struct LogHandler {
 
     public static var stdout = { logLevel in
         LogHandler(logLevel: logLevel) { level, message in
-            print("[TelemetryDeck: \(level.description)] \(message)")
+            if #available(macOS 11.0, *) {
+                let logger = Logger(subsystem: "TelemetryDeck", category: "LogHandler")
+                switch level {
+                case .debug: logger.debug("\(message)")
+                case .info: logger.info("\(message)")
+                case .error: logger.error("\(message)")
+                }
+            } else {
+                print("[TelemetryDeck: \(level.description)] \(message)")
+            }
         }
     }
 }
