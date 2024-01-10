@@ -2,7 +2,7 @@ Pod::Spec.new do |spec|
   spec.name         = "TelemetryDeck SDK"
   spec.version      = "1.5.0"
   spec.summary      = "Client SDK for TelemetryDeck"
-  spec.swift_versions = "5.6"
+  spec.swift_versions = "5.2"
   spec.summary  = "Swift SDK for TelemetryDeck, a privacy-first analytics service for apps. Sign up for a free account at telemetrydeck.com."
     spec.description  = <<-DESC
                       Build better products with live usage data. 
