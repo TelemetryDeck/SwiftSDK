@@ -1,6 +1,6 @@
 Pod::Spec.new do |spec|
   spec.name         = "TelemetryDeckSDK"
-  spec.version      = "1.5.0"
+  spec.version      = ENV['LIB_VERSION'] || '1.5.0' #fallback to major version
   spec.summary      = "Client SDK for TelemetryDeck"
   spec.swift_versions = "5.2"
   spec.summary  = "Swift SDK for TelemetryDeck, a privacy-first analytics service for apps. Sign up for a free account at telemetrydeck.com."
