@@ -1,5 +1,5 @@
 Pod::Spec.new do |spec|
-  spec.name         = "TelemetryDeck SDK"
+  spec.name         = "TelemetryDeckSDK"
   spec.version      = "1.5.0"
   spec.summary      = "Client SDK for TelemetryDeck"
   spec.swift_versions = "5.2"
