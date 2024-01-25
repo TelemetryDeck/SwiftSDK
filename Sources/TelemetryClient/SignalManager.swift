@@ -46,7 +46,7 @@ internal class SignalManager: SignalManageable {
         } else {
             // Pre watchOS 7.0, this library will not use disk caching at all as there are no notifications we can observe.
         }
-        #elseif os(tvOS) || os(iOS)
+        #elseif os(tvOS) || os(iOS) || os(visionOS)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             // We need to use a delay with these type of notifications because they fire on app load which causes a double load of the cache from disk
             NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -148,7 +148,7 @@ private extension SignalManager {
     /// This means our `init()` above doesn't always run when coming back to foreground, so we have to manually
     /// reload the cache. This also means we miss any signals sent during watchDidEnterForeground
     /// so we merge them into the new cache.
-    #if os(watchOS) || os(tvOS) || os(iOS)
+    #if os(watchOS) || os(tvOS) || os(iOS) || os(visionOS)
     @objc func didEnterForeground() {
         configuration.logHandler?.log(.debug, message: #function)
 
