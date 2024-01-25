@@ -15,7 +15,7 @@ internal protocol SignalManageable {
 }
 
 internal class SignalManager: SignalManageable {
-    private let minimumWaitTimeBetweenRequests: Double = 10 // seconds
+    private let minimumSecondsToPassBetweenRequests: Double = 10
 
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
@@ -54,17 +54,15 @@ internal class SignalManager: SignalManageable {
         }
         #endif
 
-        startTimer()
+        sendCachedSignalsRepeatedly()
     }
 
-    /// Setup a timer to send the Signals
-    private func startTimer() {
+    /// Send any cached Signals from previous sessions now and setup a timer to repeatedly send Signals from cache in regular time intervals.
+    private func sendCachedSignalsRepeatedly() {
+        attemptToSendNextBatchOfCachedSignals()
+
         sendTimer?.invalidate()
-
-        sendTimer = Timer.scheduledTimer(timeInterval: minimumWaitTimeBetweenRequests, target: self, selector: #selector(checkForSignalsAndSend), userInfo: nil, repeats: true)
-
-        // Fire the timer to attempt to send any cached Signals from a previous session
-        checkForSignalsAndSend()
+        sendTimer = Timer.scheduledTimer(timeInterval: minimumSecondsToPassBetweenRequests, target: self, selector: #selector(attemptToSendNextBatchOfCachedSignals), userInfo: nil, repeats: true)
     }
 
     /// Adds a signal to the process queue
@@ -101,10 +99,10 @@ internal class SignalManager: SignalManageable {
         }
     }
 
-    /// Send signals once we have more than the minimum.
-    /// If any fail to send, we put them back into the cache to send later.
+    /// Sends one batch of signals from the cache if not empty.
+    /// If signals fail to send, we put them back into the cache to try again later.
     @objc
-    private func checkForSignalsAndSend() {
+    private func attemptToSendNextBatchOfCachedSignals() {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 
         let queuedSignals: [SignalPostBody] = signalCache.pop()
@@ -159,7 +157,7 @@ private extension SignalManager {
         signalCache = SignalCache(logHandler: configuration.logHandler)
         signalCache.push(currentCache)
 
-        startTimer()
+        sendCachedSignalsRepeatedly()
     }
 
     @objc func didEnterBackground() {
