@@ -25,7 +25,7 @@ internal class SignalManager: SignalManageable {
         self.configuration = configuration
 
         // We automatically load any old signals from disk on initialisation
-        signalCache = SignalCache(logHandler: configuration.logHandler)
+        signalCache = SignalCache(logHandler: configuration.swiftUIPreviewMode ? nil : configuration.logHandler)
 
         // Before the app terminates, we want to save any pending signals to disk
         // We need to monitor different notifications for different devices.
