@@ -1,6 +1,6 @@
 import Foundation
 
-#if os(iOS) || os(xrOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 #elseif os(macOS)
 import AppKit
@@ -213,7 +213,7 @@ private extension SignalManager {
     var defaultUserIdentifier: String {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
 
-        #if os(iOS) || os(tvOS) || os(xrOS)
+        #if os(iOS) || os(tvOS) || os(visionOS)
             return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #elseif os(watchOS)
             if #available(watchOS 6.2, *) {
