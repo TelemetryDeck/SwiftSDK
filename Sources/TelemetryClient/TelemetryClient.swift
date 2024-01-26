@@ -277,7 +277,11 @@ public class TelemetryManager {
         // this check ensures that the number of requests can only double in the worst case where a developer calls this after each `send`
         if Date().timeIntervalSince(lastTimeImmediateSyncRequested) > SignalManager.minimumSecondsToPassBetweenRequests {
             lastTimeImmediateSyncRequested = Date()
-            signalManager.attemptToSendNextBatchOfCachedSignals()
+
+            // give the signal manager some short amount of time to process the signal that was sent right before calling sync
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(50)) { [weak self] in
+                self?.signalManager.attemptToSendNextBatchOfCachedSignals()
+            }
         }
     }
 
