@@ -197,8 +197,23 @@ public class TelemetryManager {
         initializedTelemetryManager = nil
     }
 
+    /// Send a Signal to TelemetryDeck, to record that an event has occurred.
+    ///
+    /// If you specify a user identifier here, it will take precedence over the default user identifier specified in the `TelemetryManagerConfiguration`.
+    ///
+    /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:]) {
         TelemetryManager.shared.send(signalType, for: clientUser, floatValue: floatValue, with: additionalPayload)
+    }
+
+    /// Do not call this method unless you really know what you're doing. The signals will automatically sync with the server at appropriate times, there's no need to call this.
+    ///
+    /// Use this sparingly and only to indicate a time in your app where a signal was just sent but the user is likely to leave your app and not return again for a long time.
+    ///
+    /// This function does not guarantee that the signal cache will be sent right away. Calling this after every ``send`` will not make data reach our servers faster, so avoid doing that.
+    /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn data because a user closes your app and doesn't reopen it anytime soon (if at all).
+    public static func requestImmediateSync() {
+        TelemetryManager.shared.requestImmediateSync()
     }
 
     public static var shared: TelemetryManager {
@@ -252,6 +267,20 @@ public class TelemetryManager {
         signalManager.processSignal(signalType, for: clientUser, floatValue: floatValue, with: additionalPayload, configuration: configuration)
     }
 
+    /// Do not call this method unless you really know what you're doing. The signals will automatically sync with the server at appropriate times, there's no need to call this.
+    /// 
+    /// Use this sparingly and only to indicate a time in your app where a signal was just sent but the user is likely to leave your app and not return again for a long time.
+    /// 
+    /// This function does not guarantee that the signal cache will be sent right away. Calling this after every ``send`` will not make data reach our servers faster, so avoid doing that.
+    /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn data because a user closes your app and doesn't reopen it anytime soon (if at all).
+    public func requestImmediateSync() {
+        // this check ensures that the number of requests can only double in the worst case where a developer calls this after each `send`
+        if Date().timeIntervalSince(lastTimeImmediateSyncRequested) > SignalManager.minimumSecondsToPassBetweenRequests {
+            lastTimeImmediateSyncRequested = Date()
+            signalManager.attemptToSendNextBatchOfCachedSignals()
+        }
+    }
+
     private init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
         signalManager = SignalManager(configuration: configuration)
@@ -267,6 +296,8 @@ public class TelemetryManager {
     private let configuration: TelemetryManagerConfiguration
 
     private let signalManager: SignalManageable
+
+    private var lastTimeImmediateSyncRequested: Date = .distantPast
 }
 
 @objc(TelemetryManagerConfiguration)

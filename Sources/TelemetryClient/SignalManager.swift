@@ -12,10 +12,11 @@ import TVUIKit
 
 internal protocol SignalManageable {
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String: String], configuration: TelemetryManagerConfiguration)
+    func attemptToSendNextBatchOfCachedSignals()
 }
 
 internal class SignalManager: SignalManageable {
-    private let minimumSecondsToPassBetweenRequests: Double = 10
+    internal static let minimumSecondsToPassBetweenRequests: Double = 10
 
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
@@ -62,7 +63,7 @@ internal class SignalManager: SignalManageable {
         attemptToSendNextBatchOfCachedSignals()
 
         sendTimer?.invalidate()
-        sendTimer = Timer.scheduledTimer(timeInterval: minimumSecondsToPassBetweenRequests, target: self, selector: #selector(attemptToSendNextBatchOfCachedSignals), userInfo: nil, repeats: true)
+        sendTimer = Timer.scheduledTimer(timeInterval: Self.minimumSecondsToPassBetweenRequests, target: self, selector: #selector(attemptToSendNextBatchOfCachedSignals), userInfo: nil, repeats: true)
     }
 
     /// Adds a signal to the process queue
@@ -102,7 +103,7 @@ internal class SignalManager: SignalManageable {
     /// Sends one batch of signals from the cache if not empty.
     /// If signals fail to send, we put them back into the cache to try again later.
     @objc
-    private func attemptToSendNextBatchOfCachedSignals() {
+    internal func attemptToSendNextBatchOfCachedSignals() {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 
         let queuedSignals: [SignalPostBody] = signalCache.pop()
