@@ -222,7 +222,7 @@ extension DefaultSignalPayload {
     static var operatingSystem: String {
         #if os(macOS)
             return "macOS"
-        #elseif os(xrOS)
+        #elseif os(visionOS)
             return "visionOS"
         #elseif os(iOS)
             return "iOS"
@@ -240,7 +240,7 @@ extension DefaultSignalPayload {
     static var platform: String {
         #if os(macOS)
             return "macOS"
-        #elseif os(xrOS)
+        #elseif os(visionOS)
             return "visionOS"
         #elseif os(iOS)
             #if targetEnvironment(macCatalyst)

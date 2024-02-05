@@ -194,4 +194,6 @@ private class FakeSignalManager: SignalManageable {
         )
         processedSignals.append(signalPostBody)
     }
+
+    func attemptToSendNextBatchOfCachedSignals() {}
 }

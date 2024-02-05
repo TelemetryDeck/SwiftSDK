@@ -1,6 +1,6 @@
 import Foundation
 
-#if os(iOS) || os(xrOS)
+#if os(iOS) || os(visionOS)
 import UIKit
 #elseif os(macOS)
 import AppKit
@@ -12,10 +12,11 @@ import TVUIKit
 
 internal protocol SignalManageable {
     func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String: String], configuration: TelemetryManagerConfiguration)
+    func attemptToSendNextBatchOfCachedSignals()
 }
 
 internal class SignalManager: SignalManageable {
-    private let minimumWaitTimeBetweenRequests: Double = 10 // seconds
+    internal static let minimumSecondsToPassBetweenRequests: Double = 10
 
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
@@ -25,7 +26,7 @@ internal class SignalManager: SignalManageable {
         self.configuration = configuration
 
         // We automatically load any old signals from disk on initialisation
-        signalCache = SignalCache(logHandler: configuration.logHandler)
+        signalCache = SignalCache(logHandler: configuration.swiftUIPreviewMode ? nil : configuration.logHandler)
 
         // Before the app terminates, we want to save any pending signals to disk
         // We need to monitor different notifications for different devices.
@@ -46,7 +47,7 @@ internal class SignalManager: SignalManageable {
         } else {
             // Pre watchOS 7.0, this library will not use disk caching at all as there are no notifications we can observe.
         }
-        #elseif os(tvOS) || os(iOS)
+        #elseif os(tvOS) || os(iOS) || os(visionOS)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
             // We need to use a delay with these type of notifications because they fire on app load which causes a double load of the cache from disk
             NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
@@ -54,17 +55,15 @@ internal class SignalManager: SignalManageable {
         }
         #endif
 
-        startTimer()
+        sendCachedSignalsRepeatedly()
     }
 
-    /// Setup a timer to send the Signals
-    private func startTimer() {
+    /// Send any cached Signals from previous sessions now and setup a timer to repeatedly send Signals from cache in regular time intervals.
+    private func sendCachedSignalsRepeatedly() {
+        attemptToSendNextBatchOfCachedSignals()
+
         sendTimer?.invalidate()
-
-        sendTimer = Timer.scheduledTimer(timeInterval: minimumWaitTimeBetweenRequests, target: self, selector: #selector(checkForSignalsAndSend), userInfo: nil, repeats: true)
-
-        // Fire the timer to attempt to send any cached Signals from a previous session
-        checkForSignalsAndSend()
+        sendTimer = Timer.scheduledTimer(timeInterval: Self.minimumSecondsToPassBetweenRequests, target: self, selector: #selector(attemptToSendNextBatchOfCachedSignals), userInfo: nil, repeats: true)
     }
 
     /// Adds a signal to the process queue
@@ -101,10 +100,10 @@ internal class SignalManager: SignalManageable {
         }
     }
 
-    /// Send signals once we have more than the minimum.
-    /// If any fail to send, we put them back into the cache to send later.
+    /// Sends one batch of signals from the cache if not empty.
+    /// If signals fail to send, we put them back into the cache to try again later.
     @objc
-    private func checkForSignalsAndSend() {
+    internal func attemptToSendNextBatchOfCachedSignals() {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 
         let queuedSignals: [SignalPostBody] = signalCache.pop()
@@ -150,7 +149,7 @@ private extension SignalManager {
     /// This means our `init()` above doesn't always run when coming back to foreground, so we have to manually
     /// reload the cache. This also means we miss any signals sent during watchDidEnterForeground
     /// so we merge them into the new cache.
-    #if os(watchOS) || os(tvOS) || os(iOS)
+    #if os(watchOS) || os(tvOS) || os(iOS) || os(visionOS)
     @objc func didEnterForeground() {
         configuration.logHandler?.log(.debug, message: #function)
 
@@ -159,7 +158,7 @@ private extension SignalManager {
         signalCache = SignalCache(logHandler: configuration.logHandler)
         signalCache.push(currentCache)
 
-        startTimer()
+        sendCachedSignalsRepeatedly()
     }
 
     @objc func didEnterBackground() {
@@ -213,7 +212,7 @@ private extension SignalManager {
     var defaultUserIdentifier: String {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
 
-        #if os(iOS) || os(tvOS) || os(xrOS)
+        #if os(iOS) || os(tvOS) || os(visionOS)
             return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #elseif os(watchOS)
             if #available(watchOS 6.2, *) {
