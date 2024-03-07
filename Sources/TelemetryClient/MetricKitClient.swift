@@ -46,7 +46,7 @@ import Foundation
         func didReceive(_ payloads: [MXDiagnosticPayload]) {
             for payload in payloads {
                 guard let diagnosticPayload = String(data: payload.jsonRepresentation(), encoding: .utf8) else { continue }
-                TelemetryManager.send("TelemetryDeck.Crashes.swiftCrash", with: ["diagnisticPayload": diagnosticPayload])
+                TelemetryManager.send("TelemetryDeck.Crashes.swiftCrash", with: ["diagnosticPayload": diagnosticPayload])
             }
         }
     }
