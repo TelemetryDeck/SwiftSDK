@@ -47,6 +47,19 @@ public final class TelemetryManagerConfiguration {
     ///
     /// Defaults to true. Set to false to prevent automatically sending this signal.
     public var sendNewSessionBeganSignal: Bool = true
+    
+    /// If `true`, sends app metrics and crash reports whenever they are received from the OS.
+    ///
+    /// Most Apple platforms can automatically collect metrics such as app launch time and
+    /// CPU usage using MetricKit. iOS, tvOS, iPadOS and visionOS can additionally also collect
+    /// crash logs. When enabled, the SDK will send these to TelemetryDeck for further analysis.
+    public var sendMetricsAndCrashes: Bool = true {
+        didSet {
+            metricKitClient.enabled = sendMetricsAndCrashes
+        }
+    }
+    
+    private let metricKitClient = MetricKitClient()
 
     /// A random identifier for the current user session.
     ///
@@ -142,6 +155,8 @@ public final class TelemetryManagerConfiguration {
         } else {
             self.salt = ""
         }
+        
+        metricKitClient.enabled = sendMetricsAndCrashes
 
         #if os(iOS)
             NotificationCenter.default.addObserver(self, selector: #selector(didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
