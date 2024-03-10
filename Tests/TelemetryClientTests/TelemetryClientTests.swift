@@ -17,21 +17,21 @@ final class TelemetryClientTests: XCTestCase {
         let signalCache = SignalCache<SignalPostBody>(logHandler: nil)
         
         let signals: [SignalPostBody] = [
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "01", sessionID: "01", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "02", sessionID: "02", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "03", sessionID: "03", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "04", sessionID: "04", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "05", sessionID: "05", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "06", sessionID: "06", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "07", sessionID: "07", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "08", sessionID: "08", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "09", sessionID: "09", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "10", sessionID: "10", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "11", sessionID: "11", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "12", sessionID: "12", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "13", sessionID: "13", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "14", sessionID: "14", type: "test", floatValue: nil, payload: [], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "15", sessionID: "15", type: "test", floatValue: nil, payload: [], isTestMode: "true")
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "01", sessionID: "01", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "02", sessionID: "02", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "03", sessionID: "03", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "04", sessionID: "04", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "05", sessionID: "05", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "06", sessionID: "06", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "07", sessionID: "07", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "08", sessionID: "08", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "09", sessionID: "09", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "10", sessionID: "10", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "11", sessionID: "11", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "12", sessionID: "12", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "13", sessionID: "13", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "14", sessionID: "14", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID(), clientUser: "15", sessionID: "15", type: "test", floatValue: nil, payload: [:], isTestMode: "true")
         ]
         
         for signal in signals {
@@ -71,7 +71,7 @@ final class TelemetryClientTests: XCTestCase {
         let bodyItems = signalManager.processedSignals
         XCTAssertEqual(bodyItems.count, 1)
         let bodyItem = try XCTUnwrap(bodyItems.first)
-        XCTAssert(bodyItem.payload.contains("isTestEnricher:true"))
+        XCTAssertEqual(bodyItem.payload["isTestEnricher"], "true")
     }
     
     func testSignalEnrichers_precedence() throws {
@@ -91,8 +91,9 @@ final class TelemetryClientTests: XCTestCase {
         let bodyItems = signalManager.processedSignals
         XCTAssertEqual(bodyItems.count, 1)
         let bodyItem = try XCTUnwrap(bodyItems.first)
-        XCTAssert(bodyItem.payload.contains("item:B")) // .send takes priority over enricher
-        XCTAssert(bodyItem.payload.contains("isDebug:banana")) // enricher takes priority over default payload
+        
+        XCTAssertEqual(bodyItem.payload["item"], "B") // .send takes priority over enricher
+        XCTAssertEqual(bodyItem.payload["isDebug"], "banana") // enricher takes priority over default payload
     }
     
     func testSendsSignals_withAnalyticsImplicitlyEnabled() {
@@ -189,7 +190,7 @@ private class FakeSignalManager: SignalManageable {
             sessionID: configuration.sessionID.uuidString,
             type: "\(signalType)",
             floatValue: floatValue,
-            payload: payload.toMultiValueDimension(),
+            payload: payload,
             isTestMode: configuration.testMode ? "true" : "false"
         )
         processedSignals.append(signalPostBody)
