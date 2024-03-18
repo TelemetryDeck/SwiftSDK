@@ -224,7 +224,8 @@ public class TelemetryManager {
             self.initializedTelemetryManager = .init(configuration: .init(appID: ""))
             return self.initializedTelemetryManager!
         } else {
-            fatalError("Please call TelemetryManager.initialize(...) before accessing the shared telemetryManager instance.")
+            assertionFailure("Please call TelemetryManager.initialize(...) before accessing the shared telemetryManager instance.")
+            return .init(configuration: .init(appID: ""))
         }
 
     }
