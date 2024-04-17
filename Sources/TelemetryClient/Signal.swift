@@ -55,6 +55,9 @@ public struct DefaultSignalPayload: Encodable {
     public let operatingSystem = Self.operatingSystem
     public let targetEnvironment = Self.targetEnvironment
     public let locale = Self.locale
+    public let region = Self.region
+    public let appLanguage = Self.appLanguage
+    public let preferredLanguage = Self.preferredLanguage
     public let extensionIdentifier: String? = Self.extensionIdentifier
     public let telemetryClientVersion = TelemetryClientVersion
 
@@ -271,8 +274,32 @@ extension DefaultSignalPayload {
         #endif
     }
 
-    /// The locale identifier
+    /// The locale identifier the app currently runs in. E.g. `en_DE` for an app that does not support German on a device with preferences `[German, English]`, and region Germany.
     static var locale: String {
         return Locale.current.identifier
+    }
+
+    /// The region identifier both the user most prefers and also the app is set to. They are always the same because formatters in apps always auto-adjust to the users preferences.
+    static var region: String {
+        if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
+            return Locale.current.region?.identifier ?? Locale.current.identifier.components(separatedBy: .init(charactersIn: "-_")).last!
+        } else {
+            return Locale.current.regionCode ?? Locale.current.identifier.components(separatedBy: .init(charactersIn: "-_")).last!
+        }
+    }
+
+    /// The language identifier the app is currently running in. This represents the language the system (or the user) has chosen for the app to run in.
+    static var appLanguage: String {
+        if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
+            return Locale.current.language.minimalIdentifier
+        } else {
+            return Locale.current.languageCode ?? Locale.current.identifier.components(separatedBy: .init(charactersIn: "-_"))[0]
+        }
+    }
+
+    /// The language identifier of the users most preferred language set on the device. Returns also languages the current app is not even localized to.
+    static var preferredLanguage: String {
+        let preferredLocaleIdentifier = Locale.preferredLanguages.first ?? "zz-ZZ"
+        return preferredLocaleIdentifier.components(separatedBy: .init(charactersIn: "-_"))[0]
     }
 }
