@@ -40,38 +40,71 @@ internal struct SignalPostBody: Codable, Equatable {
 
 /// The default payload that is included in payloads processed by TelemetryDeck.
 public struct DefaultSignalPayload: Encodable {
-    public let platform = Self.platform
-    public let systemVersion = Self.systemVersion
-    public let majorSystemVersion = Self.majorSystemVersion
-    public let majorMinorSystemVersion = Self.majorMinorSystemVersion
-    public let appVersion = Self.appVersion
-    public let buildNumber = Self.buildNumber
-    public let isSimulator = "\(Self.isSimulator)"
-    public let isDebug = "\(Self.isDebug)"
-    public let isTestFlight = "\(Self.isTestFlight)"
-    public let isAppStore = "\(Self.isAppStore)"
-    public let modelName = Self.modelName
-    public let architecture = Self.architecture
-    public let operatingSystem = Self.operatingSystem
-    public let targetEnvironment = Self.targetEnvironment
-    public let locale = Self.locale
-    public let region = Self.region
-    public let appLanguage = Self.appLanguage
-    public let preferredLanguage = Self.preferredLanguage
-    public let extensionIdentifier: String? = Self.extensionIdentifier
-    public let telemetryClientVersion = TelemetryClientVersion
+    public static var parameters: [String: String] {
+        var parameters: [String: String] = [
+            // deprecated names
+            "platform": Self.platform,
+            "systemVersion": Self.systemVersion,
+            "majorSystemVersion": Self.majorSystemVersion,
+            "majorMinorSystemVersion": Self.majorMinorSystemVersion,
+            "appVersion": Self.appVersion,
+            "buildNumber": Self.buildNumber,
+            "isSimulator": "\(Self.isSimulator)",
+            "isDebug": "\(Self.isDebug)",
+            "isTestFlight": "\(Self.isTestFlight)",
+            "isAppStore": "\(Self.isAppStore)",
+            "modelName": Self.modelName,
+            "architecture": Self.architecture,
+            "operatingSystem": Self.operatingSystem,
+            "targetEnvironment": Self.targetEnvironment,
+            "locale": Self.locale,
+            "region": Self.region,
+            "appLanguage": Self.appLanguage,
+            "preferredLanguage": Self.preferredLanguage,
+            "telemetryClientVersion": TelemetryClientVersion,
 
-    public init() { }
+            // new names
+            "TelemetryDeck.AppInfo.buildNumber": Self.buildNumber,
+            "TelemetryDeck.AppInfo.version": Self.appVersion,
+            "TelemetryDeck.AppInfo.versionAndBuildNumber": "\(Self.appVersion) (build \(Self.buildNumber))",
+            
+            "TelemetryDeck.Device.architecture": Self.architecture,
+            "TelemetryDeck.Device.modelName": Self.modelName,
+            "TelemetryDeck.Device.operatingSystem": Self.operatingSystem,
+            "TelemetryDeck.Device.orientation": Self.orientation,
+            "TelemetryDeck.Device.platform": Self.platform,
+            "TelemetryDeck.Device.screenResolutionHeight": Self.screenResolutionHeight,
+            "TelemetryDeck.Device.screenResolutionWidth": Self.screenResolutionWidth,
+            "TelemetryDeck.Device.systemMajorMinorVersion": Self.majorMinorSystemVersion,
+            "TelemetryDeck.Device.systemMajorVersion": Self.majorSystemVersion,
+            "TelemetryDeck.Device.systemVersion": Self.systemVersion,
+            "TelemetryDeck.Device.timeZone": Self.timeZone,
 
-    public func toDictionary() -> [String: String] {
-        do {
-            let encoder = JSONEncoder()
-            let data = try encoder.encode(self)
-            let dict = try JSONSerialization.jsonObject(with: data) as? [String: String]
-            return dict ?? [:]
-        } catch {
-            return [:]
+            "TelemetryDeck.RunContext.isAppStore": "\(Self.isAppStore)",
+            "TelemetryDeck.RunContext.isDebug": "\(Self.isDebug)",
+            "TelemetryDeck.RunContext.isSimulator": "\(Self.isSimulator)",
+            "TelemetryDeck.RunContext.isTestFlight": "\(Self.isTestFlight)",
+            "TelemetryDeck.RunContext.language": Self.appLanguage,
+            "TelemetryDeck.RunContext.locale": Self.locale,
+            "TelemetryDeck.RunContext.targetEnvironment": Self.targetEnvironment,
+
+            "TelemetryDeck.SDK.name": "SwiftSDK",
+            "TelemetryDeck.SDK.nameAndVersion": "SwiftSDK \(TelemetryClientVersion)",
+            "TelemetryDeck.SDK.version": TelemetryClientVersion,
+
+            "TelemetryDeck.UserPreference.language": Self.preferredLanguage,
+            "TelemetryDeck.UserPreference.region": Self.region,
+        ]
+
+        if let extensionIdentifier = Self.extensionIdentifier {
+            // deprecated name
+            parameters["extensionIdentifier"] = extensionIdentifier
+
+            // new name
+            parameters["TelemetryDeck.RunContext.extensionIdentifier"]
         }
+
+        return parameters
     }
 }
 
@@ -301,5 +334,67 @@ extension DefaultSignalPayload {
     static var preferredLanguage: String {
         let preferredLocaleIdentifier = Locale.preferredLanguages.first ?? "zz-ZZ"
         return preferredLocaleIdentifier.components(separatedBy: .init(charactersIn: "-_"))[0]
+    }
+
+    /// The current devices screen resolution width in points.
+    static var screenResolutionWidth: String {
+        #if os(iOS) || os(tvOS)
+        return "\(UIScreen.main.bounds.width)"
+        #elseif os(watchOS)
+        return "\(WKInterfaceDevice.current().screenBounds.width)"
+        #elseif os(macOS)
+        if let screen = NSScreen.main {
+            return "\(screen.frame.width)"
+        }
+        return "Unknown"
+        #else
+        return "N/A"
+        #endif
+    }
+
+    /// The current devices screen resolution height in points.
+    static var screenResolutionHeight: String {
+        #if os(iOS) || os(tvOS)
+        return "\(UIScreen.main.bounds.height)"
+        #elseif os(watchOS)
+        return "\(WKInterfaceDevice.current().screenBounds.height)"
+        #elseif os(macOS)
+        if let screen = NSScreen.main {
+            return "\(screen.frame.height)"
+        }
+        return "Unknown"
+        #else
+        return "N/A"
+        #endif
+    }
+
+    /// The current devices screen orientation. Returns `Fixed` for devices that don't support an orientation change.
+    static var orientation: String {
+        #if os(iOS)
+        switch UIDevice.current.orientation {
+        case .portrait, .portraitUpsideDown:
+            return "Portrait"
+        case .landscapeLeft, .landscapeRight:
+            return "Landscape"
+        default:
+            return "Unknown"
+        }
+        #else
+        return "Fixed"
+        #endif
+    }
+
+    /// The devices current time zone in the modern `UTC` format, such as `UTC+1`, or `UTC-3:30`.
+    static var timeZone: String {
+        let secondsFromGMT = TimeZone.current.secondsFromGMT()
+        let hours = secondsFromGMT / 3600
+        let minutes = abs(secondsFromGMT / 60 % 60)
+
+        let sign = secondsFromGMT >= 0 ? "+" : "-"
+        if minutes > 0 {
+            return "UTC\(sign)\(hours):\(String(format: "%02d", minutes))"
+        } else {
+            return "UTC\(sign)\(hours)"
+        }
     }
 }

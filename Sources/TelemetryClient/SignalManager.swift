@@ -79,7 +79,7 @@ internal class SignalManager: SignalManageable {
                 .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
                 .reduce([String: String](), { $0.applying($1) })
 
-            let payload = DefaultSignalPayload().toDictionary()
+            let payload = DefaultSignalPayload.parameters
                 .applying(enrichedMetadata)
                 .applying(additionalPayload)
 
