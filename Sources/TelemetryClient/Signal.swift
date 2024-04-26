@@ -101,7 +101,7 @@ public struct DefaultSignalPayload: Encodable {
             parameters["extensionIdentifier"] = extensionIdentifier
 
             // new name
-            parameters["TelemetryDeck.RunContext.extensionIdentifier"]
+            parameters["TelemetryDeck.RunContext.extensionIdentifier"] = extensionIdentifier
         }
 
         return parameters
