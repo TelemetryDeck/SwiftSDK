@@ -12,8 +12,6 @@ import Foundation
 
 let TelemetryClientVersion = "1.5.1"
 
-public typealias TelemetrySignalType = String
-
 /// Configuration for TelemetryManager
 ///
 /// Use an instance of this class to specify settings for TelemetryManager. If these settings change during the course of
@@ -55,7 +53,14 @@ public final class TelemetryManagerConfiguration {
     /// more fine-grained session support, write a new random session identifier into this property each time a new session begins.
     ///
     /// Beginning a new session automatically sends a "newSessionBegan" Signal if `sendNewSessionBeganSignal` is `true`
-    public var sessionID = UUID() { didSet { if sendNewSessionBeganSignal { TelemetryManager.send("newSessionBegan") } } }
+    public var sessionID = UUID() {
+        didSet {
+            if sendNewSessionBeganSignal {
+                TelemetryManager.send("newSessionBegan")
+                TelemetryDeck.signal("TelemetryDeck.Session.started")
+            }
+        }
+    }
 
     @available(*, deprecated, message: "Please use the testMode property instead")
     public var sendSignalsInDebugConfiguration: Bool = false
@@ -183,6 +188,7 @@ public class TelemetryManager {
         initializedTelemetryManager != nil
     }
 
+    @available(*, deprecated, renamed: "TelemetryDeck.initialize(configuration:)", message: "This call was renamed to `TelemetryDeck.initialize(configuration:)`. Please migrate – a fix-it is available.")
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
@@ -199,11 +205,21 @@ public class TelemetryManager {
 
     /// Send a Signal to TelemetryDeck, to record that an event has occurred.
     ///
+    /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
+    @available(*, deprecated, renamed: "TelemetryDeck.signal(_:parameters:)", message: "This call was renamed to `TelemetryDeck.signal(_:parameters:)`. Please migrate – a fix-it is available.")
+    public static func send(_ signalName: String, with parameters: [String: String] = [:]) {
+        send(signalName, for: nil, floatValue: nil, with: parameters)
+    }
+
+    /// Send a Signal to TelemetryDeck, to record that an event has occurred.
+    ///
     /// If you specify a user identifier here, it will take precedence over the default user identifier specified in the `TelemetryManagerConfiguration`.
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
-    public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.shared.send(signalType, for: clientUser, floatValue: floatValue, with: additionalPayload)
+    @_disfavoredOverload
+    @available(*, deprecated, message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments.")
+    public static func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
+        TelemetryManager.shared.send(signalName, for: customUserID, floatValue: floatValue, with: parameters)
     }
 
     /// Do not call this method unless you really know what you're doing. The signals will automatically sync with the server at appropriate times, there's no need to call this.
@@ -261,11 +277,23 @@ public class TelemetryManager {
     /// If you specify a user identifier here, it will take precedence over the default user identifier specified in the `TelemetryManagerConfiguration`.
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
-    public func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, floatValue: Double? = nil, with additionalPayload: [String: String] = [:]) {
+    @available(*, deprecated, message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments.")
+    public func send(_ signalName: String, with parameters: [String: String] = [:]) {
+        send(signalName, for: nil, floatValue: nil, with: parameters)
+    }
+
+    /// Send a Signal to TelemetryDeck, to record that an event has occurred.
+    ///
+    /// If you specify a user identifier here, it will take precedence over the default user identifier specified in the `TelemetryManagerConfiguration`.
+    ///
+    /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
+    @_disfavoredOverload
+    @available(*, deprecated, message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments.")
+    public func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
         // make sure to not send any signals when run by Xcode via SwiftUI previews
         guard !self.configuration.swiftUIPreviewMode, !self.configuration.analyticsDisabled else { return }
 
-        signalManager.processSignal(signalType, for: clientUser, floatValue: floatValue, with: additionalPayload, configuration: configuration)
+        signalManager.processSignal(signalName, parameters: parameters, floatValue: floatValue, customUserID: customUserID, configuration: configuration)
     }
 
     /// Do not call this method unless you really know what you're doing. The signals will automatically sync with the server at appropriate times, there's no need to call this.
@@ -366,16 +394,16 @@ public final class TelemetryManagerObjCProxy: NSObject {
         TelemetryManager.terminate()
     }
 
-    @objc public static func send(_ signalType: TelemetrySignalType, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.send(signalType, for: clientUser, with: additionalPayload)
+    @objc public static func send(_ signalName: String, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
+        TelemetryManager.send(signalName, for: clientUser, with: additionalPayload)
     }
 
-    @objc public static func send(_ signalType: TelemetrySignalType, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.send(signalType, with: additionalPayload)
+    @objc public static func send(_ signalName: String, with additionalPayload: [String: String] = [:]) {
+        TelemetryManager.send(signalName, with: additionalPayload)
     }
 
-    @objc public static func send(_ signalType: TelemetrySignalType) {
-        TelemetryManager.send(signalType)
+    @objc public static func send(_ signalName: String) {
+        TelemetryManager.send(signalName)
     }
 
     @objc public static func updateDefaultUser(to newDefaultUser: String?) {

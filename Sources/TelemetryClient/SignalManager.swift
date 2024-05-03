@@ -11,7 +11,7 @@ import TVUIKit
 #endif
 
 internal protocol SignalManageable {
-    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String: String], configuration: TelemetryManagerConfiguration)
+    func processSignal(_ signalName: String, parameters: [String: String], floatValue: Double?, customUserID: String?, configuration: TelemetryManagerConfiguration)
     func attemptToSendNextBatchOfCachedSignals()
 }
 
@@ -68,27 +68,27 @@ internal class SignalManager: SignalManageable {
 
     /// Adds a signal to the process queue
     func processSignal(
-        _ signalType: TelemetrySignalType,
-        for clientUser: String? = nil,
-        floatValue: Double? = nil,
-        with additionalPayload: [String: String] = [:],
+        _ signalName: String,
+        parameters: [String: String],
+        floatValue: Double?,
+        customUserID: String?,
         configuration: TelemetryManagerConfiguration
     ) {
         DispatchQueue.global(qos: .utility).async {
             let enrichedMetadata: [String: String] = configuration.metadataEnrichers
-                .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
+                .map { $0.enrich(signalType: signalName, for: customUserID, floatValue: floatValue) }
                 .reduce([String: String](), { $0.applying($1) })
 
             let payload = DefaultSignalPayload.parameters
                 .applying(enrichedMetadata)
-                .applying(additionalPayload)
+                .applying(parameters)
 
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
                 appID: UUID(uuidString: configuration.telemetryAppID)!,
-                clientUser: CryptoHashing.sha256(str: clientUser ?? self.defaultUserIdentifier, salt: configuration.salt),
+                clientUser: CryptoHashing.sha256(str: customUserID ?? self.defaultUserIdentifier, salt: configuration.salt),
                 sessionID: configuration.sessionID.uuidString,
-                type: "\(signalType)",
+                type: "\(signalName)",
                 floatValue: floatValue,
                 payload: payload.toMultiValueDimension(),
                 isTestMode: configuration.testMode ? "true" : "false"

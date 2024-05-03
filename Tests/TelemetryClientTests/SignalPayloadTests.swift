@@ -76,7 +76,7 @@ final class DefaultSignalPayloadTests: XCTestCase {
         #elseif os(Linux)
             expectedResult = "Linux"
         #elseif os(visionOS)
-            expectedResult = "VisionOS"
+            expectedResult = "visionOS"
         #else
             return "Unknown Operating System"
         #endif

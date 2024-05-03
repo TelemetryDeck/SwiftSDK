@@ -2,7 +2,7 @@ import Foundation
 
 public protocol SignalEnricher {
     func enrich(
-        signalType: TelemetrySignalType,
+        signalType: String,
         for clientUser: String?,
         floatValue: Double?
     ) -> [String: String]
