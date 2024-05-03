@@ -188,7 +188,7 @@ public class TelemetryManager {
         initializedTelemetryManager != nil
     }
 
-    @available(*, deprecated, renamed: "TelemetryDeck.initialize(configuration:)", message: "This call was renamed to `TelemetryDeck.initialize(configuration:)`. Please migrate – a fix-it is available.")
+    @available(*, deprecated, renamed: "TelemetryDeck.initialize(config:)", message: "This call was renamed to `TelemetryDeck.initialize(config:)`. Please migrate – a fix-it is available.")
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }

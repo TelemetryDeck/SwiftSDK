@@ -3,7 +3,7 @@ import Foundation
 /// A namespace for TelemetryDeck related functionalities.
 public enum TelemetryDeck {
     /// This alias makes it easier to migrate the configuration type into the TelemetryDeck namespace in future versions when deprecated code is fully removed.
-    public typealias Configuration = TelemetryManagerConfiguration
+    public typealias Config = TelemetryManagerConfiguration
 
     /// Initializes TelemetryDeck with a customizable configuration.
     ///
@@ -11,8 +11,8 @@ public enum TelemetryDeck {
     ///
     /// This function sets up the telemetry system with the specified configuration. It is necessary to call this method before sending any telemetry signals.
     /// For example, you might want to call this in your `init` method of your app's `@main` entry point.
-    public static func initialize(configuration: Configuration) {
-        TelemetryManager.initialize(with: configuration)
+    public static func initialize(config: Config) {
+        TelemetryManager.initialize(with: config)
     }
 
     /// Sends a telemetry signal with optional parameters to TelemetryDeck.
