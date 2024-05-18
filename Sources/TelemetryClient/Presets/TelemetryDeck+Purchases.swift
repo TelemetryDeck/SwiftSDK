@@ -4,6 +4,16 @@ import Foundation
 
 @available(iOS 15, macOS 12, tvOS 15, visionOS 1, watchOS 8, *)
 extension TelemetryDeck {
+    /// Sends a telemetry signal indicating that a purchase has been completed.
+    ///
+    /// - Parameters:
+    ///   - transaction: The completed `StoreKit.Transaction` containing details about the purchase.
+    ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
+    ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
+    ///
+    /// This function captures details about the completed purchase, including the type of purchase (subscription or one-time),
+    /// the country code of the storefront, and the currency code. It also converts the price to USD if necessary and sends
+    /// this information as a telemetry signal. The conversion happens with hard-coded values that might be out of date.
     public static func purchaseCompleted(
         transaction: StoreKit.Transaction,
         parameters: [String: String] = [:],
@@ -203,6 +213,5 @@ extension TelemetryDeck {
         "ZMW": 25.4938,
         "ZWL": 13.3976,
     ]
-
 }
 #endif
