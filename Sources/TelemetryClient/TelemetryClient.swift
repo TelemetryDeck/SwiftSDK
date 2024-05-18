@@ -231,6 +231,7 @@ public class TelemetryManager {
     ///
     /// This function does not guarantee that the signal cache will be sent right away. Calling this after every ``send`` will not make data reach our servers faster, so avoid doing that.
     /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn data because a user closes your app and doesn't reopen it anytime soon (if at all).
+    @available(*, deprecated, renamed: "TelemetryDeck.requestImmediateSync()", message: "This call was renamed to `TelemetryDeck.requestImmediateSync()`. Please migrate – a fix-it is available.")
     public static func requestImmediateSync() {
         TelemetryManager.shared.requestImmediateSync()
     }
