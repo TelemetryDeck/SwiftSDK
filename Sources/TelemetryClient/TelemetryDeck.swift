@@ -24,7 +24,7 @@ public enum TelemetryDeck {
     ///   - customUserID: An optional string specifying a custom user identifier. If provided, it will override the default user identifier from the configuration. Default is `nil`.
     ///
     /// This function wraps the `TelemetryManager.send` method, providing a streamlined way to send signals from anywhere in the app.
-    static func signal(_ signalName: String, parameters: [String: String] = [:], floatValue: Double? = nil, customUserID: String? = nil) {
+    public static func signal(_ signalName: String, parameters: [String: String] = [:], floatValue: Double? = nil, customUserID: String? = nil) {
         TelemetryManager.send(signalName, for: customUserID, floatValue: floatValue, with: parameters)
     }
 }
