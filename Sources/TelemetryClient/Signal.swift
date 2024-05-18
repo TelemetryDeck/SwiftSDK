@@ -324,7 +324,7 @@ extension DefaultSignalPayload {
     /// The language identifier the app is currently running in. This represents the language the system (or the user) has chosen for the app to run in.
     static var appLanguage: String {
         if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
-            return Locale.current.language.minimalIdentifier
+            return Locale.current.language.languageCode?.identifier ?? Locale.current.identifier.components(separatedBy: .init(charactersIn: "-_"))[0]
         } else {
             return Locale.current.languageCode ?? Locale.current.identifier.components(separatedBy: .init(charactersIn: "-_"))[0]
         }
