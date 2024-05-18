@@ -22,11 +22,11 @@ extension TelemetryDeck {
         let priceValueInNativeCurrency = NSDecimalNumber(decimal: transaction.price ?? Decimal()).doubleValue
 
         let priceValueInUSD: Double
-        if transaction.currency == Locale.Currency("USD") {
+        if transaction.currencyCode == "USD" {
             priceValueInUSD = priceValueInNativeCurrency
         } else if
-            let currency = transaction.currency,
-            let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currency.identifier]
+            let currencyCode = transaction.currencyCode,
+            let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
         {
             priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
         } else {
@@ -35,11 +35,11 @@ extension TelemetryDeck {
 
         var purchaseParameters: [String: String] = [
             "TelemetryDeck.Purchase.type": transaction.subscriptionGroupID != nil ? "subscription" : "one-time-purchase",
-            "TelemetryDeck.Purchase.countryCode": transaction.storefront.countryCode,
+            "TelemetryDeck.Purchase.countryCode": transaction.storefrontCountryCode,
         ]
 
-        if let currency = transaction.currency {
-            purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currency.identifier
+        if let currencyCode = transaction.currencyCode {
+            purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currencyCode
         }
 
         self.signal(
