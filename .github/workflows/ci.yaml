@@ -27,10 +27,11 @@ jobs:
         xcode:
           - ^15
         xcodebuildCommand:
-          - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 14'"
+          - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 15'"
           - "-sdk macosx -destination 'platform=macOS'"
-          - "-sdk appletvsimulator -destination 'platform=tvOS Simulator,name=Apple TV 4K (2nd generation)'"
-          - "-sdk watchsimulator -destination 'platform=watchOS Simulator,name=Apple Watch Series 8 (45mm)'"
+          - "-sdk xrsimulator -destination 'platform=visionOS Simulator,name=Apple Vision Pro'"
+          - "-sdk appletvsimulator -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)'"
+          - "-sdk watchsimulator -destination 'platform=watchOS Simulator,name=Apple Watch Series 9 (45mm)'"
     steps:
       - name: Repository checkout
         uses: actions/checkout@v4
