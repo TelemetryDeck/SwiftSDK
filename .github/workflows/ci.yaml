@@ -10,12 +10,14 @@ on:
 jobs:
   lint:
     name: Lint Code
-    runs-on: macos-latest
+    runs-on: ubuntu-latest
     steps:
       - name: Repository checkout
         uses: actions/checkout@v4
       - name: Lint
-        run: swiftlint
+        uses: norio-nomura/action-swiftlint@3.2.1
+        with:
+          args: --strict
   test:
     name: Test Xcode ${{ matrix.xcode }} - ${{ matrix.xcodebuildCommand }}
     runs-on: "macos-latest"

@@ -86,7 +86,7 @@ internal class SignalManager: SignalManageable {
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
                 appID: UUID(uuidString: configuration.telemetryAppID)!,
-                clientUser: CryptoHashing.sha256(str: customUserID ?? self.defaultUserIdentifier, salt: configuration.salt),
+                clientUser: CryptoHashing.sha256(string: customUserID ?? self.defaultUserIdentifier, salt: configuration.salt),
                 sessionID: configuration.sessionID.uuidString,
                 type: "\(signalName)",
                 floatValue: floatValue,
@@ -203,7 +203,7 @@ private extension SignalManager {
     #if os(macOS)
     /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
     private var customDefaults: UserDefaults? {
-        let appIdHash = CryptoHashing.sha256(str: self.configuration.telemetryAppID, salt: "")
+        let appIdHash = CryptoHashing.sha256(string: self.configuration.telemetryAppID, salt: "")
         return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
     }
     #endif
