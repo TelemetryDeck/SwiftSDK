@@ -12,7 +12,7 @@ final class CryptoHashingTests: XCTestCase {
 
         let expectedDigestString = "5b8fab7cf45fcece0e99a05950611b7b355917e4fb6daa73fd3d7590764fa53b"
 
-        XCTAssertEqual(expectedDigestString, CryptoHashing.sha256(str: stringToHash, salt: ""))
+        XCTAssertEqual(expectedDigestString, CryptoHashing.sha256(string: stringToHash, salt: ""))
         XCTAssertEqual(expectedDigestString, CryptoHashing.commonCryptoSha256(strData: dataToHash))
 
         // even though we already test if we can import CryptoKit, somehow this still fails on iOS 12,
@@ -31,9 +31,9 @@ final class CryptoHashingTests: XCTestCase {
         let secondSalt = "x21MTSq3MRSmLjVFsYIe"
         let expectedSecondDigestString = "acb027bb031c0f73de26c6b8d0441d9c98449d582a538014c44ca49b4c299aa8"
 
-        XCTAssertEqual(expectedDigestString, CryptoHashing.sha256(str: stringToHash, salt: salt))
-        XCTAssertEqual(expectedSecondDigestString, CryptoHashing.sha256(str: stringToHash, salt: secondSalt))
-        XCTAssertNotEqual(CryptoHashing.sha256(str: stringToHash, salt: salt), CryptoHashing.sha256(str: stringToHash, salt: secondSalt))
+        XCTAssertEqual(expectedDigestString, CryptoHashing.sha256(string: stringToHash, salt: salt))
+        XCTAssertEqual(expectedSecondDigestString, CryptoHashing.sha256(string: stringToHash, salt: secondSalt))
+        XCTAssertNotEqual(CryptoHashing.sha256(string: stringToHash, salt: salt), CryptoHashing.sha256(string: stringToHash, salt: secondSalt))
     }
     #endif
 }

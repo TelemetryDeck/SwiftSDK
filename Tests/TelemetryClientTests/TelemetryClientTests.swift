@@ -6,11 +6,11 @@ final class TelemetryClientTests: XCTestCase {
     func testSending() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
-        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
-        TelemetryManager.initialize(with: configuration)
-        TelemetryManager.send("appOpenedRegularly")
-        TelemetryManager.send("userLoggedIn", for: "email")
-        TelemetryManager.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
+        let config = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        TelemetryDeck.initialize(config: config)
+        TelemetryDeck.signal("appOpenedRegularly")
+        TelemetryDeck.signal("userLoggedIn", customUserID: "email")
+        TelemetryDeck.signal("databaseUpdated", parameters: ["numberOfDatabaseEntries": "3831"])
     }
     
     func testPushAndPop() {
@@ -56,7 +56,7 @@ final class TelemetryClientTests: XCTestCase {
     
     func testSignalEnrichers() throws {
         struct BasicEnricher: SignalEnricher {
-            func enrich(signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?) -> [String : String] {
+            func enrich(signalType: String, for clientUser: String?, floatValue: Double?) -> [String : String] {
                 ["isTestEnricher": "true"]
             }
         }
@@ -66,8 +66,8 @@ final class TelemetryClientTests: XCTestCase {
         
         let signalManager = FakeSignalManager()
         TelemetryManager.initialize(with: configuration, signalManager: signalManager)
-        TelemetryManager.send("testSignal")
-        
+        TelemetryDeck.signal("testSignal")
+
         let bodyItems = signalManager.processedSignals
         XCTAssertEqual(bodyItems.count, 1)
         let bodyItem = try XCTUnwrap(bodyItems.first)
@@ -76,7 +76,7 @@ final class TelemetryClientTests: XCTestCase {
     
     func testSignalEnrichers_precedence() throws {
         struct BasicEnricher: SignalEnricher {
-            func enrich(signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?) -> [String : String] {
+            func enrich(signalType: String, for clientUser: String?, floatValue: Double?) -> [String : String] {
                 ["item": "A", "isDebug": "banana"]
             }
         }
@@ -86,8 +86,8 @@ final class TelemetryClientTests: XCTestCase {
         
         let signalManager = FakeSignalManager()
         TelemetryManager.initialize(with: configuration, signalManager: signalManager)
-        TelemetryManager.send("testSignal", with: ["item": "B"])
-        
+        TelemetryDeck.signal("testSignal", parameters: ["item": "B"])
+
         let bodyItems = signalManager.processedSignals
         XCTAssertEqual(bodyItems.count, 1)
         let bodyItem = try XCTUnwrap(bodyItems.first)
@@ -103,7 +103,7 @@ final class TelemetryClientTests: XCTestCase {
         let signalManager = FakeSignalManager()
         TelemetryManager.initialize(with: configuration, signalManager: signalManager)
         
-        TelemetryManager.send("appOpenedRegularly")
+        TelemetryDeck.signal("appOpenedRegularly")
         
         XCTAssertEqual(signalManager.processedSignalTypes.count, 1)
     }
@@ -117,7 +117,7 @@ final class TelemetryClientTests: XCTestCase {
         let signalManager = FakeSignalManager()
         TelemetryManager.initialize(with: configuration, signalManager: signalManager)
         
-        TelemetryManager.send("appOpenedRegularly")
+        TelemetryDeck.signal("appOpenedRegularly")
         
         XCTAssertEqual(signalManager.processedSignalTypes.count, 1)
     }
@@ -131,7 +131,7 @@ final class TelemetryClientTests: XCTestCase {
         let signalManager = FakeSignalManager()
         TelemetryManager.initialize(with: configuration, signalManager: signalManager)
         
-        TelemetryManager.send("appOpenedRegularly")
+        TelemetryDeck.signal("appOpenedRegularly")
         
         XCTAssertTrue(signalManager.processedSignalTypes.isEmpty)
     }
@@ -147,7 +147,7 @@ final class TelemetryClientTests: XCTestCase {
         let signalManager = FakeSignalManager()
         TelemetryManager.initialize(with: configuration, signalManager: signalManager)
         
-        TelemetryManager.send("appOpenedRegularly")
+        TelemetryDeck.signal("appOpenedRegularly")
         
         XCTAssertTrue(signalManager.processedSignalTypes.isEmpty)
         
@@ -162,30 +162,30 @@ final class TelemetryClientTests: XCTestCase {
         let signalManager = FakeSignalManager()
         TelemetryManager.initialize(with: configuration, signalManager: signalManager)
         
-        TelemetryManager.send("appOpenedRegularly", floatValue: 42)
-        
+        TelemetryDeck.signal("appOpenedRegularly", floatValue: 42)
+
         XCTAssertEqual(signalManager.processedSignals.first?.floatValue, 42)
     }
 }
 
 private class FakeSignalManager: SignalManageable {
-    var processedSignalTypes = [TelemetrySignalType]()
+    var processedSignalTypes = [String]()
     var processedSignals = [SignalPostBody]()
     
-    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String : String], configuration: TelemetryManagerConfiguration) {
+    func processSignal(_ signalType: String, parameters: [String : String], floatValue: Double?, customUserID: String?, configuration: TelemetryManagerConfiguration) {
         processedSignalTypes.append(signalType)
         let enrichedMetadata: [String: String] = configuration.metadataEnrichers
-            .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
+            .map { $0.enrich(signalType: signalType, for: customUserID, floatValue: floatValue) }
             .reduce([String: String](), { $0.applying($1) })
         
-        let payload = DefaultSignalPayload().toDictionary()
+        let payload = DefaultSignalPayload.parameters
             .applying(enrichedMetadata)
-            .applying(additionalPayload)
-        
+            .applying(parameters)
+
         let signalPostBody = SignalPostBody(
             receivedAt: Date(),
             appID: UUID(uuidString: configuration.telemetryAppID)!,
-            clientUser: clientUser ?? "no user",
+            clientUser: customUserID ?? "no user",
             sessionID: configuration.sessionID.uuidString,
             type: "\(signalType)",
             floatValue: floatValue,

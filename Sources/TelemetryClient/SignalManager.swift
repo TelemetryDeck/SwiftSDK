@@ -11,7 +11,7 @@ import TVUIKit
 #endif
 
 internal protocol SignalManageable {
-    func processSignal(_ signalType: TelemetrySignalType, for clientUser: String?, floatValue: Double?, with additionalPayload: [String: String], configuration: TelemetryManagerConfiguration)
+    func processSignal(_ signalName: String, parameters: [String: String], floatValue: Double?, customUserID: String?, configuration: TelemetryManagerConfiguration)
     func attemptToSendNextBatchOfCachedSignals()
 }
 
@@ -68,27 +68,27 @@ internal class SignalManager: SignalManageable {
 
     /// Adds a signal to the process queue
     func processSignal(
-        _ signalType: TelemetrySignalType,
-        for clientUser: String? = nil,
-        floatValue: Double? = nil,
-        with additionalPayload: [String: String] = [:],
+        _ signalName: String,
+        parameters: [String: String],
+        floatValue: Double?,
+        customUserID: String?,
         configuration: TelemetryManagerConfiguration
     ) {
         DispatchQueue.global(qos: .utility).async {
             let enrichedMetadata: [String: String] = configuration.metadataEnrichers
-                .map { $0.enrich(signalType: signalType, for: clientUser, floatValue: floatValue) }
+                .map { $0.enrich(signalType: signalName, for: customUserID, floatValue: floatValue) }
                 .reduce([String: String](), { $0.applying($1) })
 
-            let payload = DefaultSignalPayload().toDictionary()
+            let payload = DefaultSignalPayload.parameters
                 .applying(enrichedMetadata)
-                .applying(additionalPayload)
+                .applying(parameters)
 
             let signalPostBody = SignalPostBody(
                 receivedAt: Date(),
                 appID: UUID(uuidString: configuration.telemetryAppID)!,
-                clientUser: CryptoHashing.sha256(str: clientUser ?? self.defaultUserIdentifier, salt: configuration.salt),
+                clientUser: CryptoHashing.sha256(string: customUserID ?? self.defaultUserIdentifier, salt: configuration.salt),
                 sessionID: configuration.sessionID.uuidString,
-                type: "\(signalType)",
+                type: "\(signalName)",
                 floatValue: floatValue,
                 payload: payload.toMultiValueDimension(),
                 isTestMode: configuration.testMode ? "true" : "false"
@@ -130,7 +130,7 @@ internal class SignalManager: SignalManageable {
                 }
 
                 if let data = data {
-                    configuration.logHandler?.log(.debug, message: String(data: data, encoding: .utf8)!)
+                    configuration.logHandler?.log(.debug, message: String(decoding: data, as: UTF8.self))
                 }
             }
         }
@@ -189,7 +189,7 @@ private extension SignalManager {
             }
 
             urlRequest.httpBody = body
-            self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
+            self.configuration.logHandler?.log(.debug, message: String(decoding: urlRequest.httpBody!, as: UTF8.self))
 
             let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
@@ -203,7 +203,7 @@ private extension SignalManager {
     #if os(macOS)
     /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
     private var customDefaults: UserDefaults? {
-        let appIdHash = CryptoHashing.sha256(str: self.configuration.telemetryAppID, salt: "")
+        let appIdHash = CryptoHashing.sha256(string: self.configuration.telemetryAppID, salt: "")
         return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
     }
     #endif
@@ -253,13 +253,13 @@ private extension URLResponse {
         // Check for valid response in the 200-299 range
         guard (200 ... 299).contains(statusCode() ?? 0) else {
             if statusCode() == 401 {
-                return TelemetryError.Unauthorised
+                return TelemetryError.unauthorised
             } else if statusCode() == 403 {
-                return TelemetryError.Forbidden
+                return TelemetryError.forbidden
             } else if statusCode() == 413 {
-                return TelemetryError.PayloadTooLarge
+                return TelemetryError.payloadTooLarge
             } else {
-                return TelemetryError.InvalidStatusCode(statusCode: statusCode() ?? 0)
+                return TelemetryError.invalidStatusCode(statusCode: statusCode() ?? 0)
             }
         }
         return nil
@@ -269,22 +269,22 @@ private extension URLResponse {
 // MARK: - Errors
 
 private enum TelemetryError: Error {
-    case Unauthorised
-    case Forbidden
-    case PayloadTooLarge
-    case InvalidStatusCode(statusCode: Int)
+    case unauthorised
+    case forbidden
+    case payloadTooLarge
+    case invalidStatusCode(statusCode: Int)
 }
 
 extension TelemetryError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .InvalidStatusCode(let statusCode):
+        case .invalidStatusCode(let statusCode):
             return "Invalid status code \(statusCode)"
-        case .Unauthorised:
+        case .unauthorised:
             return "Unauthorized (401)"
-        case .Forbidden:
+        case .forbidden:
             return "Forbidden (403)"
-        case .PayloadTooLarge:
+        case .payloadTooLarge:
             return "Payload is too large (413)"
         }
     }
