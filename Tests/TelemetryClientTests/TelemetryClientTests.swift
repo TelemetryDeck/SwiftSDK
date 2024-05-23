@@ -6,8 +6,8 @@ final class TelemetryClientTests: XCTestCase {
     func testSending() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
-        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
-        TelemetryDeck.initialize(configuration: configuration)
+        let config = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        TelemetryDeck.initialize(config: config)
         TelemetryDeck.signal("appOpenedRegularly")
         TelemetryDeck.signal("userLoggedIn", customUserID: "email")
         TelemetryDeck.signal("databaseUpdated", parameters: ["numberOfDatabaseEntries": "3831"])
