@@ -1,10 +1,10 @@
-# TelemetryClient
+# Swift SDK for TelemetryDeck
 
 This package allows you to send signals to [TelemetryDeck](https://telemetrydeck.com) from your Swift code. Sign up for a free account at telemetrydeck.com
 
 ## Installation
 
-The easiest way to install TelemetryDeck is using [Swift Package Manager](https://www.swift.org/package-manager/), Apple's solution which is built into Xcode. In Xcode, press _File > Add Packages..._, then in the resulting window enter `https://github.com/TelemetryDeck/SwiftClient` into the search field. Set the _Dependency Rule_ field to _Up to Next Major Version_, then press the _Add Package_ button. Xcode will download it, then you can choose which target of your app to add it to.
+The easiest way to install TelemetryDeck is using [Swift Package Manager](https://www.swift.org/package-manager/), Apple's solution which is built into Xcode. In Xcode, press _File > Add Packages..._, then in the resulting window enter `https://github.com/TelemetryDeck/SwiftSDK` into the search field. Set the _Dependency Rule_ field to _Up to Next Major Version_, then press the _Add Package_ button. Xcode will download it, then you can choose which target of your app to add the "TelemetryDeck" library to (note that "TelemetryClient" is the old name of the lib).
 
 See our [detailed setup guide](https://telemetrydeck.com/docs/guides/swift-setup/?source=github) for more information.
 
@@ -13,16 +13,16 @@ See our [detailed setup guide](https://telemetrydeck.com/docs/guides/swift-setup
 Init the Telemetry Manager at app startup, so it knows your App ID (you can retrieve the App ID from your [TelemetryDeck Dashboard](https://dashboard.telemetrydeck.com/) under Set Up App)
 
 ```swift
-let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
-// optional: modify the configuration here
-TelemetryManager.initialize(with: configuration)
+let config = TelemetryDeck.Config(appID: "<YOUR-APP-ID>")
+// optional: modify the config here
+TelemetryDeck.initialize(config: config)
 ```
 
 For example, if you're building a scene based app, in the `init()` function for your `App`:
 
 ```swift
 import SwiftUI
-import TelemetryClient
+import TelemetryDeck
 
 @main
 struct TelemetryTestApp: App {
@@ -36,8 +36,8 @@ struct TelemetryTestApp: App {
         // Note: Do not add this code to `WindowGroup.onAppear`, which will be called
         //       *after* your window has been initialized, and might lead to our initialization
         //       occurring too late.
-        let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>")
-        TelemetryManager.initialize(with: configuration)
+        let config = TelemetryDeck.Config(appID: "<YOUR-APP-ID>")
+        TelemetryDeck.initialize(config: config)
     }
 }
 ```
@@ -45,52 +45,65 @@ struct TelemetryTestApp: App {
 Then send signals like so:
 
 ```swift
-TelemetryManager.send("appLaunchedRegularly")
+TelemetryDeck.signal("App.launchedRegularly")
 ```
 
 ## Debug -> Test Mode
 
 If your app's build configuration is set to "Debug", all signals sent will be marked as testing signals. In the Telemetry Viewer app, activate **Test Mode** to see those.
 
-If you want to manually control whether test mode is active, you can set the `configuration.testMode` property.
+If you want to manually control whether test mode is active, you can set the `config.testMode` property.
 
 ## User Identifiers
 
-Telemetry Manager will create a user identifier for you user that is specific to app installation and device. If you have a better user identifier available, such as an email address or a username, you can use that instead, by passing it on to the `TelemetryManagerConfiguration` (the identifier will be hashed before sending it).
+Telemetry Manager will create a user identifier for you user that is specific to app installation and device. If you have a better user identifier available, such as an email address or a username, you can use that instead, by passing it on to the `TelemetryDeck.Config` (the identifier will be hashed before sending it).
 
 ```swift
-configuration.defaultUser = "myuser@example.com"
+config.defaultUser = "myuser@example.com"
 ```
 
-You can update the configuration after TelemetryManager is already initialized.
+You can update the configuration after TelemetryDeck is already initialized.
 
 ## Payload
 
 You can also send additional payload data with each signal:
 
 ```swift
-TelemetryManager.send("databaseUpdated", with: ["numberOfDatabaseEntries": "3831"])
+TelemetryDeck.send("Database.updated", parameters: ["numberOfDatabaseEntries": "3831"])
 ```
 
-Telemetry Manager will automatically send a base payload with these keys:
+TelemetryDeck will automatically send base parameters, such as:
 
-- platform
-- systemVersion
-- appVersion
-- buildNumber
-- isSimulator
-- isTestFlight
-- isAppStore
-- modelName
-- architecture
-- operatingSystem
-- targetEnvironment
+- TelemetryDeck.AppInfo.buildNumber
+- TelemetryDeck.AppInfo.version
+- TelemetryDeck.Device.architecture
+- TelemetryDeck.Device.modelName
+- TelemetryDeck.Device.operatingSystem
+- TelemetryDeck.Device.platform
+- TelemetryDeck.Device.orientation
+- TelemetryDeck.Device.screenResolutionHeight
+- TelemetryDeck.Device.screenResolutionWidth
+- TelemetryDeck.Device.systemMajorVersion
+- TelemetryDeck.Device.systemMajorMinorVersion
+- TelemetryDeck.Device.systemVersion
+- TelemetryDeck.Device.timeZone
+- TelemetryDeck.RunContext.isAppStore
+- TelemetryDeck.RunContext.isDebug
+- TelemetryDeck.RunContext.isSimulator
+- TelemetryDeck.RunContext.isTestFlight
+- TelemetryDeck.RunContext.language
+- TelemetryDeck.RunContext.targetEnvironment
+- TelemetryDeck.SDK.version
+- TelemetryDeck.UserPreference.region
+- TelemetryDeck.UserPreference.language
+
+See our [Grand Renaming article](https://telemetrydeck.com/docs/articles/grand-rename/?source=github) for a full list.
 
 ## Sessions
 
 With each Signal, the client sends a hash of your user ID as well as a _session ID_. This gets automatically generated when the client is initialized, so if you do nothing, you'll get a new session each time your app is started from cold storage.
 
-On iOS, tvOS, and watchOS, the session identifier will automatically update whenever your app returns from background, or if it is launched from cold storage. On other platforms, a new identifier will be generated each time your app launches. If you'd like more fine-grained session support, write a new random session identifier into the `TelemetryManagerConfiguration`'s `sessionID` property each time a new session begins.
+On iOS, tvOS, and watchOS, the session identifier will automatically update whenever your app returns from background, or if it is launched from cold storage. On other platforms, a new identifier will be generated each time your app launches. If you'd like more fine-grained session support, write a new random session identifier into the `TelemetryDeck.Config`'s `sessionID` property each time a new session begins.
 
 ## Custom Salt
 
@@ -98,28 +111,28 @@ By default, user identifiers are hashed by the TelemetryDeck SDK, and then sent 
 
 This is enough for most use cases, but if you want to extra privacy conscious, you can add in you own salt on the client side. The TelemetryDeck SDK will append the salt to all user identifers before hashing them and sending them to us.
 
-If you'd like to use a custom salt, you can do so by passing it on to the `TelemetryManagerConfiguration`
+If you'd like to use a custom salt, you can do so by passing it on to the `TelemetryDeck.Config`
 
 ```swift
-let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>", salt: "<A RANDOM STRING>")
+let config = TelemetryDeck.Config(appID: "<YOUR-APP-ID>", salt: "<A RANDOM STRING>")
 ```
 
 ## Custom Server
 
-A very small subset of our customers will want to use a custom signal ingestion server or a custom proxy server. To do so, you can pass the URL of the custom server to the `TelemetryManagerConfiguration`:
+A very small subset of our customers will want to use a custom signal ingestion server or a custom proxy server. To do so, you can pass the URL of the custom server to the `TelemetryDeck.Config`:
 
 ```swift
-let configuration = TelemetryManagerConfiguration(appID: "<YOUR-APP-ID>", baseURL: "https://nom.telemetrydeck.com")
+let config = TelemetryDeck.Config(appID: "<YOUR-APP-ID>", baseURL: "https://nom.telemetrydeck.com")
 ```
 
 ## Custom Logging Strategy
 
-By default, some logs helpful for monitoring TelemetryDeck are printed out to the console. This behaviour can be customised by overriding `configuration.logHandler`. This struct accepts a minimum allows log level (any log with the same or higher log level will be accepted) and a closure.
+By default, some logs helpful for monitoring TelemetryDeck are printed out to the console. This behaviour can be customised by overriding `config.logHandler`. This struct accepts a minimum allows log level (any log with the same or higher log level will be accepted) and a closure.
 
 This allows for compatibility with other logging solutions, such as [swift-log](https://github.com/apple/swift-log), by providing your own closure.
 
 ## Developing this SDK
 
-Your PRs on TelemetryDeck's Swift Client are very much welcome. Check out the [SwiftClientTester](https://github.com/TelemetryDeck/SwiftClientTester) project, which provides a harness you can use to work on the library and try out new things.
+Your PRs on TelemetryDeck's Swift SDK are very much welcome. Check out the [SwiftClientTester](https://github.com/TelemetryDeck/SwiftClientTester) project, which provides a harness you can use to work on the library and try out new things.
 
 When making a new release, run `./tag-release.sh MAJOR.MINOR.PATCH` to bump the version string in the SDK, create a new commit and tag that commit accordingly all in one step.
