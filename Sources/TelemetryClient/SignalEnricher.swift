@@ -9,9 +9,9 @@ public protocol SignalEnricher {
 }
 
 extension Dictionary where Key == String, Value == String {
-    func applying(_ rhs: [String: String]) -> [String: String] {
-        merging(rhs) { _, rhs in
-            rhs
+    func applying(_ other: [String: String]) -> [String: String] {
+        merging(other) { _, other in
+            other
         }
     }
 

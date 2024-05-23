@@ -10,7 +10,7 @@ import Foundation
     import TVUIKit
 #endif
 
-let TelemetryClientVersion = "2.0.0"
+let telemetryClientVersion = "2.0.0"
 
 /// Configuration for TelemetryManager
 ///
@@ -217,7 +217,10 @@ public class TelemetryManager {
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     @_disfavoredOverload
-    @available(*, deprecated, message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments.")
+    @available(
+        *, deprecated,
+        message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
+    )
     public static func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
         TelemetryManager.shared.send(signalName, for: customUserID, floatValue: floatValue, with: parameters)
     }
@@ -277,7 +280,10 @@ public class TelemetryManager {
     /// If you specify a user identifier here, it will take precedence over the default user identifier specified in the `TelemetryManagerConfiguration`.
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
-    @available(*, deprecated, message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments.")
+    @available(
+        *, deprecated,
+        message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
+    )
     public func send(_ signalName: String, with parameters: [String: String] = [:]) {
         send(signalName, for: nil, floatValue: nil, with: parameters)
     }
@@ -288,7 +294,10 @@ public class TelemetryManager {
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     @_disfavoredOverload
-    @available(*, deprecated, message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments.")
+    @available(
+        *, deprecated,
+        message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
+    )
     public func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
         // make sure to not send any signals when run by Xcode via SwiftUI previews
         guard !self.configuration.swiftUIPreviewMode, !self.configuration.analyticsDisabled else { return }

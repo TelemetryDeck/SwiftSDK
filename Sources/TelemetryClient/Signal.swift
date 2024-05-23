@@ -61,13 +61,13 @@ public struct DefaultSignalPayload: Encodable {
             "region": Self.region,
             "appLanguage": Self.appLanguage,
             "preferredLanguage": Self.preferredLanguage,
-            "telemetryClientVersion": TelemetryClientVersion,
+            "telemetryClientVersion": telemetryClientVersion,
 
             // new names
             "TelemetryDeck.AppInfo.buildNumber": Self.buildNumber,
             "TelemetryDeck.AppInfo.version": Self.appVersion,
             "TelemetryDeck.AppInfo.versionAndBuildNumber": "\(Self.appVersion) (build \(Self.buildNumber))",
-            
+
             "TelemetryDeck.Device.architecture": Self.architecture,
             "TelemetryDeck.Device.modelName": Self.modelName,
             "TelemetryDeck.Device.operatingSystem": Self.operatingSystem,
@@ -89,8 +89,8 @@ public struct DefaultSignalPayload: Encodable {
             "TelemetryDeck.RunContext.targetEnvironment": Self.targetEnvironment,
 
             "TelemetryDeck.SDK.name": "SwiftSDK",
-            "TelemetryDeck.SDK.nameAndVersion": "SwiftSDK \(TelemetryClientVersion)",
-            "TelemetryDeck.SDK.version": TelemetryClientVersion,
+            "TelemetryDeck.SDK.nameAndVersion": "SwiftSDK \(telemetryClientVersion)",
+            "TelemetryDeck.SDK.version": telemetryClientVersion,
 
             "TelemetryDeck.UserPreference.language": Self.preferredLanguage,
             "TelemetryDeck.UserPreference.region": Self.region,
@@ -210,7 +210,7 @@ extension DefaultSignalPayload {
                 var modelIdentifier: String?
 
                 if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data {
-                    if let modelIdentifierCString = String(data: modelData, encoding: .utf8)?.cString(using: .utf8) {
+                    if let modelIdentifierCString = String(decoding: modelData, as: UTF8.self).cString(using: .utf8) {
                         modelIdentifier = String(cString: modelIdentifierCString)
                     }
                 }

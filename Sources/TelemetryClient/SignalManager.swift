@@ -130,7 +130,7 @@ internal class SignalManager: SignalManageable {
                 }
 
                 if let data = data {
-                    configuration.logHandler?.log(.debug, message: String(data: data, encoding: .utf8)!)
+                    configuration.logHandler?.log(.debug, message: String(decoding: data, as: UTF8.self))
                 }
             }
         }
@@ -189,7 +189,7 @@ private extension SignalManager {
             }
 
             urlRequest.httpBody = body
-            self.configuration.logHandler?.log(.debug, message: String(data: urlRequest.httpBody!, encoding: .utf8)!)
+            self.configuration.logHandler?.log(.debug, message: String(decoding: urlRequest.httpBody!, as: UTF8.self))
 
             let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
@@ -253,13 +253,13 @@ private extension URLResponse {
         // Check for valid response in the 200-299 range
         guard (200 ... 299).contains(statusCode() ?? 0) else {
             if statusCode() == 401 {
-                return TelemetryError.Unauthorised
+                return TelemetryError.unauthorised
             } else if statusCode() == 403 {
-                return TelemetryError.Forbidden
+                return TelemetryError.forbidden
             } else if statusCode() == 413 {
-                return TelemetryError.PayloadTooLarge
+                return TelemetryError.payloadTooLarge
             } else {
-                return TelemetryError.InvalidStatusCode(statusCode: statusCode() ?? 0)
+                return TelemetryError.invalidStatusCode(statusCode: statusCode() ?? 0)
             }
         }
         return nil
@@ -269,22 +269,22 @@ private extension URLResponse {
 // MARK: - Errors
 
 private enum TelemetryError: Error {
-    case Unauthorised
-    case Forbidden
-    case PayloadTooLarge
-    case InvalidStatusCode(statusCode: Int)
+    case unauthorised
+    case forbidden
+    case payloadTooLarge
+    case invalidStatusCode(statusCode: Int)
 }
 
 extension TelemetryError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .InvalidStatusCode(let statusCode):
+        case .invalidStatusCode(let statusCode):
             return "Invalid status code \(statusCode)"
-        case .Unauthorised:
+        case .unauthorised:
             return "Unauthorized (401)"
-        case .Forbidden:
+        case .forbidden:
             return "Forbidden (403)"
-        case .PayloadTooLarge:
+        case .payloadTooLarge:
             return "Payload is too large (413)"
         }
     }
