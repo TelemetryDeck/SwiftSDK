@@ -69,7 +69,7 @@ You can update the configuration after TelemetryDeck is already initialized.
 You can also send additional payload data with each signal:
 
 ```swift
-TelemetryDeck.send("Database.updated", parameters: ["numberOfDatabaseEntries": "3831"])
+TelemetryDeck.signal("Database.updated", parameters: ["numberOfDatabaseEntries": "3831"])
 ```
 
 TelemetryDeck will automatically send base parameters, such as:
