@@ -33,9 +33,15 @@ extension TelemetryDeck {
             priceValueInUSD = 0
         }
 
+        #if os(visionOS)
+        let countryCode = "US"  // NOTE: visionOS 1.x does not support the `storefrontCountryCode` field
+        #else
+        let countryCode = transaction.storefrontCountryCode
+        #endif
+
         var purchaseParameters: [String: String] = [
             "TelemetryDeck.Purchase.type": transaction.subscriptionGroupID != nil ? "subscription" : "one-time-purchase",
-            "TelemetryDeck.Purchase.countryCode": transaction.storefrontCountryCode,
+            "TelemetryDeck.Purchase.countryCode": countryCode,
         ]
 
         if let currencyCode = transaction.currencyCode {
