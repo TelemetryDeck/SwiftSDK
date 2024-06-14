@@ -101,12 +101,18 @@ public enum TelemetryDeck {
         Self.navigate(from: source, to: destination, customUserID: customUserID)
     }
 
-    /// Do not call this method unless you really know what you're doing. The signals will automatically sync with the server at appropriate times, there's no need to call this.
+    /// Do not call this method unless you really know what you're doing. The signals will automatically sync with 
+    /// the server at appropriate times, there's no need to call this.
     ///
-    /// Use this sparingly and only to indicate a time in your app where a signal was just sent but the user is likely to leave your app and not return again for a long time.
+    /// Use this sparingly and only to indicate a time in your app where a signal was just sent but the user is likely 
+    /// to leave your app and not return again for a long time.
     ///
-    /// This function does not guarantee that the signal cache will be sent right away. Calling this after every ``signal(_:parameters:floatValue:customUserID:)`` will not make data reach our servers faster, so avoid doing that.
-    /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn data because a user closes your app and doesn't reopen it anytime soon (if at all).
+    /// This function does not guarantee that the signal cache will be sent right away. Calling this after every 
+    /// ``signal(_:parameters:floatValue:customUserID:)`` will not make data reach our servers faster, so avoid 
+    /// doing that.
+    ///
+    /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn 
+    /// data because a user closes your app and doesn't reopen it anytime soon (if at all).
     public static func requestImmediateSync() {
         TelemetryManager.requestImmediateSync()
     }
