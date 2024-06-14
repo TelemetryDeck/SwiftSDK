@@ -45,11 +45,11 @@ public enum TelemetryDeck {
     /// This is a convenience method that will internally send a completely normal TelemetryDeck signals with the type
     /// `TelemetryDeck.Route.Transition.navigation` and the necessary payload.
     ///
-    /// Since TelemetryDeck navigation signals need a source and a destination, this method will keep track of the last
+    /// Since TelemetryDeck navigation signals need a source and a destination, this method will store the last
     /// used destination for use in the `navigate(to:)` method.
     ///
     /// ## Navigation Paths
-    /// Navigation Paths are strings that indicate a location or view in your application or website. They must be
+    /// Navigation Paths are strings that describe a location or view in your application or website. They must be
     /// delineated by either `.` or `/` characters. Delineation characters at the beginning and end of the string are
     /// ignored. Use the empty string `""` for navigation from outside the app. Examples are `index`,
     /// `settings.user.changePassword`, or `/blog/ios-market-share`.
@@ -79,7 +79,7 @@ public enum TelemetryDeck {
     /// `TelemetryDeck.Route.Transition.navigation` and the necessary payload.
     ///
     /// ## Navigation Paths
-    /// Navigation Paths are strings that indicate a location or view in your application or website. They must be
+    /// Navigation Paths are strings that describe a location or view in your application or website. They must be
     /// delineated by either `.` or `/` characters. Delineation characters at the beginning and end of the string are
     /// ignored. Use the empty string `""` for navigation from outside the app. Examples are `index`,
     /// `settings.user.changePassword`, or `/blog/ios-market-share`.

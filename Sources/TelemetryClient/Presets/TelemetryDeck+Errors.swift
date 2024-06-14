@@ -1,6 +1,6 @@
 import Foundation
 
-extension TelemetryDeck {
+public extension TelemetryDeck {
     /// Sends a telemetry signal indicating that an error has occurred.
     ///
     /// - Parameters:
@@ -10,7 +10,7 @@ extension TelemetryDeck {
     ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
     ///   - floatValue: An optional floating-point value to include with the signal. Default is `nil`.
     ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
-    public static func errorOccurred(
+    static func errorOccurred(
         id: String,
         category: ErrorCategory? = nil,
         message: String? = nil,
@@ -44,7 +44,7 @@ extension TelemetryDeck {
     ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
     ///   - floatValue: An optional floating-point value to include with the signal. Default is `nil`.
     ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
-    public static func errorOccurred(
+    static func errorOccurred(
         identifiableError: IdentifiableError,
         category: ErrorCategory = .thrownException,
         parameters: [String: String] = [:],
@@ -71,9 +71,10 @@ extension TelemetryDeck {
     ///   - floatValue: An optional floating-point value to include with the signal. Default is `nil`.
     ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
     ///
-    ///  - Note: Use this overload if you want to provide a custom `message` parameter. Prefer ``errorOccurred(identifiableError:category:parameters:floatValue:customUserID:)`` to send `error.localizedDescription` as the `message` automatically.
+    ///  - Note: Use this overload if you want to provide a custom `message` parameter. Prefer ``errorOccurred(identifiableError:category:parameters:floatValue:customUserID:)`` to send
+    ///    `error.localizedDescription` as the `message` automatically.
     @_disfavoredOverload
-    public static func errorOccurred(
+    static func errorOccurred(
         identifiableError: IdentifiableError,
         category: ErrorCategory = .thrownException,
         message: String? = nil,
