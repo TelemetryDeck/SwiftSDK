@@ -205,7 +205,7 @@ public class TelemetryManager {
 
     /// Send a Signal to TelemetryDeck, to record that an event has occurred.
     ///
-    /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
+    /// If you specify parameters, they will be sent in addition to the default parameters which include OS Version, App Version, and more.
     @available(*, deprecated, renamed: "TelemetryDeck.signal(_:parameters:)", message: "This call was renamed to `TelemetryDeck.signal(_:parameters:)`. Please migrate – a fix-it is available.")
     public static func send(_ signalName: String, with parameters: [String: String] = [:]) {
         send(signalName, for: nil, floatValue: nil, with: parameters)
