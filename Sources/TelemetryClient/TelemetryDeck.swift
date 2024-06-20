@@ -62,13 +62,13 @@ public enum TelemetryDeck {
         TelemetryDeckNavigationStatus.shared.previousNavigationPath = destination
 
         TelemetryManager.send(
-            "TelemetryDeck.Route.Transition.navigation",
+            "TelemetryDeck.Navigation.pathChanged",
             for: customUserID,
             with: [
-                "TelemetryDeck.Route.Transition.schemaVersion": "1",
-                "TelemetryDeck.Route.Transition.identifier": "\(source) -> \(destination)",
-                "TelemetryDeck.Route.Transition.source": source,
-                "TelemetryDeck.Route.Transition.destination": destination
+                "TelemetryDeck.Navigation.schemaVersion": "1",
+                "TelemetryDeck.Navigation.identifier": "\(source) -> \(destination)",
+                "TelemetryDeck.Navigation.sourcePath": source,
+                "TelemetryDeck.Navigation.destinationPath": destination
             ]
         )
     }
