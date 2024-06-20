@@ -10,7 +10,7 @@ import Foundation
     import TVUIKit
 #endif
 
-let telemetryClientVersion = "2.1.1"
+let telemetryClientVersion = "2.2.0"
 
 /// Configuration for TelemetryManager
 ///
@@ -193,9 +193,10 @@ public class TelemetryManager {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
 
-    internal static func initialize(with configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
+    static func initialize(with configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration, signalManager: signalManager)
     }
+
     /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
     ///
     /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
@@ -238,16 +239,15 @@ public class TelemetryManager {
 
     public static var shared: TelemetryManager {
         if let telemetryManager = initializedTelemetryManager {
-           return telemetryManager
+            return telemetryManager
         } else if ProcessInfo.processInfo.environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1" {
             // Xcode is building and running the app for SwiftUI Previews, this is not a real launch of the app, therefore mock data is used
-            self.initializedTelemetryManager = .init(configuration: .init(appID: ""))
-            return self.initializedTelemetryManager!
+            initializedTelemetryManager = .init(configuration: .init(appID: ""))
+            return initializedTelemetryManager!
         } else {
             assertionFailure("Please call TelemetryManager.initialize(...) before accessing the shared telemetryManager instance.")
             return .init(configuration: .init(appID: ""))
         }
-
     }
 
     /// Change the default user identifier sent with each signal.
@@ -301,15 +301,15 @@ public class TelemetryManager {
     )
     public func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
         // make sure to not send any signals when run by Xcode via SwiftUI previews
-        guard !self.configuration.swiftUIPreviewMode, !self.configuration.analyticsDisabled else { return }
+        guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
 
         signalManager.processSignal(signalName, parameters: parameters, floatValue: floatValue, customUserID: customUserID, configuration: configuration)
     }
 
     /// Do not call this method unless you really know what you're doing. The signals will automatically sync with the server at appropriate times, there's no need to call this.
-    /// 
+    ///
     /// Use this sparingly and only to indicate a time in your app where a signal was just sent but the user is likely to leave your app and not return again for a long time.
-    /// 
+    ///
     /// This function does not guarantee that the signal cache will be sent right away. Calling this after every ``send`` will not make data reach our servers faster, so avoid doing that.
     /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn data because a user closes your app and doesn't reopen it anytime soon (if at all).
     public func requestImmediateSync() {
@@ -348,19 +348,19 @@ public final class TelemetryManagerConfigurationObjCProxy: NSObject {
     fileprivate var telemetryManagerConfiguration: TelemetryManagerConfiguration
 
     @objc public init(appID: String, salt: String, baseURL: URL) {
-        self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt, baseURL: baseURL)
+        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt, baseURL: baseURL)
     }
 
     @objc public init(appID: String, baseURL: URL) {
-        self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, baseURL: baseURL)
+        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, baseURL: baseURL)
     }
 
     @objc public init(appID: String, salt: String) {
-        self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt)
+        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt)
     }
 
     @objc public init(appID: String) {
-        self.telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID)
+        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID)
     }
 
     @objc public var sendNewSessionBeganSignal: Bool {
