@@ -43,7 +43,7 @@ public enum TelemetryDeck {
     /// Send a signal that represents a navigation event with a source and a destination
     ///
     /// This is a convenience method that will internally send a completely normal TelemetryDeck signals with the type
-    /// `TelemetryDeck.Route.Transition.navigation` and the necessary payload.
+    /// `TelemetryDeck.Route.Transition.navigation` and the necessary parameters.
     ///
     /// Since TelemetryDeck navigation signals need a source and a destination, this method will store the last
     /// used destination for use in the `navigate(to:)` method.
@@ -76,7 +76,7 @@ public enum TelemetryDeck {
     /// Send a signal that represents a navigation event with a destination and a default source.
     ///
     /// This is a convenience method that will internally send a completely normal TelemetryDeck signals with the type
-    /// `TelemetryDeck.Route.Transition.navigation` and the necessary payload.
+    /// `TelemetryDeck.Route.Transition.navigation` and the necessary parameters.
     ///
     /// ## Navigation Paths
     /// Navigation Paths are strings that describe a location or view in your application or website. They must be

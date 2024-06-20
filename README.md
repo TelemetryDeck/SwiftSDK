@@ -64,9 +64,9 @@ config.defaultUser = "myuser@example.com"
 
 You can update the configuration after TelemetryDeck is already initialized.
 
-## Payload
+## Parameters
 
-You can also send additional payload data with each signal:
+You can also send additional parameters with each signal:
 
 ```swift
 TelemetryDeck.signal("Database.updated", parameters: ["numberOfDatabaseEntries": "3831"])
