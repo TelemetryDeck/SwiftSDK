@@ -21,6 +21,11 @@ public struct LogHandler {
     let logLevel: LogLevel
     let handler: (LogLevel, String) -> Void
 
+    public init(logLevel: LogHandler.LogLevel, handler: @escaping (LogHandler.LogLevel, String) -> Void) {
+        self.logLevel = logLevel
+        self.handler = handler
+    }
+
     internal func log(_ level: LogLevel = .info, message: String) {
         if level.rawValue >= logLevel.rawValue {
             handler(level, message)
