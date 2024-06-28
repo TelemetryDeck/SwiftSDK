@@ -22,15 +22,29 @@ extension TelemetryDeck {
         let priceValueInNativeCurrency = NSDecimalNumber(decimal: transaction.price ?? Decimal()).doubleValue
 
         let priceValueInUSD: Double
-        if transaction.currencyCode == "USD" {
-            priceValueInUSD = priceValueInNativeCurrency
-        } else if
-            let currencyCode = transaction.currencyCode,
-            let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
-        {
-            priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
+
+        if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
+            if transaction.currency?.identifier == "USD" {
+                priceValueInUSD = priceValueInNativeCurrency
+            } else if
+                let currencyCode = transaction.currency?.identifier,
+                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+            {
+                priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
+            } else {
+                priceValueInUSD = 0
+            }
         } else {
-            priceValueInUSD = 0
+            if transaction.currencyCode == "USD" {
+                priceValueInUSD = priceValueInNativeCurrency
+            } else if
+                let currencyCode = transaction.currencyCode,
+                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+            {
+                priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
+            } else {
+                priceValueInUSD = 0
+            }
         }
 
         #if os(visionOS)
@@ -44,8 +58,14 @@ extension TelemetryDeck {
             "TelemetryDeck.Purchase.countryCode": countryCode,
         ]
 
-        if let currencyCode = transaction.currencyCode {
-            purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currencyCode
+        if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
+            if let currencyCode = transaction.currency?.identifier {
+                purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currencyCode
+            }
+        } else {
+            if let currencyCode = transaction.currencyCode {
+                purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currencyCode
+            }
         }
 
         self.signal(
