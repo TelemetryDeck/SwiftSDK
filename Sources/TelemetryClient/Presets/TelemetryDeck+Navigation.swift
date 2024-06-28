@@ -59,7 +59,7 @@ extension TelemetryDeck {
     ///     - customUserID: An optional string specifying a custom user identifier. If provided, it will override the default user identifier from the configuration. Default is `nil`.
     public static func navigationPathChanged(to destination: String, customUserID: String? = nil) {
         let source = NavigationStatus.shared.previousNavigationPath ?? ""
-        
+
         Self.navigationPathChanged(from: source, to: destination, customUserID: customUserID)
     }
 
