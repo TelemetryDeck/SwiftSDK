@@ -23,7 +23,7 @@ extension TelemetryDeck {
 
         let priceValueInUSD: Double
 
-        if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
+        if #available(iOS 16, macOS 13, tvOS 16, watchOS 9, *) {
             if transaction.currency?.identifier == "USD" {
                 priceValueInUSD = priceValueInNativeCurrency
             } else if
@@ -47,18 +47,23 @@ extension TelemetryDeck {
             }
         }
 
-        #if os(visionOS)
-        let countryCode = "US"  // NOTE: visionOS 1.x does not support the `storefrontCountryCode` field
-        #else
-        let countryCode = transaction.storefrontCountryCode
-        #endif
+        let countryCode: String
+        if #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) {
+            countryCode = transaction.storefront.countryCode
+        } else {
+            #if os(visionOS)
+            countryCode = "US"
+            #else
+            countryCode = transaction.storefrontCountryCode
+            #endif
+        }
 
         var purchaseParameters: [String: String] = [
             "TelemetryDeck.Purchase.type": transaction.subscriptionGroupID != nil ? "subscription" : "one-time-purchase",
             "TelemetryDeck.Purchase.countryCode": countryCode,
         ]
 
-        if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
+        if #available(iOS 16, macOS 13, tvOS 16, watchOS 9, *) {
             if let currencyCode = transaction.currency?.identifier {
                 purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currencyCode
             }
