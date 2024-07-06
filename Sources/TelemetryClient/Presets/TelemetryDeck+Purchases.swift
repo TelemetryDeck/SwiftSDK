@@ -1,4 +1,4 @@
-#if canImport(StoreKit)
+#if canImport(StoreKit) && compiler(>=5.9.2)
 import StoreKit
 import Foundation
 
