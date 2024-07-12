@@ -10,7 +10,12 @@ jobs:
     runs-on: macOS-latest
 
     steps:
-      - uses: actions/checkout@v1
+      - uses: actions/checkout@v4
+
+      - name: Setup Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
 
       - name: Install Cocoapods
         run: gem install cocoapods
