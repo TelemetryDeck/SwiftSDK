@@ -1,7 +1,7 @@
 Pod::Spec.new do |spec|
-  spec.name         = "TelemetryClient"
+  spec.name         = "TelemetryDeck"
   spec.version      = ENV['LIB_VERSION'] || '2.0.0' #fallback to major version
-  spec.summary      = "Client SDK for TelemetryDeck"
+  spec.summary      = "Swift SDK for TelemetryDeck"
   spec.swift_versions = "5.9"
   spec.summary  = "Swift SDK for TelemetryDeck, a privacy-first analytics service for apps. Sign up for a free account at telemetrydeck.com."
     spec.description  = <<-DESC
@@ -27,6 +27,6 @@ Pod::Spec.new do |spec|
   spec.watchos.deployment_target = "5.0"
   spec.visionos.deployment_target = "1.0"
   spec.tvos.deployment_target = "13.0"
-  spec.source       = { :git => "https://github.com/TelemetryDeck/SwiftClient.git", :tag => "#{spec.version}" }
-  spec.source_files  = "Sources/**/*.{h,m,swift}"
+  spec.source       = { :git => "https://github.com/TelemetryDeck/SwiftSDK.git", :tag => "#{spec.version}" }
+  spec.source_files  = "Sources/TelemetryClient/**/*.{h,m,swift}"
 end
