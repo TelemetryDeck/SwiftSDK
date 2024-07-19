@@ -200,6 +200,7 @@ public class TelemetryManager {
     /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
     ///
     /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
+    @available(*, deprecated, renamed: "TelemetryDeck.terminate()", message: "This call was renamed to `TelemetryDeck.terminate()`. Please migrate – a fix-it is available.")
     public static func terminate() {
         initializedTelemetryManager = nil
     }
@@ -259,6 +260,7 @@ public class TelemetryManager {
     ///
     /// Note that just as with specifying the user identifier with the `send` call, the identifier will never leave the device.
     /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
+    @available(*, deprecated, renamed: "TelemetryDeck.updateDefaultUserID(to:)", message: "This call was renamed to `TelemetryDeck.updateDefaultUserID(to:)`. Please migrate – a fix-it is available.")
     public static func updateDefaultUser(to newDefaultUser: String?) {
         TelemetryManager.shared.updateDefaultUser(to: newDefaultUser)
     }
@@ -268,6 +270,7 @@ public class TelemetryManager {
     }
 
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
+    @available(*, deprecated, renamed: "TelemetryDeck.generateNewSession()", message: "This call was renamed to `TelemetryDeck.generateNewSession()`. Please migrate – a fix-it is available.")
     public static func generateNewSession() {
         TelemetryManager.shared.generateNewSession()
     }

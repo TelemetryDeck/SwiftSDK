@@ -48,4 +48,29 @@ public enum TelemetryDeck {
     public static func requestImmediateSync() {
         TelemetryManager.requestImmediateSync()
     }
+
+    /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
+    ///
+    /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
+    public static func terminate() {
+        TelemetryManager.terminate()
+    }
+
+    /// Change the default user identifier sent with each signal.
+    ///
+    /// Instead of specifying a user identifier with each `signal` call, you can set your user's name/email/identifier here and
+    /// it will be sent with every signal from now on. If you still specify a user in the `signal` call, that takes precedence.
+    ///
+    /// Set to `nil` to disable this behavior.
+    ///
+    /// Note that just as with specifying the user identifier with the `signal` call, the identifier will never leave the device.
+    /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
+    public static func updateDefaultUserID(to customUserID: String?) {
+        TelemetryManager.updateDefaultUser(to: customUserID)
+    }
+
+    /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
+    public static func generateNewSession() {
+        TelemetryManager.generateNewSession()
+    }
 }
