@@ -19,15 +19,18 @@ let package = Package(
         .target(
             name: "TelemetryDeck",
             dependencies: ["TelemetryClient"],
-            resources: [.copy("PrivacyInfo.xcprivacy")]
+            resources: [.copy("PrivacyInfo.xcprivacy")],
+            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .target(
             name: "TelemetryClient",
-            resources: [.copy("PrivacyInfo.xcprivacy")]
+            resources: [.copy("PrivacyInfo.xcprivacy")],
+            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .testTarget(
             name: "TelemetryClientTests",
-            dependencies: ["TelemetryClient"]
+            dependencies: ["TelemetryClient"],
+            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         )
     ]
 )
