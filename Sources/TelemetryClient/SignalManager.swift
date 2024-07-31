@@ -104,6 +104,7 @@ internal final class SignalManager: SignalManageable, @unchecked Sendable {
     /// Sends one batch of signals from the cache if not empty.
     /// If signals fail to send, we put them back into the cache to try again later.
     @objc
+    @Sendable
     internal func attemptToSendNextBatchOfCachedSignals() {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 

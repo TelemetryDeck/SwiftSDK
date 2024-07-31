@@ -195,7 +195,7 @@ public struct TelemetryManagerConfiguration: Sendable {
 /// Accepts signals that signify events in your app's life cycle, collects and caches them, and pushes them to the Telemetry API.
 ///
 /// Use an instance of `TelemetryManagerConfiguration` to configure this at initialization and during its lifetime.
-public class TelemetryManager {
+public final class TelemetryManager: @unchecked Sendable {
     /// Returns `true` when the TelemetryManager already has been initialized correctly, `false` otherwise.
     public static var isInitialized: Bool {
         initializedTelemetryManager != nil
@@ -350,6 +350,7 @@ public class TelemetryManager {
         self.signalManager = signalManager
     }
 
+    nonisolated(unsafe)
     private static var initializedTelemetryManager: TelemetryManager?
 
     private var configuration: TelemetryManagerConfiguration

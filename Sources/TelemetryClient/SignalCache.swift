@@ -7,7 +7,7 @@ import Foundation
 /// correctly.
 ///
 /// Currently the cache is only in-memory. This will probably change in the near future.
-internal class SignalCache<T> where T: Codable {
+internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     internal var logHandler: LogHandler?
 
     private var cachedSignals: [T] = []
