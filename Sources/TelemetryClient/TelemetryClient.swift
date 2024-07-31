@@ -343,11 +343,15 @@ public final class TelemetryManager: @unchecked Sendable {
     private init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
         signalManager = SignalManager(configuration: configuration)
+
+        self.observeForegroundEntering()
     }
 
     private init(configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
         self.configuration = configuration
         self.signalManager = signalManager
+
+        self.observeForegroundEntering()
     }
 
     nonisolated(unsafe)
@@ -358,6 +362,34 @@ public final class TelemetryManager: @unchecked Sendable {
     private let signalManager: SignalManageable
 
     private var lastTimeImmediateSyncRequested: Date = .distantPast
+
+    private func observeForegroundEntering() {
+        #if os(iOS)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
+                NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+            }
+        #elseif os(watchOS)
+            if #available(watchOS 7.0, *) {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
+                    NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
+                }
+            } else {
+                // Pre watchOS 7.0, this library will not use multiple sessions after backgrounding since there are no notifications we can observe.
+            }
+        #elseif os(tvOS)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
+                NotificationCenter.default.addObserver(self, selector: #selector(willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+            }
+        #endif
+    }
+
+    #if os(iOS) || os(watchOS) || os(tvOS)
+        @objc
+        func willEnterForeground() {
+            // generate a new session identifier
+            configuration.sessionID = UUID()
+        }
+    #endif
 }
 
 @objc(TelemetryManagerConfiguration)
