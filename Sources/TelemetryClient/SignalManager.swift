@@ -15,11 +15,12 @@ internal protocol SignalManageable {
     func attemptToSendNextBatchOfCachedSignals()
 }
 
-internal class SignalManager: SignalManageable {
+internal final class SignalManager: SignalManageable, @unchecked Sendable {
     internal static let minimumSecondsToPassBetweenRequests: Double = 10
 
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
+
     private var sendTimer: Timer?
 
     init(configuration: TelemetryManagerConfiguration) {
@@ -175,7 +176,7 @@ private extension SignalManager {
 // MARK: - Comms
 
 private extension SignalManager {
-    private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
+    private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
             let path = "/api/v1/apps/\(self.configuration.telemetryAppID)/signals/multiple/"
             let url = self.configuration.apiBaseURL.appendingPathComponent(path)

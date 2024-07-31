@@ -17,7 +17,7 @@ let telemetryClientVersion = "2.3.0"
 /// Use an instance of this class to specify settings for TelemetryManager. If these settings change during the course of
 /// your runtime, it might be a good idea to hold on to the instance and update it as needed. TelemetryManager's behaviour
 /// will update as well.
-public final class TelemetryManagerConfiguration {
+public struct TelemetryManagerConfiguration: Sendable {
     /// Your app's ID for Telemetry. Set this during initialization.
     public let telemetryAppID: String
 
@@ -352,7 +352,7 @@ public class TelemetryManager {
 
     private static var initializedTelemetryManager: TelemetryManager?
 
-    private let configuration: TelemetryManagerConfiguration
+    private var configuration: TelemetryManagerConfiguration
 
     private let signalManager: SignalManageable
 
