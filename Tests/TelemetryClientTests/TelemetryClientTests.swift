@@ -172,6 +172,7 @@ private class FakeSignalManager: SignalManageable {
     var processedSignalTypes = [String]()
     var processedSignals = [SignalPostBody]()
     
+    @MainActor
     func processSignal(_ signalType: String, parameters: [String : String], floatValue: Double?, customUserID: String?, configuration: TelemetryManagerConfiguration) {
         processedSignalTypes.append(signalType)
         let enrichedMetadata: [String: String] = configuration.metadataEnrichers
