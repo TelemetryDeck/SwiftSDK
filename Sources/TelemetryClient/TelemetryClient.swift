@@ -133,6 +133,8 @@ public final class TelemetryManagerConfiguration {
     /// Defaults to an empty array.
     public var metadataEnrichers: [SignalEnricher] = []
 
+    private var lastDateAppEnteredBackground: Date = .distantPast
+
     public init(appID: String, salt: String? = nil, baseURL: URL? = nil) {
         telemetryAppID = appID
 
@@ -148,29 +150,40 @@ public final class TelemetryManagerConfiguration {
             self.salt = ""
         }
 
-        #if os(iOS)
-            NotificationCenter.default.addObserver(self, selector: #selector(didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+        // initially start a new session upon app start (delayed so that `didSet` triggers)
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            self.sessionID = UUID()
+        }
+
+        // subscribe to notification to start a new session on app entering foreground (if needed)
+        #if os(iOS) || os(tvOS)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                NotificationCenter.default.addObserver(self, selector: #selector(self.willEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
+                NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
+            }
         #elseif os(watchOS)
             if #available(watchOS 7.0, *) {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
+                    NotificationCenter.default.addObserver(self, selector: #selector(self.willEnterForeground), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
+                    NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterBackground), name: WKExtension.applicationDidEnterBackgroundNotification, object: nil)
                 }
             } else {
                 // Pre watchOS 7.0, this library will not use multiple sessions after backgrounding since there are no notifications we can observe.
             }
-        #elseif os(tvOS)
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
-            }
         #endif
     }
 
-    #if os(iOS) || os(watchOS) || os(tvOS)
-        @objc func didEnterForeground() {
+    @objc func willEnterForeground() {
+        // check if at least 5 minutes have passed since last app entered background
+        if self.lastDateAppEnteredBackground.addingTimeInterval(5 * 60) < Date() {
             // generate a new session identifier
             sessionID = UUID()
         }
-    #endif
+    }
+
+    @objc func didEnterBackground() {
+        lastDateAppEnteredBackground = Date()
+    }
 
     @available(*, deprecated, renamed: "sendSignalsInDebugConfiguration")
     public var telemetryAllowDebugBuilds: Bool {
