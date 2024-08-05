@@ -13,7 +13,7 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     private var cachedSignals: [T] = []
     private let maximumNumberOfSignalsToPopAtOnce = 100
 
-    let queue = DispatchQueue(label: "telemetrydeck-signal-cache", attributes: .concurrent)
+    let queue = DispatchQueue(label: "com.telemetrydeck.SignalCache", attributes: .concurrent)
 
     /// How many Signals are cached
     func count() -> Int {

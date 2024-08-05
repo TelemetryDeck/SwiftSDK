@@ -305,14 +305,14 @@ public final class TelemetryManager: @unchecked Sendable {
     }
 
     private init(configuration: TelemetryManagerConfiguration) {
-        self.configuration = configuration
+        self._configuration = configuration
         signalManager = SignalManager(configuration: configuration)
 
         self.startSessionAndObserveAppForegrounding()
     }
 
     private init(configuration: TelemetryManagerConfiguration, signalManager: SignalManageable) {
-        self.configuration = configuration
+        self._configuration = configuration
         self.signalManager = signalManager
 
         self.startSessionAndObserveAppForegrounding()
@@ -321,13 +321,27 @@ public final class TelemetryManager: @unchecked Sendable {
     nonisolated(unsafe)
     private static var initializedTelemetryManager: TelemetryManager?
 
-    private var configuration: TelemetryManagerConfiguration
-
     private let signalManager: SignalManageable
 
-    private var lastTimeImmediateSyncRequested: Date = .distantPast
+    private let queue = DispatchQueue(label: "com.telemetrydeck.TelemetryManager", attributes: .concurrent)
 
-    private var lastDateAppEnteredBackground: Date = .distantPast
+    private var _configuration: TelemetryManagerConfiguration
+    private var configuration: TelemetryManagerConfiguration {
+        get { queue.sync(flags: .barrier) { return _configuration } }
+        set { queue.sync(flags: .barrier) { _configuration = newValue } }
+    }
+
+    private var _lastTimeImmediateSyncRequested: Date = .distantPast
+    private var lastTimeImmediateSyncRequested: Date {
+        get { queue.sync(flags: .barrier) { return _lastTimeImmediateSyncRequested } }
+        set { queue.sync(flags: .barrier) { _lastTimeImmediateSyncRequested = newValue } }
+    }
+
+    private var _lastDateAppEnteredBackground: Date = .distantPast
+    private var lastDateAppEnteredBackground: Date {
+        get { queue.sync(flags: .barrier) { return _lastDateAppEnteredBackground } }
+        set { queue.sync(flags: .barrier) { _lastDateAppEnteredBackground = newValue } }
+    }
 
     private func startSessionAndObserveAppForegrounding() {
         // initially start a new session upon app start (delayed so that `didSet` triggers)
