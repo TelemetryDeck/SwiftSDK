@@ -2,15 +2,16 @@
 import XCTest
 
 final class LogHandlerTests: XCTestCase {
+    var counter: Int = 0
+    var lastLevel: LogHandler.LogLevel?
+
     func testLogHandler_stdoutLogLevelDefined() {
         XCTAssertEqual(LogHandler.stdout(.error).logLevel, .error)
     }
     
     func testLogHandler_logLevelRespected() {
-        var counter = 0
-        
         let handler = LogHandler(logLevel: .info) { _, _ in
-            counter += 1
+            self.counter += 1
         }
         
         XCTAssertEqual(counter, 0)
@@ -23,10 +24,8 @@ final class LogHandlerTests: XCTestCase {
     }
     
     func testLogHandler_defaultLogLevel() {
-        var lastLevel: LogHandler.LogLevel?
-        
         let handler = LogHandler(logLevel: .debug) { level, _ in
-            lastLevel = level
+            self.lastLevel = level
         }
         
         handler.log(message: "")

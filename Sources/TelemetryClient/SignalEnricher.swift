@@ -1,6 +1,6 @@
 import Foundation
 
-public protocol SignalEnricher {
+public protocol SignalEnricher: Sendable {
     func enrich(
         signalType: String,
         for clientUser: String?,

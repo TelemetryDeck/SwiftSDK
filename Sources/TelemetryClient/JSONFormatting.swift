@@ -1,19 +1,19 @@
 import Foundation
 
 extension Formatter {
-    static let iso8601: ISO8601DateFormatter = {
+    static var iso8601: ISO8601DateFormatter {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
         return formatter
-    }()
+    }
 
-    static let iso8601noFS = ISO8601DateFormatter()
+    static var iso8601noFS: ISO8601DateFormatter { ISO8601DateFormatter() }
 
-    static let iso8601dateOnly: ISO8601DateFormatter = {
+    static var iso8601dateOnly: ISO8601DateFormatter {
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         return formatter
-    }()
+    }
 }
 
 extension JSONDecoder.DateDecodingStrategy {
@@ -28,7 +28,7 @@ extension JSONDecoder.DateDecodingStrategy {
 }
 
 extension JSONDecoder {
-    static var telemetryDecoder: JSONDecoder = {
+    static var telemetryDecoder: JSONDecoder {
         let decoder = JSONDecoder()
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
@@ -36,17 +36,17 @@ extension JSONDecoder {
         dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
         decoder.dateDecodingStrategy = .formatted(dateFormatter)
         return decoder
-    }()
+    }
 
-    static var druidDecoder: JSONDecoder = {
+    static var druidDecoder: JSONDecoder {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .customISO8601
         return decoder
-    }()
+    }
 }
 
 extension JSONEncoder {
-    static var telemetryEncoder: JSONEncoder = {
+    static var telemetryEncoder: JSONEncoder {
         let encoder = JSONEncoder()
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
@@ -54,7 +54,7 @@ extension JSONEncoder {
         dateFormatter.timeZone = TimeZone(secondsFromGMT: 0)
         encoder.dateEncodingStrategy = .formatted(dateFormatter)
         return encoder
-    }()
+    }
 }
 
 extension Data {

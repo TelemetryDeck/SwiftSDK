@@ -1,7 +1,7 @@
 import Foundation
 
-public struct LogHandler {
-    public enum LogLevel: Int, CustomStringConvertible {
+public struct LogHandler: Sendable {
+    public enum LogLevel: Int, CustomStringConvertible, Sendable {
         case debug = 0
         case info = 1
         case error = 2
@@ -19,9 +19,9 @@ public struct LogHandler {
     }
 
     let logLevel: LogLevel
-    let handler: (LogLevel, String) -> Void
+    let handler: @Sendable (LogLevel, String) -> Void
 
-    public init(logLevel: LogHandler.LogLevel, handler: @escaping (LogHandler.LogLevel, String) -> Void) {
+    public init(logLevel: LogHandler.LogLevel, handler: @escaping @Sendable (LogHandler.LogLevel, String) -> Void) {
         self.logLevel = logLevel
         self.handler = handler
     }
@@ -32,7 +32,7 @@ public struct LogHandler {
         }
     }
 
-    public static var stdout = { logLevel in
+    public static func stdout(_ logLevel: LogLevel) -> LogHandler {
         LogHandler(logLevel: logLevel) { level, message in
             print("[TelemetryDeck: \(level.description)] \(message)")
         }
