@@ -15,11 +15,12 @@ internal protocol SignalManageable {
     func attemptToSendNextBatchOfCachedSignals()
 }
 
-internal class SignalManager: SignalManageable {
+internal final class SignalManager: SignalManageable, @unchecked Sendable {
     internal static let minimumSecondsToPassBetweenRequests: Double = 10
 
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
+
     private var sendTimer: Timer?
 
     init(configuration: TelemetryManagerConfiguration) {
@@ -74,35 +75,41 @@ internal class SignalManager: SignalManageable {
         customUserID: String?,
         configuration: TelemetryManagerConfiguration
     ) {
-        DispatchQueue.global(qos: .utility).async {
-            let enrichedMetadata: [String: String] = configuration.metadataEnrichers
-                .map { $0.enrich(signalType: signalName, for: customUserID, floatValue: floatValue) }
-                .reduce([String: String](), { $0.applying($1) })
+        DispatchQueue.main.async {
+            let defaultUserIdentifier = self.defaultUserIdentifier
+            let defaultParameters = DefaultSignalPayload.parameters
 
-            let payload = DefaultSignalPayload.parameters
-                .applying(enrichedMetadata)
-                .applying(parameters)
+            DispatchQueue.global(qos: .utility).async {
+                let enrichedMetadata: [String: String] = configuration.metadataEnrichers
+                    .map { $0.enrich(signalType: signalName, for: customUserID, floatValue: floatValue) }
+                    .reduce([String: String](), { $0.applying($1) })
 
-            let signalPostBody = SignalPostBody(
-                receivedAt: Date(),
-                appID: UUID(uuidString: configuration.telemetryAppID)!,
-                clientUser: CryptoHashing.sha256(string: customUserID ?? self.defaultUserIdentifier, salt: configuration.salt),
-                sessionID: configuration.sessionID.uuidString,
-                type: "\(signalName)",
-                floatValue: floatValue,
-                payload: payload.toMultiValueDimension(),
-                isTestMode: configuration.testMode ? "true" : "false"
-            )
+                let payload = defaultParameters
+                    .applying(enrichedMetadata)
+                    .applying(parameters)
 
-            configuration.logHandler?.log(.debug, message: "Process signal: \(signalPostBody)")
+                let signalPostBody = SignalPostBody(
+                    receivedAt: Date(),
+                    appID: UUID(uuidString: configuration.telemetryAppID)!,
+                    clientUser: CryptoHashing.sha256(string: customUserID ?? defaultUserIdentifier, salt: configuration.salt),
+                    sessionID: configuration.sessionID.uuidString,
+                    type: "\(signalName)",
+                    floatValue: floatValue,
+                    payload: payload.toMultiValueDimension(),
+                    isTestMode: configuration.testMode ? "true" : "false"
+                )
 
-            self.signalCache.push(signalPostBody)
+                configuration.logHandler?.log(.debug, message: "Process signal: \(signalPostBody)")
+
+                self.signalCache.push(signalPostBody)
+            }
         }
     }
 
     /// Sends one batch of signals from the cache if not empty.
     /// If signals fail to send, we put them back into the cache to try again later.
     @objc
+    @Sendable
     internal func attemptToSendNextBatchOfCachedSignals() {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 
@@ -175,7 +182,7 @@ private extension SignalManager {
 // MARK: - Comms
 
 private extension SignalManager {
-    private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping (Data?, URLResponse?, Error?) -> Void) {
+    private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
             let path = "/api/v1/apps/\(self.configuration.telemetryAppID)/signals/multiple/"
             let url = self.configuration.apiBaseURL.appendingPathComponent(path)
@@ -209,6 +216,7 @@ private extension SignalManager {
     #endif
 
     /// The default user identifier. If the platform supports it, the ``identifierForVendor``. Otherwise, a self-generated `UUID` which is persisted in custom `UserDefaults` if available.
+    @MainActor
     var defaultUserIdentifier: String {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
 

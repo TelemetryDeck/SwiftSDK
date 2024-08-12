@@ -7,13 +7,13 @@ import Foundation
 /// correctly.
 ///
 /// Currently the cache is only in-memory. This will probably change in the near future.
-internal class SignalCache<T> where T: Codable {
+internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     internal var logHandler: LogHandler?
 
     private var cachedSignals: [T] = []
     private let maximumNumberOfSignalsToPopAtOnce = 100
 
-    let queue = DispatchQueue(label: "telemetrydeck-signal-cache", attributes: .concurrent)
+    let queue = DispatchQueue(label: "com.telemetrydeck.SignalCache", attributes: .concurrent)
 
     /// How many Signals are cached
     func count() -> Int {

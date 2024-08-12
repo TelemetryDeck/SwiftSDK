@@ -41,6 +41,7 @@ internal struct SignalPostBody: Codable, Equatable {
 
 /// The default payload that is included in payloads processed by TelemetryDeck.
 public struct DefaultSignalPayload: Encodable {
+    @MainActor
     public static var parameters: [String: String] {
         var parameters: [String: String] = [
             // deprecated names
@@ -338,6 +339,7 @@ extension DefaultSignalPayload {
     }
 
     /// The current devices screen resolution width in points.
+    @MainActor
     static var screenResolutionWidth: String {
         #if os(iOS) || os(tvOS)
         return "\(UIScreen.main.bounds.width)"
@@ -354,6 +356,7 @@ extension DefaultSignalPayload {
     }
 
     /// The current devices screen resolution height in points.
+    @MainActor
     static var screenResolutionHeight: String {
         #if os(iOS) || os(tvOS)
         return "\(UIScreen.main.bounds.height)"
@@ -370,6 +373,7 @@ extension DefaultSignalPayload {
     }
 
     /// The current devices screen orientation. Returns `Fixed` for devices that don't support an orientation change.
+    @MainActor
     static var orientation: String {
         #if os(iOS)
         switch UIDevice.current.orientation {

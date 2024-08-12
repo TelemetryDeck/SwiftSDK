@@ -19,6 +19,7 @@ extension TelemetryDeck {
     ///     - from: The navigation path at the beginning of the navigation event, identifying the view the user is leaving
     ///     - to: The navigation path at the end of the navigation event, identifying the view the user is arriving at
     ///     - customUserID: An optional string specifying a custom user identifier. If provided, it will override the default user identifier from the configuration. Default is `nil`.
+    @MainActor
     public static func navigationPathChanged(from source: String, to destination: String, customUserID: String? = nil) {
         NavigationStatus.shared.previousNavigationPath = destination
 
@@ -57,17 +58,20 @@ extension TelemetryDeck {
     /// - Parameters:
     ///     - to: The navigation path representing the view the user is arriving at.
     ///     - customUserID: An optional string specifying a custom user identifier. If provided, it will override the default user identifier from the configuration. Default is `nil`.
+    @MainActor
     public static func navigationPathChanged(to destination: String, customUserID: String? = nil) {
         let source = NavigationStatus.shared.previousNavigationPath ?? ""
 
         Self.navigationPathChanged(from: source, to: destination, customUserID: customUserID)
     }
 
+    @MainActor
     @available(*, unavailable, renamed: "navigationPathChanged(from:to:customUserID:)")
     public static func navigate(from source: String, to destination: String, customUserID: String? = nil) {
         self.navigationPathChanged(from: source, to: destination, customUserID: customUserID)
     }
 
+    @MainActor
     @available(*, unavailable, renamed: "navigationPathChanged(to:customUserID:)")
     public static func navigate(to destination: String, customUserID: String? = nil) {
         self.navigationPathChanged(to: destination, customUserID: customUserID)
