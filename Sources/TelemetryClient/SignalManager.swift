@@ -95,7 +95,7 @@ internal final class SignalManager: SignalManageable, @unchecked Sendable {
                     sessionID: configuration.sessionID.uuidString,
                     type: "\(signalName)",
                     floatValue: floatValue,
-                    payload: payload.toMultiValueDimension(),
+                    payload: payload,
                     isTestMode: configuration.testMode ? "true" : "false"
                 )
 
@@ -184,7 +184,7 @@ private extension SignalManager {
 private extension SignalManager {
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
-            let path = "/api/v1/apps/\(self.configuration.telemetryAppID)/signals/multiple/"
+            let path = "/v2/"
             let url = self.configuration.apiBaseURL.appendingPathComponent(path)
 
             var urlRequest = URLRequest(url: url)

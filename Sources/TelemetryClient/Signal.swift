@@ -33,7 +33,7 @@ internal struct SignalPostBody: Codable, Equatable {
     let floatValue: Double?
 
     /// Tags in the form "key:value" to attach to the signal
-    let payload: [String]
+    let payload: [String: String]
 
     /// If "true", mark the signal as a testing signal and only show it in a dedicated test mode UI
     let isTestMode: String

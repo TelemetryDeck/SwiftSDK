@@ -14,10 +14,4 @@ extension Dictionary where Key == String, Value == String {
             other
         }
     }
-
-    func toMultiValueDimension() -> [String] {
-        map { key, value in
-            key.replacingOccurrences(of: ":", with: "_") + ":" + value
-        }
-    }
 }
