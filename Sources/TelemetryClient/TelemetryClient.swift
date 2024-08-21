@@ -246,6 +246,11 @@ public final class TelemetryManager: @unchecked Sendable {
         configuration.defaultUser = newDefaultUser
     }
 
+    public var hashedDefaultUser: String? {
+        guard let defaultUser = configuration.defaultUser else { return nil }
+        return CryptoHashing.sha256(string: defaultUser, salt: configuration.salt)
+    }
+
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
     @available(*, deprecated, renamed: "TelemetryDeck.generateNewSession()", message: "This call was renamed to `TelemetryDeck.generateNewSession()`. Please migrate – a fix-it is available.")
     public static func generateNewSession() {
