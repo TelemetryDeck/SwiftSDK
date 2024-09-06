@@ -65,9 +65,9 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
         return cacheFolderURL.appendingPathComponent("telemetrysignalcache")
     }
 
-    /// Save the entire signal cache to disk
+    /// Save the entire signal cache to disk asynchronously
     func backupCache() {
-        queue.sync {
+        queue.async { [self] in
             if let data = try? JSONEncoder().encode(self.cachedSignals) {
                 do {
                     try data.write(to: fileURL())
@@ -83,16 +83,17 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
         }
     }
 
-    /// Loads any previous signal cache from disk
+    /// Loads any previous signal cache from disk asynchronously
     init(logHandler: LogHandler?) {
         self.logHandler = logHandler
 
-        queue.sync {
-            logHandler?.log(message: "Loading Telemetry cache from: \(fileURL())")
+        queue.async { [weak self] in
+            guard let self else { return }
+            self.logHandler?.log(message: "Loading Telemetry cache from: \(self.fileURL())")
 
-            if let data = try? Data(contentsOf: fileURL()) {
+            if let data = try? Data(contentsOf: self.fileURL()) {
                 // Loaded cache file, now delete it to stop it being loaded multiple times
-                try? FileManager.default.removeItem(at: fileURL())
+                try? FileManager.default.removeItem(at: self.fileURL())
 
                 // Decode the data into a new cache
                 if let signals = try? JSONDecoder().decode([T].self, from: data) {
