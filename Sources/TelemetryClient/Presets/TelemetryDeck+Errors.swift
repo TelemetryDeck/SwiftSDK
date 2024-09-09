@@ -39,7 +39,7 @@ public extension TelemetryDeck {
     /// Sends a telemetry signal indicating that an identifiable error has occurred.
     ///
     /// - Parameters:
-    ///   - identifiableError: The error that conforms to `IdentifiableError`.
+    ///   - identifiableError: The error that conforms to `IdentifiableError`. Conform any error type by calling `.with(id:)` on it.
     ///   - category: The category of the error. Default is `.thrownException`.
     ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
     ///   - floatValue: An optional floating-point value to include with the signal. Default is `nil`.
