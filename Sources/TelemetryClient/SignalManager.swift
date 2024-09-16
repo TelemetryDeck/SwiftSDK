@@ -10,13 +10,13 @@ import WatchKit
 import TVUIKit
 #endif
 
-internal protocol SignalManageable {
+protocol SignalManageable {
     func processSignal(_ signalName: String, parameters: [String: String], floatValue: Double?, customUserID: String?, configuration: TelemetryManagerConfiguration)
     func attemptToSendNextBatchOfCachedSignals()
 }
 
-internal final class SignalManager: SignalManageable, @unchecked Sendable {
-    internal static let minimumSecondsToPassBetweenRequests: Double = 10
+final class SignalManager: SignalManageable, @unchecked Sendable {
+    static let minimumSecondsToPassBetweenRequests: Double = 10
 
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
@@ -82,7 +82,7 @@ internal final class SignalManager: SignalManageable, @unchecked Sendable {
             DispatchQueue.global(qos: .utility).async {
                 let enrichedMetadata: [String: String] = configuration.metadataEnrichers
                     .map { $0.enrich(signalType: signalName, for: customUserID, floatValue: floatValue) }
-                    .reduce([String: String](), { $0.applying($1) })
+                    .reduce([String: String]()) { $0.applying($1) }
 
                 let payload = defaultParameters
                     .applying(enrichedMetadata)
@@ -110,7 +110,7 @@ internal final class SignalManager: SignalManageable, @unchecked Sendable {
     /// If signals fail to send, we put them back into the cache to try again later.
     @objc
     @Sendable
-    internal func attemptToSendNextBatchOfCachedSignals() {
+    func attemptToSendNextBatchOfCachedSignals() {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 
         let queuedSignals: [SignalPostBody] = signalCache.pop()
@@ -136,8 +136,8 @@ internal final class SignalManager: SignalManageable, @unchecked Sendable {
                     return
                 }
 
-                if let data = data {
-                    configuration.logHandler?.log(.debug, message: String(decoding: data, as: UTF8.self))
+                if let data = data, let messageString = String(data: data, encoding: .utf8) {
+                    configuration.logHandler?.log(.debug, message: messageString)
                 }
             }
         }
@@ -196,7 +196,10 @@ private extension SignalManager {
             }
 
             urlRequest.httpBody = body
-            self.configuration.logHandler?.log(.debug, message: String(decoding: urlRequest.httpBody!, as: UTF8.self))
+
+            if let data = urlRequest.httpBody, let messageString = String(data: data, encoding: .utf8) {
+                self.configuration.logHandler?.log(.debug, message: messageString)
+            }
 
             let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
@@ -210,7 +213,7 @@ private extension SignalManager {
     #if os(macOS)
     /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
     private var customDefaults: UserDefaults? {
-        let appIdHash = CryptoHashing.sha256(string: self.configuration.telemetryAppID, salt: "")
+        let appIdHash = CryptoHashing.sha256(string: configuration.telemetryAppID, salt: "")
         return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
     }
     #endif
@@ -221,28 +224,28 @@ private extension SignalManager {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
 
         #if os(iOS) || os(tvOS) || os(visionOS)
-            return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
+        return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #elseif os(watchOS)
-            if #available(watchOS 6.2, *) {
-                return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
-            } else {
-                return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
-            }
-        #elseif os(macOS)
-            if let customDefaults = self.customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
-                return defaultUserIdentifier
-            } else {
-                let defaultUserIdentifier = UUID().uuidString
-                self.customDefaults?.set(defaultUserIdentifier, forKey: "defaultUserIdentifier")
-                return defaultUserIdentifier
-            }
-        #else
-            #if DEBUG
-                let line1 = "[Telemetry] On this platform, Telemetry can't generate a unique user identifier."
-                let line2 = "It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html"
-                configuration.logHandler?.log(message: "\(line1) \(line2)")
-            #endif
+        if #available(watchOS 6.2, *) {
+            return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
+        } else {
             return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
+        }
+        #elseif os(macOS)
+        if let customDefaults = customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
+            return defaultUserIdentifier
+        } else {
+            let defaultUserIdentifier = UUID().uuidString
+            customDefaults?.set(defaultUserIdentifier, forKey: "defaultUserIdentifier")
+            return defaultUserIdentifier
+        }
+        #else
+        #if DEBUG
+        let line1 = "[Telemetry] On this platform, Telemetry can't generate a unique user identifier."
+        let line2 = "It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html"
+        configuration.logHandler?.log(message: "\(line1) \(line2)")
+        #endif
+        return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #endif
     }
 }

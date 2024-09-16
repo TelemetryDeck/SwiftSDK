@@ -12,7 +12,7 @@ import Foundation
 #endif
 
 /// Note: only use this when posting to the deprecated V1 ingest API
-internal struct SignalPostBody: Codable, Equatable {
+struct SignalPostBody: Codable, Equatable {
     /// When was this signal generated
     let receivedAt: Date
 
@@ -212,7 +212,7 @@ extension DefaultSignalPayload {
                 var modelIdentifier: String?
 
                 if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data {
-                    if let modelIdentifierCString = String(decoding: modelData, as: UTF8.self).cString(using: .utf8) {
+                    if let modelIdentifierCString = String(data: modelData, encoding: .utf8)?.cString(using: .utf8) {
                         modelIdentifier = String(cString: modelIdentifierCString)
                     }
                 }
@@ -342,16 +342,16 @@ extension DefaultSignalPayload {
     @MainActor
     static var screenResolutionWidth: String {
         #if os(iOS) || os(tvOS)
-        return "\(UIScreen.main.bounds.width)"
+            return "\(UIScreen.main.bounds.width)"
         #elseif os(watchOS)
-        return "\(WKInterfaceDevice.current().screenBounds.width)"
+            return "\(WKInterfaceDevice.current().screenBounds.width)"
         #elseif os(macOS)
-        if let screen = NSScreen.main {
-            return "\(screen.frame.width)"
-        }
-        return "Unknown"
+            if let screen = NSScreen.main {
+                return "\(screen.frame.width)"
+            }
+            return "Unknown"
         #else
-        return "N/A"
+            return "N/A"
         #endif
     }
 
@@ -359,16 +359,16 @@ extension DefaultSignalPayload {
     @MainActor
     static var screenResolutionHeight: String {
         #if os(iOS) || os(tvOS)
-        return "\(UIScreen.main.bounds.height)"
+            return "\(UIScreen.main.bounds.height)"
         #elseif os(watchOS)
-        return "\(WKInterfaceDevice.current().screenBounds.height)"
+            return "\(WKInterfaceDevice.current().screenBounds.height)"
         #elseif os(macOS)
-        if let screen = NSScreen.main {
-            return "\(screen.frame.height)"
-        }
-        return "Unknown"
+            if let screen = NSScreen.main {
+                return "\(screen.frame.height)"
+            }
+            return "Unknown"
         #else
-        return "N/A"
+            return "N/A"
         #endif
     }
 
@@ -376,16 +376,16 @@ extension DefaultSignalPayload {
     @MainActor
     static var orientation: String {
         #if os(iOS)
-        switch UIDevice.current.orientation {
-        case .portrait, .portraitUpsideDown:
-            return "Portrait"
-        case .landscapeLeft, .landscapeRight:
-            return "Landscape"
-        default:
-            return "Unknown"
-        }
+            switch UIDevice.current.orientation {
+            case .portrait, .portraitUpsideDown:
+                return "Portrait"
+            case .landscapeLeft, .landscapeRight:
+                return "Landscape"
+            default:
+                return "Unknown"
+            }
         #else
-        return "Fixed"
+            return "Fixed"
         #endif
     }
 
