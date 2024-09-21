@@ -151,7 +151,10 @@ private extension SignalManager {
     @objc func appWillTerminate() {
         configuration.logHandler?.log(.debug, message: #function)
 
-        // run backup in background task to avoid blocking main thread while ensureing app stays open during write
+        #if os(watchOS) || os(macOS)
+        self.signalCache.backupCache()
+        #else
+        // run backup in background task to avoid blocking main thread while ensuring app stays open during write
         let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
         DispatchQueue.global(qos: .background).async {
             self.signalCache.backupCache()
@@ -160,6 +163,7 @@ private extension SignalManager {
                 UIApplication.shared.endBackgroundTask(backgroundTaskID)
             }
         }
+        #endif
     }
 
     /// WatchOS doesn't have a notification before it's killed, so we have to use background/foreground
@@ -185,7 +189,10 @@ private extension SignalManager {
         sendTimer?.invalidate()
         sendTimer = nil
 
-        // run backup in background task to avoid blocking main thread while ensureing app stays open during write
+        #if os(watchOS) || os(macOS)
+        self.signalCache.backupCache()
+        #else
+        // run backup in background task to avoid blocking main thread while ensuring app stays open during write
         let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
         DispatchQueue.global(qos: .background).async {
             self.signalCache.backupCache()
@@ -194,6 +201,7 @@ private extension SignalManager {
                 UIApplication.shared.endBackgroundTask(backgroundTaskID)
             }
         }
+        #endif
     }
     #endif
 }
