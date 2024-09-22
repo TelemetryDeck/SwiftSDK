@@ -458,30 +458,30 @@ public final class TelemetryManagerConfigurationObjCProxy: NSObject {
 @objc(TelemetryManager)
 public final class TelemetryManagerObjCProxy: NSObject {
     @objc public static func initialize(with configuration: TelemetryManagerConfigurationObjCProxy) {
-        TelemetryManager.initialize(with: configuration.telemetryManagerConfiguration)
+        TelemetryDeck.initialize(config: configuration.telemetryManagerConfiguration)
     }
 
     @objc public static func terminate() {
-        TelemetryManager.terminate()
+        TelemetryDeck.terminate()
     }
 
     @objc public static func send(_ signalName: String, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.send(signalName, for: clientUser, with: additionalPayload)
+        TelemetryDeck.signal(signalName, parameters: additionalPayload, customUserID: clientUser)
     }
 
     @objc public static func send(_ signalName: String, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.send(signalName, with: additionalPayload)
+        TelemetryDeck.signal(signalName, parameters: additionalPayload)
     }
 
     @objc public static func send(_ signalName: String) {
-        TelemetryManager.send(signalName)
+        TelemetryDeck.signal(signalName)
     }
 
     @objc public static func updateDefaultUser(to newDefaultUser: String?) {
-        TelemetryManager.updateDefaultUser(to: newDefaultUser)
+        TelemetryDeck.updateDefaultUserID(to: newDefaultUser)
     }
 
     @objc public static func generateNewSession() {
-        TelemetryManager.generateNewSession()
+        TelemetryDeck.generateNewSession()
     }
 }
