@@ -10,7 +10,7 @@ import Foundation
     import TVUIKit
 #endif
 
-let telemetryClientVersion = "2.4.0"
+let sdkVersion = "2.3.0"
 
 /// Configuration for TelemetryManager
 ///
@@ -406,51 +406,51 @@ public final class TelemetryManager: @unchecked Sendable {
 
 @objc(TelemetryManagerConfiguration)
 public final class TelemetryManagerConfigurationObjCProxy: NSObject {
-    fileprivate var telemetryManagerConfiguration: TelemetryManagerConfiguration
+    fileprivate var telemetryDeckConfiguration: TelemetryDeck.Config
 
     @objc public init(appID: String, salt: String, baseURL: URL) {
-        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt, baseURL: baseURL)
+        telemetryDeckConfiguration = TelemetryDeck.Config(appID: appID, salt: salt, baseURL: baseURL)
     }
 
     @objc public init(appID: String, baseURL: URL) {
-        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, baseURL: baseURL)
+        telemetryDeckConfiguration = TelemetryDeck.Config(appID: appID, baseURL: baseURL)
     }
 
     @objc public init(appID: String, salt: String) {
-        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID, salt: salt)
+        telemetryDeckConfiguration = TelemetryDeck.Config(appID: appID, salt: salt)
     }
 
     @objc public init(appID: String) {
-        telemetryManagerConfiguration = TelemetryManagerConfiguration(appID: appID)
+        telemetryDeckConfiguration = TelemetryDeck.Config(appID: appID)
     }
 
     @objc public var sendNewSessionBeganSignal: Bool {
         get {
-            telemetryManagerConfiguration.sendNewSessionBeganSignal
+            telemetryDeckConfiguration.sendNewSessionBeganSignal
         }
 
         set {
-            telemetryManagerConfiguration.sendNewSessionBeganSignal = newValue
+            telemetryDeckConfiguration.sendNewSessionBeganSignal = newValue
         }
     }
 
     @objc public var testMode: Bool {
         get {
-            telemetryManagerConfiguration.testMode
+            telemetryDeckConfiguration.testMode
         }
 
         set {
-            telemetryManagerConfiguration.testMode = newValue
+            telemetryDeckConfiguration.testMode = newValue
         }
     }
 
     @objc public var analyticsDisabled: Bool {
         get {
-            telemetryManagerConfiguration.analyticsDisabled
+            telemetryDeckConfiguration.analyticsDisabled
         }
 
         set {
-            telemetryManagerConfiguration.analyticsDisabled = newValue
+            telemetryDeckConfiguration.analyticsDisabled = newValue
         }
     }
 }
@@ -458,30 +458,30 @@ public final class TelemetryManagerConfigurationObjCProxy: NSObject {
 @objc(TelemetryManager)
 public final class TelemetryManagerObjCProxy: NSObject {
     @objc public static func initialize(with configuration: TelemetryManagerConfigurationObjCProxy) {
-        TelemetryManager.initialize(with: configuration.telemetryManagerConfiguration)
+        TelemetryDeck.initialize(config: configuration.telemetryDeckConfiguration)
     }
 
     @objc public static func terminate() {
-        TelemetryManager.terminate()
+        TelemetryDeck.terminate()
     }
 
     @objc public static func send(_ signalName: String, for clientUser: String? = nil, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.send(signalName, for: clientUser, with: additionalPayload)
+        TelemetryDeck.signal(signalName, parameters: additionalPayload, customUserID: clientUser)
     }
 
     @objc public static func send(_ signalName: String, with additionalPayload: [String: String] = [:]) {
-        TelemetryManager.send(signalName, with: additionalPayload)
+        TelemetryDeck.signal(signalName, parameters: additionalPayload)
     }
 
     @objc public static func send(_ signalName: String) {
-        TelemetryManager.send(signalName)
+        TelemetryDeck.signal(signalName)
     }
 
     @objc public static func updateDefaultUser(to newDefaultUser: String?) {
-        TelemetryManager.updateDefaultUser(to: newDefaultUser)
+        TelemetryDeck.updateDefaultUserID(to: newDefaultUser)
     }
 
     @objc public static func generateNewSession() {
-        TelemetryManager.generateNewSession()
+        TelemetryDeck.generateNewSession()
     }
 }

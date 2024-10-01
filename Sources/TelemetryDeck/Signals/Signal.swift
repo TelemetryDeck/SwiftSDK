@@ -63,7 +63,7 @@ public struct DefaultSignalPayload: Encodable {
             "region": Self.region,
             "appLanguage": Self.appLanguage,
             "preferredLanguage": Self.preferredLanguage,
-            "telemetryClientVersion": telemetryClientVersion,
+            "telemetryClientVersion": sdkVersion,
 
             // new names
             "TelemetryDeck.AppInfo.buildNumber": Self.buildNumber,
@@ -91,8 +91,8 @@ public struct DefaultSignalPayload: Encodable {
             "TelemetryDeck.RunContext.targetEnvironment": Self.targetEnvironment,
 
             "TelemetryDeck.SDK.name": "SwiftSDK",
-            "TelemetryDeck.SDK.nameAndVersion": "SwiftSDK \(telemetryClientVersion)",
-            "TelemetryDeck.SDK.version": telemetryClientVersion,
+            "TelemetryDeck.SDK.nameAndVersion": "SwiftSDK \(sdkVersion)",
+            "TelemetryDeck.SDK.version": sdkVersion,
 
             "TelemetryDeck.UserPreference.language": Self.preferredLanguage,
             "TelemetryDeck.UserPreference.region": Self.region,
