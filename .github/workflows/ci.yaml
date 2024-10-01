@@ -40,4 +40,4 @@ jobs:
         with:
           xcode-version: ${{ matrix.xcode }}
       - name: Build and Test
-        run: xcodebuild test -scheme TelemetryClient-Package ${{ matrix.xcodebuildCommand }}
+        run: xcodebuild test -scheme TelemetryDeck-Package ${{ matrix.xcodebuildCommand }}
