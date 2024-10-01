@@ -178,7 +178,7 @@ public final class TelemetryManager: @unchecked Sendable {
     /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
     @available(*, deprecated, renamed: "TelemetryDeck.terminate()", message: "This call was renamed to `TelemetryDeck.terminate()`. Please migrate – a fix-it is available.")
     public static func terminate() {
-        initializedTelemetryManager = nil
+        TelemetryDeck.terminate()
     }
 
     /// Send a Signal to TelemetryDeck, to record that an event has occurred.
@@ -242,7 +242,7 @@ public final class TelemetryManager: @unchecked Sendable {
     }
 
     public func updateDefaultUser(to newDefaultUser: String?) {
-        configuration.defaultUser = newDefaultUser
+        TelemetryDeck.updateDefaultUserID(to: newDefaultUser)
     }
 
     public var hashedDefaultUser: String? {
@@ -257,7 +257,7 @@ public final class TelemetryManager: @unchecked Sendable {
     }
 
     public func generateNewSession() {
-        configuration.sessionID = UUID()
+        TelemetryDeck.generateNewSession()
     }
 
     /// Send a Signal to TelemetryDeck, to record that an event has occurred.
@@ -284,10 +284,7 @@ public final class TelemetryManager: @unchecked Sendable {
         message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
     )
     public func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
-        // make sure to not send any signals when run by Xcode via SwiftUI previews
-        guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
-
-        signalManager.processSignal(signalName, parameters: parameters, floatValue: floatValue, customUserID: customUserID, configuration: configuration)
+        TelemetryDeck.signal(signalName, parameters: parameters, floatValue: floatValue, customUserID: customUserID)
     }
 
     /// Do not call this method unless you really know what you're doing. The signals will automatically sync with the server at appropriate times, there's no need to call this.
@@ -297,18 +294,10 @@ public final class TelemetryManager: @unchecked Sendable {
     /// This function does not guarantee that the signal cache will be sent right away. Calling this after every ``send`` will not make data reach our servers faster, so avoid doing that.
     /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn data because a user closes your app and doesn't reopen it anytime soon (if at all).
     public func requestImmediateSync() {
-        // this check ensures that the number of requests can only double in the worst case where a developer calls this after each `send`
-        if Date().timeIntervalSince(lastTimeImmediateSyncRequested) > SignalManager.minimumSecondsToPassBetweenRequests {
-            lastTimeImmediateSyncRequested = Date()
-
-            // give the signal manager some short amount of time to process the signal that was sent right before calling sync
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(50)) { [weak self] in
-                self?.signalManager.attemptToSendNextBatchOfCachedSignals()
-            }
-        }
+        TelemetryDeck.requestImmediateSync()
     }
 
-    private init(configuration: TelemetryManagerConfiguration) {
+    init(configuration: TelemetryManagerConfiguration) {
         self._configuration = configuration
         signalManager = SignalManager(configuration: configuration)
 
@@ -323,20 +312,20 @@ public final class TelemetryManager: @unchecked Sendable {
     }
 
     nonisolated(unsafe)
-    private static var initializedTelemetryManager: TelemetryManager?
+    static var initializedTelemetryManager: TelemetryManager?
 
-    private let signalManager: SignalManageable
+    let signalManager: SignalManageable
 
     private let queue = DispatchQueue(label: "com.telemetrydeck.TelemetryManager", attributes: .concurrent)
 
     private var _configuration: TelemetryManagerConfiguration
-    private var configuration: TelemetryManagerConfiguration {
+    var configuration: TelemetryManagerConfiguration {
         get { queue.sync(flags: .barrier) { return _configuration } }
         set { queue.sync(flags: .barrier) { _configuration = newValue } }
     }
 
     private var _lastTimeImmediateSyncRequested: Date = .distantPast
-    private var lastTimeImmediateSyncRequested: Date {
+    var lastTimeImmediateSyncRequested: Date {
         get { queue.sync(flags: .barrier) { return _lastTimeImmediateSyncRequested } }
         set { queue.sync(flags: .barrier) { _lastTimeImmediateSyncRequested = newValue } }
     }

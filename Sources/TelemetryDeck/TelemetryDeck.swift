@@ -12,7 +12,7 @@ public enum TelemetryDeck {
     /// This function sets up the telemetry system with the specified configuration. It is necessary to call this method before sending any telemetry signals.
     /// For example, you might want to call this in your `init` method of your app's `@main` entry point.
     public static func initialize(config: Config) {
-        TelemetryManager.initialize(with: config)
+        TelemetryManager.initializedTelemetryManager = TelemetryManager(configuration: config)
     }
 
     /// Sends a telemetry signal with optional parameters to TelemetryDeck.
@@ -30,7 +30,19 @@ public enum TelemetryDeck {
         floatValue: Double? = nil,
         customUserID: String? = nil
     ) {
-        TelemetryManager.send(signalName, for: customUserID, floatValue: floatValue, with: parameters)
+        let manager = TelemetryManager.shared
+        let configuration = manager.configuration
+
+        // make sure to not send any signals when run by Xcode via SwiftUI previews
+        guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
+
+        manager.signalManager.processSignal(
+            signalName,
+            parameters: parameters,
+            floatValue: floatValue,
+            customUserID: customUserID,
+            configuration: configuration
+        )
     }
 
     /// Do not call this method unless you really know what you're doing. The signals will automatically sync with 
@@ -46,14 +58,24 @@ public enum TelemetryDeck {
     /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn 
     /// data because a user closes your app and doesn't reopen it anytime soon (if at all).
     public static func requestImmediateSync() {
-        TelemetryManager.requestImmediateSync()
+        let manager = TelemetryManager.shared
+
+        // this check ensures that the number of requests can only double in the worst case where a developer calls this after each `send`
+        if Date().timeIntervalSince(manager.lastTimeImmediateSyncRequested) > SignalManager.minimumSecondsToPassBetweenRequests {
+            manager.lastTimeImmediateSyncRequested = Date()
+
+            // give the signal manager some short amount of time to process the signal that was sent right before calling sync
+            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(50)) { [weak manager] in
+                manager?.signalManager.attemptToSendNextBatchOfCachedSignals()
+            }
+        }
     }
 
     /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
     ///
     /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
     public static func terminate() {
-        TelemetryManager.terminate()
+        TelemetryManager.initializedTelemetryManager = nil
     }
 
     /// Change the default user identifier sent with each signal.
@@ -66,11 +88,11 @@ public enum TelemetryDeck {
     /// Note that just as with specifying the user identifier with the `signal` call, the identifier will never leave the device.
     /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
     public static func updateDefaultUserID(to customUserID: String?) {
-        TelemetryManager.updateDefaultUser(to: customUserID)
+        TelemetryManager.shared.configuration.defaultUser = customUserID
     }
 
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
     public static func generateNewSession() {
-        TelemetryManager.generateNewSession()
+        TelemetryManager.shared.configuration.sessionID = UUID()
     }
 }
