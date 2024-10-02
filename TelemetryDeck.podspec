@@ -28,5 +28,5 @@ Pod::Spec.new do |spec|
   spec.visionos.deployment_target = "1.0"
   spec.tvos.deployment_target = "13.0"
   spec.source       = { :git => "https://github.com/TelemetryDeck/SwiftSDK.git", :tag => "#{spec.version}" }
-  spec.source_files  = "Sources/TelemetryClient/**/*.{h,m,swift}"
+  spec.source_files  = "Sources/TelemetryDeck/**/*.swift"
 end
