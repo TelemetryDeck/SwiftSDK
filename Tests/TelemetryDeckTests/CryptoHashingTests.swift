@@ -1,4 +1,4 @@
-@testable import TelemetryClient
+@testable import TelemetryDeck
 import XCTest
 #if canImport(CryptoKit)
 import CryptoKit

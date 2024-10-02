@@ -2,7 +2,7 @@
 import PackageDescription
 
 let package = Package(
-    name: "TelemetryClient",
+    name: "TelemetryDeck",
     platforms: [
         .macOS(.v10_13),
         .iOS(.v12),
@@ -18,18 +18,18 @@ let package = Package(
     targets: [
         .target(
             name: "TelemetryDeck",
-            dependencies: ["TelemetryClient"],
             resources: [.copy("PrivacyInfo.xcprivacy")],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .target(
             name: "TelemetryClient",
+            dependencies: ["TelemetryDeck"],
             resources: [.copy("PrivacyInfo.xcprivacy")],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         ),
         .testTarget(
-            name: "TelemetryClientTests",
-            dependencies: ["TelemetryClient"],
+            name: "TelemetryDeckTests",
+            dependencies: ["TelemetryDeck"],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
         )
     ]
