@@ -338,7 +338,7 @@ extension DefaultSignalPayload {
         let preferredLocaleIdentifier = Locale.preferredLanguages.first ?? "zz-ZZ"
         return preferredLocaleIdentifier.components(separatedBy: .init(charactersIn: "-_"))[0]
     }
-    
+
     /// The color scheme set by the user. Returns `N/A` on unsupported platforms
     static var colorScheme: String {
         #if os(iOS) || os(tvOS)
@@ -367,7 +367,6 @@ extension DefaultSignalPayload {
         return "N/A"
         #endif
     }
-    
 
     /// The current devices screen resolution width in points.
     @MainActor
