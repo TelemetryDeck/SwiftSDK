@@ -96,6 +96,7 @@ public struct DefaultSignalPayload: Encodable {
 
             "TelemetryDeck.UserPreference.language": Self.preferredLanguage,
             "TelemetryDeck.UserPreference.region": Self.region,
+            "TelemetryDeck.UserPreference.colorScheme": Self.colorScheme
         ]
 
         if let extensionIdentifier = Self.extensionIdentifier {
@@ -337,6 +338,36 @@ extension DefaultSignalPayload {
         let preferredLocaleIdentifier = Locale.preferredLanguages.first ?? "zz-ZZ"
         return preferredLocaleIdentifier.components(separatedBy: .init(charactersIn: "-_"))[0]
     }
+    
+    /// The color scheme set by the user. Returns `N/A` on unsupported platforms
+    static var colorScheme: String {
+        #if os(iOS) || os(tvOS)
+        switch UIScreen.main.traitCollection.userInterfaceStyle {
+        case .dark:
+            return "Dark"
+        case .light:
+            return "Light"
+        default:
+            return "N/A"
+        }
+        #elseif os(macOS)
+        if #available(macOS 10.14, *) {
+            switch NSAppearance.current.name {
+            case .aqua:
+                return "Light"
+            case .darkAqua:
+                return "Dark"
+            default:
+                return "N/A"
+            }
+        } else {
+            return "Light"
+        }
+        #else
+        return "N/A"
+        #endif
+    }
+    
 
     /// The current devices screen resolution width in points.
     @MainActor
