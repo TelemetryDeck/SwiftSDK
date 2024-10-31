@@ -122,10 +122,10 @@ public struct TelemetryManagerConfiguration: Sendable {
 
     /// A strategy for handling logs.
     ///
-    /// Defaults to `print` with info/errror messages - debug messages are not outputted. Set to `nil` to disable all logging from TelemetryDeck SDK.
+    /// Defaults to `OSLog.Logger` with info/errror messages - debug messages are not outputted. Set to `nil` to disable all logging from TelemetryDeck SDK.
     ///
     /// - NOTE: If ``swiftUIPreviewMode`` is `true` (by default only when running SwiftUI previews), this value is effectively ignored, working like it's set to `nil`.
-    public var logHandler: LogHandler? = LogHandler.stdout(.info)
+    public var logHandler: LogHandler? = LogHandler.standard(.info)
 
     /// An array of signal metadata enrichers: a system for adding dynamic metadata to signals as they are recorded.
     ///

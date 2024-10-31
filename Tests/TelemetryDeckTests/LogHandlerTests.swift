@@ -6,7 +6,7 @@ final class LogHandlerTests: XCTestCase {
     var lastLevel: LogHandler.LogLevel?
 
     func testLogHandler_stdoutLogLevelDefined() {
-        XCTAssertEqual(LogHandler.stdout(.error).logLevel, .error)
+        XCTAssertEqual(LogHandler.standard(.error).logLevel, .error)
     }
     
     func testLogHandler_logLevelRespected() {
