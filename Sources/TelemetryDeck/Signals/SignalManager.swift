@@ -85,15 +85,25 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         configuration: TelemetryManagerConfiguration
     ) {
         // warn users about reserved keys to avoid unexpected behavior
-        if signalName.lowercased().hasPrefix("telemetrydeck.") || Self.reservedKeysLowercased.contains(signalName.lowercased()) {
+        if signalName.lowercased().hasPrefix("telemetrydeck.") {
             configuration.logHandler?.log(
                 .error,
-                message: "Sending signal with reserved key '\(signalName)' will cause unexpected behavior. Please use another name instead."
+                message: "Sending signal with reserved prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+            )
+        } else if Self.reservedKeysLowercased.contains(signalName.lowercased()) {
+            configuration.logHandler?.log(
+                .error,
+                message: "Sending signal with reserved name '\(signalName)' will cause unexpected behavior. Please use another name instead."
             )
         }
 
         for parameterKey in parameters.keys {
-            if parameterKey.lowercased().hasPrefix("telemetrydeck.") || Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
+            if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
+                configuration.logHandler?.log(
+                    .error,
+                    message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+                )
+            } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
                 configuration.logHandler?.log(
                     .error,
                     message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
