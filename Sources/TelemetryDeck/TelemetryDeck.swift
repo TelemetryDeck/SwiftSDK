@@ -36,9 +36,12 @@ public enum TelemetryDeck {
         // make sure to not send any signals when run by Xcode via SwiftUI previews
         guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
 
+        let combinedSignalName = (configuration.defaultSignalPrefix ?? "") + signalName
+        let combinedParameters = configuration.defaultParameters().merging(parameters) { $1 }
+
         manager.signalManager.processSignal(
-            signalName,
-            parameters: parameters,
+            combinedSignalName,
+            parameters: combinedParameters,
             floatValue: floatValue,
             customUserID: customUserID,
             configuration: configuration
