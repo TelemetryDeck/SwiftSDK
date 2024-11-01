@@ -21,15 +21,15 @@ actor LogHandlerTests {
         #expect(counter == 0)
 
         handler.log(.debug, message: "")
-        try await Task.sleep(for: .milliseconds(10))
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
         #expect(counter == 0)
 
         handler.log(.info, message: "")
-        try await Task.sleep(for: .milliseconds(10))
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
         #expect(counter == 1)
 
         handler.log(.error, message: "")
-        try await Task.sleep(for: .milliseconds(10))
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
         #expect(counter == 2)
     }
 
@@ -42,7 +42,7 @@ actor LogHandlerTests {
         }
         
         handler.log(message: "")
-        try await Task.sleep(for: .milliseconds(10))
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
         #expect(lastLevel == .info)
     }
 
