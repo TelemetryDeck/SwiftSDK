@@ -1,68 +1,72 @@
 @testable import TelemetryDeck
-import XCTest
+import Testing
 
-final class DefaultSignalPayloadTests: XCTestCase {
-    func testIsSimulatorOrTestFlight() {
-        XCTAssertNoThrow(DefaultSignalPayload.isSimulatorOrTestFlight)
+struct DefaultSignalPayloadTests {
+    @Test
+    func isSimulatorOrTestFlight() {
         print("isSimulatorOrTestFlight", DefaultSignalPayload.isSimulatorOrTestFlight)
     }
-    
-    func testIsSimulator() {
-        XCTAssertNoThrow(DefaultSignalPayload.isSimulator)
+
+    @Test
+    func isSimulator() {
         print("isSimulator", DefaultSignalPayload.isSimulator)
     }
-    
-    func testIsDebug() {
-        XCTAssertTrue(DefaultSignalPayload.isDebug)
+
+    @Test
+    func isDebug() {
+        #expect(DefaultSignalPayload.isDebug == true)
         print("isDebug", DefaultSignalPayload.isDebug)
     }
-    
-    func testIsTestFlight() {
-        XCTAssertFalse(DefaultSignalPayload.isTestFlight)
+
+    @Test
+    func isTestFlight() {
+        #expect(DefaultSignalPayload.isTestFlight == false)
         print("isTestFlight", DefaultSignalPayload.isTestFlight)
     }
-    
-    func testIsAppStore() {
-        XCTAssertFalse(DefaultSignalPayload.isAppStore)
+
+    @Test
+    func isAppStore() {
+        #expect(DefaultSignalPayload.isAppStore == false)
         print("isAppStore", DefaultSignalPayload.isAppStore)
     }
-    
-    func testSystemVersion() {
-        XCTAssertNoThrow(DefaultSignalPayload.systemVersion)
+
+    @Test
+    func systemVersion() {
         print("systemVersion", DefaultSignalPayload.systemVersion)
     }
-    
-    func testMajorSystemVersion() {
-        XCTAssertNoThrow(DefaultSignalPayload.majorSystemVersion)
+
+    @Test
+    func majorSystemVersion() {
         print("majorSystemVersion", DefaultSignalPayload.majorSystemVersion)
     }
-    
-    func testMajorMinorSystemVersion() {
-        XCTAssertNoThrow(DefaultSignalPayload.majorMinorSystemVersion)
+
+    @Test
+    func majorMinorSystemVersion() {
         print("majorMinorSystemVersion", DefaultSignalPayload.majorMinorSystemVersion)
     }
-    
-    func testAppVersion() {
-        XCTAssertNoThrow(DefaultSignalPayload.appVersion)
+
+    @Test
+    func appVersion() {
         print("appVersion", DefaultSignalPayload.appVersion)
     }
-    
-    func testBuildNumber() {
-        XCTAssertNoThrow(DefaultSignalPayload.buildNumber)
+
+    @Test
+    func buildNumber() {
         print("buildNumber", DefaultSignalPayload.buildNumber)
     }
-    
-    func testModelName() {
-        XCTAssertNoThrow(DefaultSignalPayload.modelName)
+
+    @Test
+    func modelName() {
         print("modelName", DefaultSignalPayload.modelName)
     }
-    
-    func testArchitecture() {
-        XCTAssertNoThrow(DefaultSignalPayload.architecture)
+
+    @Test
+    func architecture() {
         print("architecture", DefaultSignalPayload.architecture)
     }
-    
-    func testOperatingSystem() {
+
+    @Test
+    func operatingSystem() {
         let expectedResult: String
         
         #if os(macOS)
@@ -81,23 +85,23 @@ final class DefaultSignalPayloadTests: XCTestCase {
             return "Unknown Operating System"
         #endif
         
-        XCTAssertEqual(expectedResult, DefaultSignalPayload.operatingSystem)
-        
+        #expect(expectedResult == DefaultSignalPayload.operatingSystem)
+
         print("operatingSystem", DefaultSignalPayload.operatingSystem)
     }
-    
-    func testPlatform() {
-        XCTAssertNoThrow(DefaultSignalPayload.platform)
+
+    @Test
+    func platform() {
         print("platform", DefaultSignalPayload.platform)
     }
-    
-    func testTargetEnvironment() {
-        XCTAssertNoThrow(DefaultSignalPayload.targetEnvironment)
+
+    @Test
+    func targetEnvironment() {
         print("targetEnvironment", DefaultSignalPayload.targetEnvironment)
     }
-    
-    func testLocale() {
-        XCTAssertNoThrow(DefaultSignalPayload.locale)
+
+    @Test
+    func locale() {
         print("locale", DefaultSignalPayload.locale)
     }
 }

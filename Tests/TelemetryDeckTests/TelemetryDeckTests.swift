@@ -1,8 +1,10 @@
 @testable import TelemetryDeck
-import XCTest
+import Testing
+import Foundation
 
-final class TelemetryDeckTests: XCTestCase {
-    func testSending() {
+struct TelemetryDeckTests {
+    @Test
+    func sending() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
         let config = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
@@ -12,7 +14,8 @@ final class TelemetryDeckTests: XCTestCase {
         TelemetryDeck.signal("databaseUpdated", parameters: ["numberOfDatabaseEntries": "3831"])
     }
     
-    func testPushAndPop() {
+    @Test
+    func pushAndPop() {
         let signalCache = SignalCache<SignalPostBody>(logHandler: nil)
         
         let signals: [SignalPostBody] = [
@@ -44,16 +47,17 @@ final class TelemetryDeckTests: XCTestCase {
             poppedSignalsBatch = signalCache.pop()
         }
         
-        XCTAssertEqual(signals.count, allPoppedSignals.count)
-        
+        #expect(signals.count == allPoppedSignals.count)
+
         allPoppedSignals.sort { lhs, rhs in
             lhs.type < rhs.type
         }
         
-        XCTAssertEqual(signals, allPoppedSignals)
+        #expect(signals == allPoppedSignals)
     }
     
-    func testSignalEnrichers() throws {
+    @Test
+    func signalEnrichers() throws {
         struct BasicEnricher: SignalEnricher {
             func enrich(signalType: String, for clientUser: String?, floatValue: Double?) -> [String: String] {
                 ["isTestEnricher": "true"]
@@ -68,12 +72,13 @@ final class TelemetryDeckTests: XCTestCase {
         TelemetryDeck.signal("testSignal")
 
         let bodyItems = signalManager.processedSignals
-        XCTAssertEqual(bodyItems.count, 1)
-        let bodyItem = try XCTUnwrap(bodyItems.first)
-        XCTAssert(bodyItem.payload["isTestEnricher"] == "true")
+        #expect(bodyItems.count == 1)
+        let bodyItem = try #require(bodyItems.first)
+        #expect(bodyItem.payload["isTestEnricher"] == "true")
     }
     
-    func testSignalEnrichers_precedence() throws {
+    @Test
+    func signalEnrichers_precedence() throws {
         struct BasicEnricher: SignalEnricher {
             func enrich(signalType: String, for clientUser: String?, floatValue: Double?) -> [String: String] {
                 ["item": "A", "isDebug": "banana"]
@@ -88,13 +93,14 @@ final class TelemetryDeckTests: XCTestCase {
         TelemetryDeck.signal("testSignal", parameters: ["item": "B"])
 
         let bodyItems = signalManager.processedSignals
-        XCTAssertEqual(bodyItems.count, 1)
-        let bodyItem = try XCTUnwrap(bodyItems.first)
-        XCTAssert(bodyItem.payload["item"] == "B") // .send takes priority over enricher
-        XCTAssert(bodyItem.payload["isDebug"] == "banana") // enricher takes priority over default payload
+        #expect(bodyItems.count == 1)
+        let bodyItem = try #require(bodyItems.first)
+        #expect(bodyItem.payload["item"] == "B") // .send takes priority over enricher
+        #expect(bodyItem.payload["isDebug"] == "banana") // enricher takes priority over default payload
     }
     
-    func testSendsSignals_withAnalyticsImplicitlyEnabled() {
+    @Test
+    func sendsSignals_withAnalyticsImplicitlyEnabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
         let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
@@ -104,10 +110,11 @@ final class TelemetryDeckTests: XCTestCase {
         
         TelemetryDeck.signal("appOpenedRegularly")
         
-        XCTAssertEqual(signalManager.processedSignalTypes.count, 1)
+        #expect(signalManager.processedSignalTypes.count == 1)
     }
     
-    func testSendsSignals_withAnalyticsExplicitlyEnabled() {
+    @Test
+    func sendsSignals_withAnalyticsExplicitlyEnabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
         var configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
@@ -118,10 +125,11 @@ final class TelemetryDeckTests: XCTestCase {
         
         TelemetryDeck.signal("appOpenedRegularly")
         
-        XCTAssertEqual(signalManager.processedSignalTypes.count, 1)
+        #expect(signalManager.processedSignalTypes.count == 1)
     }
     
-    func testDoesNotSendSignals_withAnalyticsExplicitlyDisabled() {
+    @Test
+    func DoesNotSendSignals_withAnalyticsExplicitlyDisabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
         var configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
@@ -132,10 +140,11 @@ final class TelemetryDeckTests: XCTestCase {
         
         TelemetryDeck.signal("appOpenedRegularly")
         
-        XCTAssertTrue(signalManager.processedSignalTypes.isEmpty)
+        #expect(signalManager.processedSignalTypes.isEmpty == true)
     }
     
-    func testDoesNotSendSignals_withAnalyticsExplicitlyEnabled_inPreviewMode() {
+    @Test
+    func DoesNotSendSignals_withAnalyticsExplicitlyEnabled_inPreviewMode() {
         setenv("XCODE_RUNNING_FOR_PREVIEWS", "1", 1)
 
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
@@ -148,12 +157,13 @@ final class TelemetryDeckTests: XCTestCase {
         
         TelemetryDeck.signal("appOpenedRegularly")
         
-        XCTAssertTrue(signalManager.processedSignalTypes.isEmpty)
+        #expect(signalManager.processedSignalTypes.isEmpty == true)
         
         setenv("XCODE_RUNNING_FOR_PREVIEWS", "0", 1)
     }
     
-    func testSendsSignals_withNumercalValue() {
+    @Test
+    func sendsSignals_withNumercalValue() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
         let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
@@ -163,11 +173,11 @@ final class TelemetryDeckTests: XCTestCase {
         
         TelemetryDeck.signal("appOpenedRegularly", floatValue: 42)
 
-        XCTAssertEqual(signalManager.processedSignals.first?.floatValue, 42)
+        #expect(signalManager.processedSignals.first?.floatValue == 42)
     }
 }
 
-private class FakeSignalManager: SignalManageable {
+private class FakeSignalManager: @preconcurrency SignalManageable {
     var processedSignalTypes = [String]()
     var processedSignals = [SignalPostBody]()
     
