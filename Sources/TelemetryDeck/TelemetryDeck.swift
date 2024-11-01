@@ -37,7 +37,9 @@ public enum TelemetryDeck {
         guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
 
         let combinedSignalName = (configuration.defaultSignalPrefix ?? "") + signalName
-        let combinedParameters = configuration.defaultParameters().merging(parameters) { $1 }
+        let combinedParameters = configuration.defaultParameters()
+            .merging(parameters) { $1 }
+            .mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
 
         manager.signalManager.processSignal(
             combinedSignalName,
