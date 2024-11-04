@@ -27,6 +27,13 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         ].map { $0.lowercased() }
     )
 
+    static let internalSignalNames: Set<String> = [
+        "TelemetryDeck.Error.occurred",
+        "TelemetryDeck.Navigation.pathChanged",
+        "TelemetryDeck.Purchase.completed",
+        "TelemetryDeck.Session.started",
+    ]
+
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
 
@@ -85,7 +92,7 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         configuration: TelemetryManagerConfiguration
     ) {
         // warn users about reserved keys to avoid unexpected behavior
-        if signalName.lowercased().hasPrefix("telemetrydeck.") {
+        if signalName.lowercased().hasPrefix("telemetrydeck."), !Self.internalSignalNames.contains(signalName) {
             configuration.logHandler?.log(
                 .error,
                 message: "Sending signal with reserved prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
