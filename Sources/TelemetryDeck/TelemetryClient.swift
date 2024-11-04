@@ -41,6 +41,20 @@ public struct TelemetryManagerConfiguration: Sendable {
     /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
     public var defaultUser: String?
 
+    /// Specify this if you want us to prefix all your signals with a specific text.
+    /// For example, if you are already adding `AppName.` in front of every signal, just specify it here and no need to repeat over and over again.
+    public var defaultSignalPrefix: String?
+
+    /// Specify this if you want us to prefix all your signal parameters with a specific text.
+    /// For example, if you are already adding `AppName.` in front of every parameter name, just specify it here and no need to repeat over and over again.
+    public var defaultParameterPrefix: String?
+
+    /// Specify this if you want to attach some parameters globally to all signals you're sending.
+    /// For example, this could be useful to report your users' paid status or their user preferences to be able to filter by these fields in various insights.
+    ///
+    /// - NOTE: If you are using ``defaultParameterPrefix``, note that it applies even here, so no need to add your prefix in all the default parameters.
+    public var defaultParameters: @Sendable () -> [String: String] = { [:] }
+
     /// If `true`, sends a "newSessionBegan" Signal on each app foreground or cold launch
     ///
     /// Defaults to true. Set to false to prevent automatically sending this signal.
