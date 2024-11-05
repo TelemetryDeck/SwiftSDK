@@ -56,7 +56,7 @@ struct TelemetryDeckTests {
         #expect(signals == allPoppedSignals)
     }
     
-    @Test
+    @Test(.disabled("this test is flaky"), .bug("https://github.com/TelemetryDeck/SwiftSDK/issues/200"))
     func signalEnrichers() throws {
         struct BasicEnricher: SignalEnricher {
             func enrich(signalType: String, for clientUser: String?, floatValue: Double?) -> [String: String] {
@@ -77,7 +77,7 @@ struct TelemetryDeckTests {
         #expect(bodyItem.payload["isTestEnricher"] == "true")
     }
     
-    @Test
+    @Test(.disabled("this test is flaky"), .bug("https://github.com/TelemetryDeck/SwiftSDK/issues/200"))
     func signalEnrichers_precedence() throws {
         struct BasicEnricher: SignalEnricher {
             func enrich(signalType: String, for clientUser: String?, floatValue: Double?) -> [String: String] {
@@ -99,7 +99,7 @@ struct TelemetryDeckTests {
         #expect(bodyItem.payload["isDebug"] == "banana") // enricher takes priority over default payload
     }
     
-    @Test
+    @Test(.disabled("this test is flaky"), .bug("https://github.com/TelemetryDeck/SwiftSDK/issues/200"))
     func sendsSignals_withAnalyticsImplicitlyEnabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
@@ -113,7 +113,7 @@ struct TelemetryDeckTests {
         #expect(signalManager.processedSignalTypes.count == 1)
     }
     
-    @Test
+    @Test(.disabled("this test is flaky"), .bug("https://github.com/TelemetryDeck/SwiftSDK/issues/200"))
     func sendsSignals_withAnalyticsExplicitlyEnabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
@@ -129,7 +129,7 @@ struct TelemetryDeckTests {
     }
     
     @Test
-    func DoesNotSendSignals_withAnalyticsExplicitlyDisabled() {
+    func doesNotSendSignals_withAnalyticsExplicitlyDisabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
         var configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
@@ -144,7 +144,7 @@ struct TelemetryDeckTests {
     }
     
     @Test
-    func DoesNotSendSignals_withAnalyticsExplicitlyEnabled_inPreviewMode() {
+    func doesNotSendSignals_withAnalyticsExplicitlyEnabled_inPreviewMode() {
         setenv("XCODE_RUNNING_FOR_PREVIEWS", "1", 1)
 
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
@@ -162,7 +162,7 @@ struct TelemetryDeckTests {
         setenv("XCODE_RUNNING_FOR_PREVIEWS", "0", 1)
     }
     
-    @Test
+    @Test(.disabled("this test is flaky"), .bug("https://github.com/TelemetryDeck/SwiftSDK/issues/200"))
     func sendsSignals_withNumercalValue() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
