@@ -1,34 +1,56 @@
 @testable import TelemetryDeck
-import XCTest
+import Testing
 
-final class LogHandlerTests: XCTestCase {
+actor LogHandlerTests {
     var counter: Int = 0
     var lastLevel: LogHandler.LogLevel?
 
-    func testLogHandler_stdoutLogLevelDefined() {
-        XCTAssertEqual(LogHandler.standard(.error).logLevel, .error)
+    @Test
+    func logHandler_stdoutLogLevelDefined() {
+        #expect(LogHandler.standard(.error).logLevel == .error)
     }
-    
-    func testLogHandler_logLevelRespected() {
+
+    @Test
+    func logHandler_logLevelRespected() async throws {
         let handler = LogHandler(logLevel: .info) { _, _ in
-            self.counter += 1
+            Task {
+                await self.increment()
+            }
         }
         
-        XCTAssertEqual(counter, 0)
+        #expect(counter == 0)
+
         handler.log(.debug, message: "")
-        XCTAssertEqual(counter, 0)
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
+        #expect(counter == 0)
+
         handler.log(.info, message: "")
-        XCTAssertEqual(counter, 1)
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
+        #expect(counter == 1)
+
         handler.log(.error, message: "")
-        XCTAssertEqual(counter, 2)
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
+        #expect(counter == 2)
     }
-    
-    func testLogHandler_defaultLogLevel() {
+
+    @Test
+    func logHandler_defaultLogLevel() async throws {
         let handler = LogHandler(logLevel: .debug) { level, _ in
-            self.lastLevel = level
+            Task {
+                await self.setLastLevel(level)
+            }
         }
         
         handler.log(message: "")
-        XCTAssertEqual(lastLevel, .info)
+        try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
+        #expect(lastLevel == .info)
+    }
+
+    private func increment() {
+        self.counter += 1
+    }
+
+    private func setLastLevel(_ lastLevel: LogHandler.LogLevel?) {
+        self.lastLevel = lastLevel
     }
 }
