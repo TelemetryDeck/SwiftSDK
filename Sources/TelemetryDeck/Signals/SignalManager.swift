@@ -18,22 +18,6 @@ protocol SignalManageable {
 final class SignalManager: SignalManageable, @unchecked Sendable {
     static let minimumSecondsToPassBetweenRequests: Double = 10
 
-    static let reservedKeysLowercased: Set<String> = Set(
-        [
-            "type", "clientUser", "appID", "sessionID", "floatValue",
-            "newSessionBegan", "platform", "systemVersion", "majorSystemVersion", "majorMinorSystemVersion", "appVersion", "buildNumber",
-            "isSimulator", "isDebug", "isTestFlight", "isAppStore", "modelName", "architecture", "operatingSystem", "targetEnvironment",
-            "locale", "region", "appLanguage", "preferredLanguage", "telemetryClientVersion",
-        ].map { $0.lowercased() }
-    )
-
-    static let internalSignalNames: Set<String> = [
-        "TelemetryDeck.Error.occurred",
-        "TelemetryDeck.Navigation.pathChanged",
-        "TelemetryDeck.Purchase.completed",
-        "TelemetryDeck.Session.started",
-    ]
-
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
 
@@ -91,33 +75,6 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         customUserID: String?,
         configuration: TelemetryManagerConfiguration
     ) {
-        // warn users about reserved keys to avoid unexpected behavior
-        if signalName.lowercased().hasPrefix("telemetrydeck."), !Self.internalSignalNames.contains(signalName) {
-            configuration.logHandler?.log(
-                .error,
-                message: "Sending signal with reserved prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
-            )
-        } else if Self.reservedKeysLowercased.contains(signalName.lowercased()) {
-            configuration.logHandler?.log(
-                .error,
-                message: "Sending signal with reserved name '\(signalName)' will cause unexpected behavior. Please use another name instead."
-            )
-        }
-
-        for parameterKey in parameters.keys {
-            if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
-                configuration.logHandler?.log(
-                    .error,
-                    message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
-                )
-            } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
-                configuration.logHandler?.log(
-                    .error,
-                    message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
-                )
-            }
-        }
-
         // enqueue signal to sending cache
         DispatchQueue.main.async {
             let defaultUserIdentifier = self.defaultUserIdentifier

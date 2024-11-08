@@ -23,7 +23,7 @@ extension TelemetryDeck {
     public static func navigationPathChanged(from source: String, to destination: String, customUserID: String? = nil) {
         NavigationStatus.shared.previousNavigationPath = destination
 
-        self.signal(
+        self.internalSignal(
             "TelemetryDeck.Navigation.pathChanged",
             parameters: [
                 "TelemetryDeck.Navigation.schemaVersion": "1",

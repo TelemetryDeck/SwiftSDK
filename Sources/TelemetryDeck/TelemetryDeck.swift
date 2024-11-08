@@ -5,6 +5,15 @@ public enum TelemetryDeck {
     /// This alias makes it easier to migrate the configuration type into the TelemetryDeck namespace in future versions when deprecated code is fully removed.
     public typealias Config = TelemetryManagerConfiguration
 
+    static let reservedKeysLowercased: Set<String> = Set(
+        [
+            "type", "clientUser", "appID", "sessionID", "floatValue",
+            "newSessionBegan", "platform", "systemVersion", "majorSystemVersion", "majorMinorSystemVersion", "appVersion", "buildNumber",
+            "isSimulator", "isDebug", "isTestFlight", "isAppStore", "modelName", "architecture", "operatingSystem", "targetEnvironment",
+            "locale", "region", "appLanguage", "preferredLanguage", "telemetryClientVersion",
+        ].map { $0.lowercased() }
+    )
+
     /// Initializes TelemetryDeck with a customizable configuration.
     ///
     /// - Parameter configuration: An instance of `Configuration` which includes all the settings required to configure TelemetryDeck.
@@ -37,12 +46,69 @@ public enum TelemetryDeck {
         guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
 
         let combinedSignalName = (configuration.defaultSignalPrefix ?? "") + signalName
-        let combinedParameters = configuration.defaultParameters()
-            .merging(parameters) { $1 }
-            .mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
+        let prefixedParameters = parameters.mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
+
+        // warn users about reserved keys to avoid unexpected behavior
+        if combinedSignalName.lowercased().hasPrefix("telemetrydeck.") {
+            configuration.logHandler?.log(
+                .error,
+                message: "Sending signal with reserved prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+            )
+        } else if Self.reservedKeysLowercased.contains(combinedSignalName.lowercased()) {
+            configuration.logHandler?.log(
+                .error,
+                message: "Sending signal with reserved name '\(combinedSignalName)' will cause unexpected behavior. Please use another name instead."
+            )
+        }
+
+        // only check parameters (not default ones)
+        for parameterKey in prefixedParameters.keys {
+            if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
+                configuration.logHandler?.log(
+                    .error,
+                    message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+                )
+            } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
+                configuration.logHandler?.log(
+                    .error,
+                    message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
+                )
+            }
+        }
+
+        self.internalSignal(combinedSignalName, parameters: prefixedParameters, floatValue: floatValue, customUserID: customUserID)
+    }
+
+    /// A signal being sent without enriching the signal name with  a prefix. Also, any reserved signal name check are skipped. Only for internal use.
+    static func internalSignal(
+        _ signalName: String,
+        parameters: [String: String] = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) {
+        let manager = TelemetryManager.shared
+        let configuration = manager.configuration
+
+        let prefixedDefaultParameters = configuration.defaultParameters().mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
+        let combinedParameters = prefixedDefaultParameters.merging(parameters) { $1 }
+
+        // check only default parameters
+        for parameterKey in prefixedDefaultParameters.keys {
+            if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
+                configuration.logHandler?.log(
+                    .error,
+                    message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+                )
+            } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
+                configuration.logHandler?.log(
+                    .error,
+                    message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
+                )
+            }
+        }
 
         manager.signalManager.processSignal(
-            combinedSignalName,
+            signalName,
             parameters: combinedParameters,
             floatValue: floatValue,
             customUserID: customUserID,

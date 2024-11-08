@@ -70,7 +70,7 @@ public struct TelemetryManagerConfiguration: Sendable {
     public var sessionID = UUID() {
         didSet {
             if sendNewSessionBeganSignal {
-                TelemetryDeck.signal("TelemetryDeck.Session.started")
+                TelemetryDeck.internalSignal("TelemetryDeck.Session.started")
             }
         }
     }
