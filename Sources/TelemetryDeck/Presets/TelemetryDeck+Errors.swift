@@ -28,7 +28,7 @@ public extension TelemetryDeck {
             errorParameters["TelemetryDeck.Error.message"] = message
         }
 
-        self.signal(
+        self.internalSignal(
             "TelemetryDeck.Error.occurred",
             parameters: errorParameters.merging(parameters) { $1 },
             floatValue: floatValue,

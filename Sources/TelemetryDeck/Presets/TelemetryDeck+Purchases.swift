@@ -73,7 +73,7 @@ extension TelemetryDeck {
             }
         }
 
-        self.signal(
+        self.internalSignal(
             "TelemetryDeck.Purchase.completed",
             parameters: purchaseParameters.merging(parameters) { $1 },
             floatValue: priceValueInUSD,
