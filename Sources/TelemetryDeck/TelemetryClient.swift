@@ -325,8 +325,21 @@ public final class TelemetryManager: @unchecked Sendable {
         self.startSessionAndObserveAppForegrounding()
     }
 
-    nonisolated(unsafe)
-    static var initializedTelemetryManager: TelemetryManager?
+    private final class TelemetryManagerStorage: @unchecked Sendable {
+        static let shared = TelemetryManagerStorage()
+        private let queue = DispatchQueue(label: "com.telemetrydeck.TelemetryManager.static", attributes: .concurrent)
+        private var _manager: TelemetryManager?
+
+        var manager: TelemetryManager? {
+            get { queue.sync { _manager } }
+            set { queue.sync(flags: .barrier) { _manager = newValue } }
+        }
+    }
+
+    static var initializedTelemetryManager: TelemetryManager? {
+        get { TelemetryManagerStorage.shared.manager }
+        set { TelemetryManagerStorage.shared.manager = newValue }
+    }
 
     let signalManager: SignalManageable
 
