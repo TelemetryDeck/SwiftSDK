@@ -17,7 +17,7 @@ let sdkVersion = "2.5.1"
 /// Use an instance of this class to specify settings for TelemetryManager. If these settings change during the course of
 /// your runtime, it might be a good idea to hold on to the instance and update it as needed. TelemetryManager's behaviour
 /// will update as well.
-public struct TelemetryManagerConfiguration: Sendable {
+public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// Your app's ID for Telemetry. Set this during initialization.
     public let telemetryAppID: String
 
