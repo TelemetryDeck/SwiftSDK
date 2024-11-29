@@ -96,6 +96,7 @@ TelemetryDeck will automatically send base parameters, such as:
 - TelemetryDeck.SDK.version
 - TelemetryDeck.UserPreference.region
 - TelemetryDeck.UserPreference.language
+- TelemetryDeck.UserPreference.colorScheme
 
 See our [Grand Renaming article](https://telemetrydeck.com/docs/articles/grand-rename/?source=github) for a full list.
 
