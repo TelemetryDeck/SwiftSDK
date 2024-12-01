@@ -83,7 +83,7 @@ TelemetryDeck will automatically send base parameters, such as:
 - TelemetryDeck.Accessibility.isVoiceOverEnabled
 - TelemetryDeck.Accessibility.preferredContentSizeCategory
 - TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor
-- TelemetryDeck.Accessibility.userInterfaceLayoutDirection
+
 - TelemetryDeck.AppInfo.buildNumber
 - TelemetryDeck.AppInfo.version
 - TelemetryDeck.Device.architecture
@@ -106,6 +106,7 @@ TelemetryDeck will automatically send base parameters, such as:
 - TelemetryDeck.SDK.version
 - TelemetryDeck.UserPreference.colorScheme
 - TelemetryDeck.UserPreference.language
+- TelemetryDeck.UserPreference.layoutDirection
 - TelemetryDeck.UserPreference.region
 
 See our [Grand Renaming article](https://telemetrydeck.com/docs/articles/grand-rename/?source=github) for a full list.
