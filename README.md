@@ -74,17 +74,27 @@ TelemetryDeck.signal("Database.updated", parameters: ["numberOfDatabaseEntries":
 
 TelemetryDeck will automatically send base parameters, such as:
 
+- TelemetryDeck.Accessibility.isBoldTextEnabled
+- TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled
+- TelemetryDeck.Accessibility.isInvertColorsEnabled
+- TelemetryDeck.Accessibility.isReduceMotionEnabled
+- TelemetryDeck.Accessibility.isReduceTransparencyEnabled
+- TelemetryDeck.Accessibility.isSwitchControlEnabled
+- TelemetryDeck.Accessibility.isVoiceOverEnabled
+- TelemetryDeck.Accessibility.preferredContentSizeCategory
+- TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor
+- TelemetryDeck.Accessibility.userInterfaceLayoutDirection
 - TelemetryDeck.AppInfo.buildNumber
 - TelemetryDeck.AppInfo.version
 - TelemetryDeck.Device.architecture
 - TelemetryDeck.Device.modelName
 - TelemetryDeck.Device.operatingSystem
-- TelemetryDeck.Device.platform
 - TelemetryDeck.Device.orientation
+- TelemetryDeck.Device.platform
 - TelemetryDeck.Device.screenResolutionHeight
 - TelemetryDeck.Device.screenResolutionWidth
-- TelemetryDeck.Device.systemMajorVersion
 - TelemetryDeck.Device.systemMajorMinorVersion
+- TelemetryDeck.Device.systemMajorVersion
 - TelemetryDeck.Device.systemVersion
 - TelemetryDeck.Device.timeZone
 - TelemetryDeck.RunContext.isAppStore
@@ -94,9 +104,9 @@ TelemetryDeck will automatically send base parameters, such as:
 - TelemetryDeck.RunContext.language
 - TelemetryDeck.RunContext.targetEnvironment
 - TelemetryDeck.SDK.version
-- TelemetryDeck.UserPreference.region
-- TelemetryDeck.UserPreference.language
 - TelemetryDeck.UserPreference.colorScheme
+- TelemetryDeck.UserPreference.language
+- TelemetryDeck.UserPreference.region
 
 See our [Grand Renaming article](https://telemetrydeck.com/docs/articles/grand-rename/?source=github) for a full list.
 
