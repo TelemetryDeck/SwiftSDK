@@ -77,6 +77,7 @@ public struct DefaultSignalPayload: Encodable {
             "TelemetryDeck.Device.platform": Self.platform,
             "TelemetryDeck.Device.screenResolutionHeight": Self.screenResolutionHeight,
             "TelemetryDeck.Device.screenResolutionWidth": Self.screenResolutionWidth,
+            "TelemetryDeck.Device.screenScaleFactor": Self.screenScaleFactor,
             "TelemetryDeck.Device.systemMajorMinorVersion": Self.majorMinorSystemVersion,
             "TelemetryDeck.Device.systemMajorVersion": Self.majorSystemVersion,
             "TelemetryDeck.Device.systemVersion": Self.systemVersion,
@@ -340,6 +341,7 @@ extension DefaultSignalPayload {
     }
 
     /// The color scheme set by the user. Returns `N/A` on unsupported platforms
+    @MainActor
     static var colorScheme: String {
         #if os(iOS) || os(tvOS)
         switch UIScreen.main.traitCollection.userInterfaceStyle {
@@ -379,7 +381,7 @@ extension DefaultSignalPayload {
             if let screen = NSScreen.main {
                 return "\(screen.frame.width)"
             }
-            return "Unknown"
+            return "N/A"
         #else
             return "N/A"
         #endif
@@ -396,9 +398,23 @@ extension DefaultSignalPayload {
             if let screen = NSScreen.main {
                 return "\(screen.frame.height)"
             }
-            return "Unknown"
-        #else
             return "N/A"
+        #else
+        return "N/A"
+        #endif
+    }
+
+    @MainActor
+    static var screenScaleFactor: String {
+        #if os(iOS) || os(tvOS)
+        return "\(UIScreen.main.scale)"
+        #elseif os(macOS)
+        if let screen = NSScreen.main {
+            return "\(screen.backingScaleFactor)"
+        }
+        return "N/A"
+        #else
+        return "N/A"
         #endif
     }
 
