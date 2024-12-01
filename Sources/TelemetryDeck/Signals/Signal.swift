@@ -131,7 +131,7 @@ extension DefaultSignalPayload {
             a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
         }
         a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
-        a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
+            .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
         a11yParams["TelemetryDeck.Accessibility.userInterfaceLayoutDirection"] = UIApplication.shared.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
         a11yParams["TelemetryDeck.Accessibility.isSwitchControlEnabled"] = "\(UIAccessibility.isSwitchControlRunning)"
         #elseif os(macOS)
