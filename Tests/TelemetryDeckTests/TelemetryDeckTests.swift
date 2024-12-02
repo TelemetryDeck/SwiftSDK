@@ -64,7 +64,7 @@ struct TelemetryDeckTests {
             }
         }
         
-        var configuration = TelemetryManagerConfiguration(appID: UUID().uuidString)
+        let configuration = TelemetryManagerConfiguration(appID: UUID().uuidString)
         configuration.metadataEnrichers.append(BasicEnricher())
         
         let signalManager = FakeSignalManager()
@@ -85,7 +85,7 @@ struct TelemetryDeckTests {
             }
         }
         
-        var configuration = TelemetryManagerConfiguration(appID: UUID().uuidString)
+        let configuration = TelemetryManagerConfiguration(appID: UUID().uuidString)
         configuration.metadataEnrichers.append(BasicEnricher())
         
         let signalManager = FakeSignalManager()
@@ -117,7 +117,7 @@ struct TelemetryDeckTests {
     func sendsSignals_withAnalyticsExplicitlyEnabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
-        var configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
         configuration.analyticsDisabled = false
         
         let signalManager = FakeSignalManager()
@@ -132,7 +132,7 @@ struct TelemetryDeckTests {
     func doesNotSendSignals_withAnalyticsExplicitlyDisabled() {
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
-        var configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
         configuration.analyticsDisabled = true
         
         let signalManager = FakeSignalManager()
@@ -149,7 +149,7 @@ struct TelemetryDeckTests {
 
         let YOUR_APP_ID = "44e0f59a-60a2-4d4a-bf27-1f96ccb4aaa3"
 
-        var configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
+        let configuration = TelemetryManagerConfiguration(appID: YOUR_APP_ID)
         configuration.analyticsDisabled = false
         
         let signalManager = FakeSignalManager()
@@ -206,4 +206,6 @@ private class FakeSignalManager: @preconcurrency SignalManageable {
     }
 
     func attemptToSendNextBatchOfCachedSignals() {}
+
+    var defaultUserIdentifier: String { UUID().uuidString }
 }
