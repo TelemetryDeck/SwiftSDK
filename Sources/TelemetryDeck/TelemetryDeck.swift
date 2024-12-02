@@ -89,6 +89,9 @@ public enum TelemetryDeck {
         let manager = TelemetryManager.shared
         let configuration = manager.configuration
 
+        // make sure to not send any signals when run by Xcode via SwiftUI previews
+        guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
+
         let prefixedDefaultParameters = configuration.defaultParameters().mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
         let combinedParameters = prefixedDefaultParameters.merging(parameters) { $1 }
 
