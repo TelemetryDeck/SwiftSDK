@@ -94,10 +94,13 @@ public struct DefaultSignalPayload: Encodable {
             "TelemetryDeck.SDK.nameAndVersion": "SwiftSDK \(sdkVersion)",
             "TelemetryDeck.SDK.version": sdkVersion,
 
+            "TelemetryDeck.UserPreference.colorScheme": Self.colorScheme,
             "TelemetryDeck.UserPreference.language": Self.preferredLanguage,
+            "TelemetryDeck.UserPreference.layoutDirection": Self.layoutDirection,
             "TelemetryDeck.UserPreference.region": Self.region,
-            "TelemetryDeck.UserPreference.colorScheme": Self.colorScheme
         ]
+
+        parameters.merge(self.accessibilityParameters, uniquingKeysWith: { $1 })
 
         if let extensionIdentifier = Self.extensionIdentifier {
             // deprecated name
@@ -114,6 +117,34 @@ public struct DefaultSignalPayload: Encodable {
 // MARK: - Helpers
 
 extension DefaultSignalPayload {
+    @MainActor
+    static var accessibilityParameters: [String: String] {
+        var a11yParams: [String: String] = [:]
+
+        #if os(iOS) || os(tvOS)
+        a11yParams["TelemetryDeck.Accessibility.isVoiceOverEnabled"] = "\(UIAccessibility.isVoiceOverRunning)"
+        a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(UIAccessibility.isReduceMotionEnabled)"
+        a11yParams["TelemetryDeck.Accessibility.isBoldTextEnabled"] = "\(UIAccessibility.isBoldTextEnabled)"
+        a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(UIAccessibility.isInvertColorsEnabled)"
+        a11yParams["TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled"] = "\(UIAccessibility.isDarkerSystemColorsEnabled)"
+        a11yParams["TelemetryDeck.Accessibility.isReduceTransparencyEnabled"] = "\(UIAccessibility.isReduceTransparencyEnabled)"
+        if #available(iOS 13.0, *) {
+            a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
+        }
+        a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
+            .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
+        a11yParams["TelemetryDeck.Accessibility.isSwitchControlEnabled"] = "\(UIAccessibility.isSwitchControlRunning)"
+        #elseif os(macOS)
+        a11yParams["TelemetryDeck.Accessibility.isVoiceOverEnabled"] = "\(NSWorkspace.shared.isVoiceOverEnabled)"
+        if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {
+            a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(systemPrefs["reduceMotion"] as? Bool ?? false)"
+            a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(systemPrefs["InvertColors"] as? Bool ?? false)"
+        }
+        #endif
+
+        return a11yParams
+    }
+
     static var isSimulatorOrTestFlight: Bool {
         isSimulator || isTestFlight
     }
@@ -363,6 +394,18 @@ extension DefaultSignalPayload {
         } else {
             return "Light"
         }
+        #else
+        return "N/A"
+        #endif
+    }
+
+    /// The user-preferred layout direction (left-to-right or right-to-left) based on the current language/region settings.
+    @MainActor
+    static var layoutDirection: String {
+        #if os(iOS) || os(tvOS)
+        return UIApplication.shared.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
+        #elseif os(macOS)
+        return NSApp.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
         #else
         return "N/A"
         #endif
