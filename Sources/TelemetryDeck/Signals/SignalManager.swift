@@ -13,6 +13,8 @@ import TVUIKit
 protocol SignalManageable {
     func processSignal(_ signalName: String, parameters: [String: String], floatValue: Double?, customUserID: String?, configuration: TelemetryManagerConfiguration)
     func attemptToSendNextBatchOfCachedSignals()
+
+    @MainActor var defaultUserIdentifier: String { get }
 }
 
 final class SignalManager: SignalManageable, @unchecked Sendable {
@@ -237,7 +239,7 @@ private extension SignalManager {
 
 // MARK: - Helpers
 
-private extension SignalManager {
+extension SignalManager {
     #if os(macOS)
     /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
     private var customDefaults: UserDefaults? {

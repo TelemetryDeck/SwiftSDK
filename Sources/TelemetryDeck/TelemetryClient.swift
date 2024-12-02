@@ -259,8 +259,9 @@ public final class TelemetryManager: @unchecked Sendable {
         TelemetryDeck.updateDefaultUserID(to: newDefaultUser)
     }
 
-    public var hashedDefaultUser: String? {
-        guard let defaultUser = configuration.defaultUser else { return nil }
+    @MainActor
+    public var hashedDefaultUser: String {
+        let defaultUser = self.signalManager.defaultUserIdentifier
         return CryptoHashing.sha256(string: defaultUser, salt: configuration.salt)
     }
 
