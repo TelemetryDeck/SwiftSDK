@@ -75,6 +75,13 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
         }
     }
 
+    /// A customizable `URLSession` used for network requests within TelemetryDeck.
+    ///
+    /// This property allows you to override the default `URLSession.shared` for cases where
+    /// a custom session configuration is needed (e.g., for network interception, caching strategies,
+    /// or debugging). If not set, the `URLSession.shared` instance will be used.
+    public var urlSession: URLSession = URLSession.shared
+
     @available(*, deprecated, message: "Please use the testMode property instead")
     public var sendSignalsInDebugConfiguration: Bool = false
 
