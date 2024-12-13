@@ -231,7 +231,7 @@ private extension SignalManager {
                 self.configuration.logHandler?.log(.debug, message: messageString)
             }
 
-            let task = URLSession.shared.dataTask(with: urlRequest, completionHandler: completionHandler)
+            let task = self.configuration.urlSession.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
         }
     }
