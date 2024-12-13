@@ -19,21 +19,21 @@ struct TelemetryDeckTests {
         let signalCache = SignalCache<SignalPostBody>(logHandler: nil)
         
         let signals: [SignalPostBody] = [
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "01", sessionID: "01", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "02", sessionID: "02", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "03", sessionID: "03", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "04", sessionID: "04", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "05", sessionID: "05", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "06", sessionID: "06", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "07", sessionID: "07", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "08", sessionID: "08", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "09", sessionID: "09", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "10", sessionID: "10", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "11", sessionID: "11", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "12", sessionID: "12", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "13", sessionID: "13", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "14", sessionID: "14", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
-            .init(receivedAt: Date(), appID: UUID(), clientUser: "15", sessionID: "15", type: "test", floatValue: nil, payload: [:], isTestMode: "true")
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "01", sessionID: "01", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "02", sessionID: "02", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "03", sessionID: "03", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "04", sessionID: "04", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "05", sessionID: "05", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "06", sessionID: "06", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "07", sessionID: "07", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "08", sessionID: "08", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "09", sessionID: "09", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "10", sessionID: "10", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "11", sessionID: "11", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "12", sessionID: "12", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "13", sessionID: "13", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "14", sessionID: "14", type: "test", floatValue: nil, payload: [:], isTestMode: "true"),
+            .init(receivedAt: Date(), appID: UUID().uuidString, clientUser: "15", sessionID: "15", type: "test", floatValue: nil, payload: [:], isTestMode: "true")
         ]
         
         for signal in signals {
@@ -194,7 +194,7 @@ private class FakeSignalManager: @preconcurrency SignalManageable {
 
         let signalPostBody = SignalPostBody(
             receivedAt: Date(),
-            appID: UUID(uuidString: configuration.telemetryAppID)!,
+            appID: configuration.telemetryAppID,
             clientUser: customUserID ?? "no user",
             sessionID: configuration.sessionID.uuidString,
             type: "\(signalType)",

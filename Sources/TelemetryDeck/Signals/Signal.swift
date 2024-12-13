@@ -17,7 +17,7 @@ struct SignalPostBody: Codable, Equatable {
     let receivedAt: Date
 
     /// The App ID of this signal
-    let appID: UUID
+    let appID: String
 
     /// A user identifier. This should be hashed on the client, and will be hashed + salted again
     /// on the server to break any connection to personally identifiable data.

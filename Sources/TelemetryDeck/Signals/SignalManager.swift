@@ -93,7 +93,7 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
 
                 let signalPostBody = SignalPostBody(
                     receivedAt: Date(),
-                    appID: UUID(uuidString: configuration.telemetryAppID)!,
+                    appID: configuration.telemetryAppID,
                     clientUser: CryptoHashing.sha256(string: customUserID ?? defaultUserIdentifier, salt: configuration.salt),
                     sessionID: configuration.sessionID.uuidString,
                     type: "\(signalName)",
