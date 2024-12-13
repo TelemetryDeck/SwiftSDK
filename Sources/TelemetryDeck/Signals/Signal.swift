@@ -407,7 +407,11 @@ extension DefaultSignalPayload {
         #if os(iOS) || os(tvOS)
         return UIApplication.shared.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
         #elseif os(macOS)
-        return NSApp.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
+        if let nsApp = NSApp {
+            return nsApp.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
+        } else {
+            return "N/A"
+        }
         #else
         return "N/A"
         #endif
