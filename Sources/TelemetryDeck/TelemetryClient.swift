@@ -137,6 +137,11 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// However it won't interfere with SwiftUI Previews, when explicitly settings this value to `false`.
     public var analyticsDisabled: Bool = false
 
+    /// Determines whether to log warnings when user-provided custom parameters use reserved parameter names that are internal to TelemetryDeck SDKs.
+    ///
+    /// - NOTE: Do not change this property if you're using our SDK in your app. This is for usage from other TelemetryDeck SDKs only.
+    public var reservedParameterWarningsEnabled: Bool = true
+
     /// Log the current status to the signal cache to the console.
     @available(*, deprecated, message: "Please use the logHandler property instead")
     public var showDebugLogs: Bool = false
