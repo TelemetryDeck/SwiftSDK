@@ -71,6 +71,9 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
         didSet {
             if sendNewSessionBeganSignal {
                 TelemetryDeck.internalSignal("TelemetryDeck.Session.started")
+
+                // TODO: send `totalSessionsCount` and `distinctDaysUsed` as well as `weekday`, `dayOfMonth`, and `dayOfYear`
+                // TODO: calculate and send `averageSessionSeconds`
             }
         }
     }
