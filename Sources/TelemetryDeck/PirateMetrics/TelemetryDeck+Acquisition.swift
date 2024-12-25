@@ -1,7 +1,8 @@
 import Foundation
 
-public extension TelemetryDeck {
-    static func acquiredUser(
+extension TelemetryDeck {
+    // TODO: add documentation comment with common/recommended usage examples
+    public static func acquiredUser(
         channel: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil
@@ -17,7 +18,8 @@ public extension TelemetryDeck {
         )
     }
 
-    static func leadStarted(
+    // TODO: add documentation comment with common/recommended usage examples
+    public static func leadStarted(
         leadID: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil
@@ -31,7 +33,8 @@ public extension TelemetryDeck {
         )
     }
 
-    static func leadConverted(
+    // TODO: add documentation comment with common/recommended usage examples
+    public static func leadConverted(
         leadID: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil
