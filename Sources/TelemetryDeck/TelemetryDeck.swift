@@ -122,7 +122,7 @@ public enum TelemetryDeck {
         self.internalSignal(signalName, parameters: durationParameters.merging(parameters) { $1 })
     }
 
-    /// A signal being sent without enriching the signal name with  a prefix. Also, any reserved signal name check are skipped. Only for internal use.
+    /// A signal being sent without enriching the signal name with a prefix. Also, any reserved signal name check are skipped. Only for internal use.
     static func internalSignal(
         _ signalName: String,
         parameters: [String: String] = [:],
