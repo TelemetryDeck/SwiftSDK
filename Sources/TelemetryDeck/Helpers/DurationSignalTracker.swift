@@ -36,7 +36,7 @@ final class DurationSignalTracker {
     }
 
     private func setupAppLifecycleObservers() {
-#if canImport(WatchKit)
+        #if canImport(WatchKit)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackgroundNotification),
@@ -50,7 +50,7 @@ final class DurationSignalTracker {
             name: WKApplication.willEnterForegroundNotification,
             object: nil
         )
-#elseif canImport(UIKit)
+        #elseif canImport(UIKit)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackgroundNotification),
@@ -64,7 +64,7 @@ final class DurationSignalTracker {
             name: UIApplication.willEnterForegroundNotification,
             object: nil
         )
-#elseif canImport(AppKit)
+        #elseif canImport(AppKit)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackgroundNotification),
@@ -78,7 +78,7 @@ final class DurationSignalTracker {
             name: NSApplication.willBecomeActiveNotification,
             object: nil
         )
-#endif
+        #endif
     }
 
     @objc

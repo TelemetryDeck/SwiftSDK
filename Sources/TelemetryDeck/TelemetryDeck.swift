@@ -212,4 +212,13 @@ public enum TelemetryDeck {
     public static func generateNewSession() {
         TelemetryManager.shared.configuration.sessionID = UUID()
     }
+
+    // MARK: - Internals
+    /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
+    static var customDefaults: UserDefaults? {
+        guard let configuration = TelemetryManager.initializedTelemetryManager?.configuration else { return nil }
+
+        let appIdHash = CryptoHashing.sha256(string: configuration.telemetryAppID, salt: "")
+        return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
+    }
 }

@@ -240,14 +240,6 @@ private extension SignalManager {
 // MARK: - Helpers
 
 extension SignalManager {
-    #if os(macOS)
-    /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
-    private var customDefaults: UserDefaults? {
-        let appIdHash = CryptoHashing.sha256(string: configuration.telemetryAppID, salt: "")
-        return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
-    }
-    #endif
-
     /// The default user identifier. If the platform supports it, the ``identifierForVendor``. Otherwise, a self-generated `UUID` which is persisted in custom `UserDefaults` if available.
     @MainActor
     var defaultUserIdentifier: String {
@@ -262,11 +254,11 @@ extension SignalManager {
             return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         }
         #elseif os(macOS)
-        if let customDefaults = customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
+        if let customDefaults = TelemetryDeck.customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
             return defaultUserIdentifier
         } else {
             let defaultUserIdentifier = UUID().uuidString
-            customDefaults?.set(defaultUserIdentifier, forKey: "defaultUserIdentifier")
+            TelemetryDeck.customDefaults?.set(defaultUserIdentifier, forKey: "defaultUserIdentifier")
             return defaultUserIdentifier
         }
         #else
