@@ -6,24 +6,28 @@ import UIKit
 import AppKit
 #endif
 
-// TODO: test logic of this class in a real-world app to find edge cases (unit tests feasible?)
 // TODO: add automatic sending of session lengths as default parameters
-// TODO: persist save dinstinct days used count separately
+// TODO: persist dinstinct days used count separately
 // TODO: persist first install date separately
 
 final class SessionManager: @unchecked Sendable {
     private struct StoredSession: Codable {
         let startedAt: Date
-        let durationInSeconds: Int
+        var durationInSeconds: Int
+
+        // Let's save some extra space in UserDefaults by using shorter keys.
+        private enum CodingKeys: String, CodingKey {
+            case startedAt = "st"
+            case durationInSeconds = "dn"
+        }
     }
 
     static let shared = SessionManager()
     private static let sessionsKey = "sessions"
 
-    private var sessionsByID: [UUID: StoredSession]
+    private var sessions: [StoredSession]
 
-    private var currentSessionID: UUID = UUID()
-    private var currentSessionStartetAt: Date = .distantPast
+    private var currentSessionStartedAt: Date = .distantPast
     private var currentSessionDuration: TimeInterval = .zero
 
     private var sessionDurationUpdater: Timer?
@@ -31,30 +35,46 @@ final class SessionManager: @unchecked Sendable {
 
     private let persistenceQueue = DispatchQueue(label: "com.telemetrydeck.sessionmanager.persistence")
 
+    private static let decoder: JSONDecoder = {
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        return decoder
+    }()
+
+    private static let encoder: JSONEncoder = {
+        let encoder = JSONEncoder()
+        // removes sub-second level precision from the start date as we don't need it
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            let timestamp = Int(date.timeIntervalSince1970)
+            var container = encoder.singleValueContainer()
+            try container.encode(timestamp)
+        }
+        return encoder
+    }()
+
     private init() {
         if
             let existingSessionData = TelemetryDeck.customDefaults?.data(forKey: Self.sessionsKey),
-            let existingSessions = try? JSONDecoder().decode([UUID: StoredSession].self, from: existingSessionData)
+            let existingSessions = try? Self.decoder.decode([StoredSession].self, from: existingSessionData)
         {
             // upon app start, clean up any sessions older than 90 days to keep dict small
             let cutoffDate = Date().addingTimeInterval(-(90 * 24 * 60 * 60))
-            self.sessionsByID = existingSessions.filter { $0.value.startedAt > cutoffDate }
+            self.sessions = existingSessions.filter { $0.startedAt > cutoffDate }
         } else {
-            self.sessionsByID = [:]
+            self.sessions = []
         }
 
         self.setupAppLifecycleObservers()
     }
 
-    func startSessionTimer() {
+    func startNewSession() {
         // stop automatic duration counting of previous session
         self.stopSessionTimer()
 
         // TODO: when sessionsByID is empty here, then send "`newInstallDetected`" with `firstSessionDate`
 
         // start a new session
-        self.currentSessionID = UUID()
-        self.currentSessionStartetAt = Date()
+        self.currentSessionStartedAt = Date()
         self.currentSessionDuration = .zero
 
         // start automatic duration counting of new session
@@ -89,14 +109,16 @@ final class SessionManager: @unchecked Sendable {
         guard self.currentSessionDuration >= 1.0 else { return }
 
         // Add or update the current session
-        self.sessionsByID[self.currentSessionID] = StoredSession(
-            startedAt: self.currentSessionStartetAt,
-            durationInSeconds: Int(self.currentSessionDuration)
-        )
+        if let existingSessionIndex = self.sessions.lastIndex(where: { $0.startedAt == self.currentSessionStartedAt }) {
+            self.sessions[existingSessionIndex].durationInSeconds = Int(self.currentSessionDuration)
+        } else {
+            let newSession = StoredSession(startedAt: self.currentSessionStartedAt, durationInSeconds: Int(self.currentSessionDuration))
+            self.sessions.append(newSession)
+        }
 
         // Save changes to UserDefaults without blocking Main thread
         self.persistenceQueue.async {
-            guard let updatedSessionData = try? JSONEncoder().encode(self.sessionsByID) else { return }
+            guard let updatedSessionData = try? Self.encoder.encode(self.sessions) else { return }
             TelemetryDeck.customDefaults?.set(updatedSessionData, forKey: Self.sessionsKey)
         }
     }
