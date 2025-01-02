@@ -99,9 +99,16 @@ public struct DefaultSignalPayload: Encodable {
             "TelemetryDeck.UserPreference.language": Self.preferredLanguage,
             "TelemetryDeck.UserPreference.layoutDirection": Self.layoutDirection,
             "TelemetryDeck.UserPreference.region": Self.region,
+
+            // Pirate Metrics
+            "TelemetryDeck.Acquisition.firstSessionDate": SessionManager.shared.firstSessionDate,
+            "TelemetryDeck.Retention.averageSessionSeconds": "\(SessionManager.shared.averageSessionSeconds)",
+            "TelemetryDeck.Retention.distinctDaysUsed": "\(SessionManager.shared.distinctDaysUsed.count)",
+            "TelemetryDeck.Retention.totalSessionsCount": "\(SessionManager.shared.totalSessionsCount)",
         ]
 
         parameters.merge(self.accessibilityParameters, uniquingKeysWith: { $1 })
+        parameters.merge(self.calendarParameters, uniquingKeysWith: { $1 })
 
         if let extensionIdentifier = Self.extensionIdentifier {
             // deprecated name
@@ -111,6 +118,10 @@ public struct DefaultSignalPayload: Encodable {
             parameters["TelemetryDeck.RunContext.extensionIdentifier"] = extensionIdentifier
         }
 
+        if let previousSessionSeconds = SessionManager.shared.previousSessionSeconds {
+            parameters["TelemetryDeck.Retention.previousSessionSeconds"] = "\(previousSessionSeconds)"
+        }
+
         return parameters
     }
 }
@@ -118,6 +129,44 @@ public struct DefaultSignalPayload: Encodable {
 // MARK: - Helpers
 
 extension DefaultSignalPayload {
+    static var calendarParameters: [String: String] {
+        let calendar = Calendar(identifier: .gregorian)
+        let now = Date()
+
+        // Get components for all the metrics we need
+        let components = calendar.dateComponents(
+            [.day, .weekday, .weekOfYear, .month, .hour, .quarter, .yearForWeekOfYear],
+            from: now
+        )
+
+        // Calculate day of year
+        let dayOfYear = calendar.ordinality(of: .day, in: .year, for: now) ?? -1
+
+        // Convert Sunday=1..Saturday=7 to Monday=1..Sunday=7
+        let dayOfWeek = components.weekday.map { $0 == 1 ? 7 : $0 - 1 } ?? -1
+
+        // Weekend is now days 6 (Saturday) and 7 (Sunday)
+        let isWeekend = dayOfWeek >= 6
+
+        return [
+            // Day-based metrics
+            "TelemetryDeck.Calendar.dayOfMonth": "\(components.day ?? -1)",
+            "TelemetryDeck.Calendar.dayOfWeek": "\(dayOfWeek)", // 1 = Monday, 7 = Sunday
+            "TelemetryDeck.Calendar.dayOfYear": "\(dayOfYear)",
+
+            // Week-based metrics
+            "TelemetryDeck.Calendar.weekOfYear": "\(components.weekOfYear ?? -1)",
+            "TelemetryDeck.Calendar.isWeekend": "\(isWeekend)",
+
+            // Month and quarter
+            "TelemetryDeck.Calendar.monthOfYear": "\(components.month ?? -1)",
+            "TelemetryDeck.Calendar.quarterOfYear": "\(components.quarter ?? -1)",
+
+            // Hours in 1-24 format
+            "TelemetryDeck.Calendar.hourOfDay": "\((components.hour ?? -1) + 1)"
+        ]
+    }
+
     @MainActor
     static var accessibilityParameters: [String: String] {
         var a11yParams: [String: String] = [:]

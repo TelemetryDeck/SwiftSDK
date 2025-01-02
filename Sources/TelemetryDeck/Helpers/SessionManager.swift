@@ -6,8 +6,6 @@ import UIKit
 import AppKit
 #endif
 
-// TODO: add automatic sending of session length, first install date, distinct days etc. as default parameters
-
 final class SessionManager: @unchecked Sendable {
     private struct StoredSession: Codable {
         let startedAt: Date
@@ -22,8 +20,10 @@ final class SessionManager: @unchecked Sendable {
 
     static let shared = SessionManager()
     
-    private static let sessionsKey = "sessions"
-    private static let firstInstallDateKey = "firstInstallDate"
+    private static let recentSessionsKey = "recentSessions"
+    private static let deletedSessionsCountKey = "deletedSessionsCount"
+
+    private static let firstSessionDateKey = "firstSessionDate"
     private static let distinctDaysUsedKey = "distinctDaysUsed"
 
     private static let decoder: JSONDecoder = {
@@ -43,7 +43,51 @@ final class SessionManager: @unchecked Sendable {
         return encoder
     }()
 
-    private var sessions: [StoredSession]
+    private var recentSessions: [StoredSession]
+
+    private var deletedSessionsCount: Int {
+        get { TelemetryDeck.customDefaults?.integer(forKey: Self.deletedSessionsCountKey) ?? 0 }
+        set {
+            self.persistenceQueue.async {
+                TelemetryDeck.customDefaults?.set(newValue, forKey: Self.deletedSessionsCountKey)
+            }
+        }
+    }
+
+    var totalSessionsCount: Int {
+        self.recentSessions.count + self.deletedSessionsCount
+    }
+
+    var averageSessionSeconds: Int {
+        let completedSessions = self.recentSessions.dropLast()
+        let totalCompletedSessionSeconds = completedSessions.map(\.durationInSeconds).reduce(into: 0) { $0 + $1 }
+        return totalCompletedSessionSeconds / completedSessions.count
+    }
+
+    var previousSessionSeconds: Int? {
+        self.recentSessions.dropLast().last?.durationInSeconds
+    }
+
+    var firstSessionDate: String {
+        get {
+            TelemetryDeck.customDefaults?.string(forKey: Self.firstSessionDateKey)
+                ?? ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
+        }
+        set {
+            self.persistenceQueue.async {
+                TelemetryDeck.customDefaults?.set(newValue, forKey: Self.firstSessionDateKey)
+            }
+        }
+    }
+
+    var distinctDaysUsed: [String] {
+        get { TelemetryDeck.customDefaults?.stringArray(forKey: Self.distinctDaysUsedKey) ?? [] }
+        set {
+            self.persistenceQueue.async {
+                TelemetryDeck.customDefaults?.set(newValue, forKey: Self.distinctDaysUsedKey)
+            }
+        }
+    }
 
     private var currentSessionStartedAt: Date = .distantPast
     private var currentSessionDuration: TimeInterval = .zero
@@ -55,14 +99,17 @@ final class SessionManager: @unchecked Sendable {
 
     private init() {
         if
-            let existingSessionData = TelemetryDeck.customDefaults?.data(forKey: Self.sessionsKey),
+            let existingSessionData = TelemetryDeck.customDefaults?.data(forKey: Self.recentSessionsKey),
             let existingSessions = try? Self.decoder.decode([StoredSession].self, from: existingSessionData)
         {
             // upon app start, clean up any sessions older than 90 days to keep dict small
             let cutoffDate = Date().addingTimeInterval(-(90 * 24 * 60 * 60))
-            self.sessions = existingSessions.filter { $0.startedAt > cutoffDate }
+            self.recentSessions = existingSessions.filter { $0.startedAt > cutoffDate }
+
+            // Update deleted sessions count
+            self.deletedSessionsCount += existingSessions.count - self.recentSessions.count
         } else {
-            self.sessions = []
+            self.recentSessions = []
         }
 
         self.updateDistinctDaysUsed()
@@ -73,19 +120,17 @@ final class SessionManager: @unchecked Sendable {
         // stop automatic duration counting of previous session
         self.stopSessionTimer()
 
-        // if the sessions are empty, this must be the first start after installing the app
-        if self.sessions.isEmpty {
+        // if the recent sessions are empty, this must be the first start after installing the app
+        if self.recentSessions.isEmpty {
             // this ensures we only use the date, not the time –> e.g. "2025-01-31"
             let todayFormatted = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
+
+            self.firstSessionDate = todayFormatted
 
             TelemetryDeck.internalSignal(
                 "TelemetryDeck.Acquisition.newInstallDetected",
                 parameters: ["TelemetryDeck.Acquisition.firstSessionDate": todayFormatted]
             )
-
-            self.persistenceQueue.async {
-                TelemetryDeck.customDefaults?.set(todayFormatted, forKey: Self.firstInstallDateKey)
-            }
         }
 
         // start a new session
@@ -124,17 +169,17 @@ final class SessionManager: @unchecked Sendable {
         guard self.currentSessionDuration >= 1.0 else { return }
 
         // Add or update the current session
-        if let existingSessionIndex = self.sessions.lastIndex(where: { $0.startedAt == self.currentSessionStartedAt }) {
-            self.sessions[existingSessionIndex].durationInSeconds = Int(self.currentSessionDuration)
+        if let existingSessionIndex = self.recentSessions.lastIndex(where: { $0.startedAt == self.currentSessionStartedAt }) {
+            self.recentSessions[existingSessionIndex].durationInSeconds = Int(self.currentSessionDuration)
         } else {
             let newSession = StoredSession(startedAt: self.currentSessionStartedAt, durationInSeconds: Int(self.currentSessionDuration))
-            self.sessions.append(newSession)
+            self.recentSessions.append(newSession)
         }
 
         // Save changes to UserDefaults without blocking Main thread
         self.persistenceQueue.async {
-            if let updatedSessionData = try? Self.encoder.encode(self.sessions) {
-                TelemetryDeck.customDefaults?.set(updatedSessionData, forKey: Self.sessionsKey)
+            if let updatedSessionData = try? Self.encoder.encode(self.recentSessions) {
+                TelemetryDeck.customDefaults?.set(updatedSessionData, forKey: Self.recentSessionsKey)
             }
         }
     }
@@ -160,22 +205,10 @@ final class SessionManager: @unchecked Sendable {
     private func updateDistinctDaysUsed() {
         let todayFormatted = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
 
-        var distinctDays: [String] = []
-        if
-            let existinDaysData = TelemetryDeck.customDefaults?.data(forKey: Self.distinctDaysUsedKey),
-            let existingDays = try? JSONDecoder().decode([String].self, from: existinDaysData)
-        {
-            distinctDays = existingDays
-        }
-
+        var distinctDays = self.distinctDaysUsed
         if distinctDays.last != todayFormatted {
             distinctDays.append(todayFormatted)
-
-            self.persistenceQueue.async {
-                if let updatedDistinctDaysData = try? JSONEncoder().encode(distinctDays) {
-                    TelemetryDeck.customDefaults?.set(updatedDistinctDaysData, forKey: Self.distinctDaysUsedKey)
-                }
-            }
+            self.distinctDaysUsed = distinctDays
         }
     }
 
