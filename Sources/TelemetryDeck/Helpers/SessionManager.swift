@@ -6,9 +6,8 @@ import UIKit
 import AppKit
 #endif
 
-// TODO: add automatic sending of session lengths as default parameters
+// TODO: add automatic sending of session length, first install date, distinct days etc. as default parameters
 // TODO: persist dinstinct days used count separately
-// TODO: persist first install date separately
 
 final class SessionManager: @unchecked Sendable {
     private struct StoredSession: Codable {
@@ -23,17 +22,10 @@ final class SessionManager: @unchecked Sendable {
     }
 
     static let shared = SessionManager()
+    
     private static let sessionsKey = "sessions"
-
-    private var sessions: [StoredSession]
-
-    private var currentSessionStartedAt: Date = .distantPast
-    private var currentSessionDuration: TimeInterval = .zero
-
-    private var sessionDurationUpdater: Timer?
-    private var sessionDurationLastUpdatedAt: Date?
-
-    private let persistenceQueue = DispatchQueue(label: "com.telemetrydeck.sessionmanager.persistence")
+    private static let firstInstallDateKey = "firstInstallDate"
+    private static let distinctDaysUsedCountKey = "distinctDaysUsedCount"
 
     private static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -51,6 +43,16 @@ final class SessionManager: @unchecked Sendable {
         }
         return encoder
     }()
+
+    private var sessions: [StoredSession]
+
+    private var currentSessionStartedAt: Date = .distantPast
+    private var currentSessionDuration: TimeInterval = .zero
+
+    private var sessionDurationUpdater: Timer?
+    private var sessionDurationLastUpdatedAt: Date?
+
+    private let persistenceQueue = DispatchQueue(label: "com.telemetrydeck.sessionmanager.persistence")
 
     private init() {
         if
@@ -71,7 +73,20 @@ final class SessionManager: @unchecked Sendable {
         // stop automatic duration counting of previous session
         self.stopSessionTimer()
 
-        // TODO: when sessionsByID is empty here, then send "`newInstallDetected`" with `firstSessionDate`
+        // if the sessions are empty, this must be the first start after installing the app
+        if self.sessions.isEmpty {
+            // this ensures we only use the date, not the time –> e.g. "2025-01-31"
+            let formattedDate = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
+
+            TelemetryDeck.internalSignal(
+                "TelemetryDeck.Acquisition.newInstallDetected",
+                parameters: ["TelemetryDeck.Acquisition.firstSessionDate": formattedDate]
+            )
+
+            self.persistenceQueue.async {
+                TelemetryDeck.customDefaults?.set(formattedDate, forKey: Self.firstInstallDateKey)
+            }
+        }
 
         // start a new session
         self.currentSessionStartedAt = Date()
