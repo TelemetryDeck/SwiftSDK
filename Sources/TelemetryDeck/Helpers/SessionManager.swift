@@ -7,7 +7,6 @@ import AppKit
 #endif
 
 // TODO: add automatic sending of session length, first install date, distinct days etc. as default parameters
-// TODO: persist dinstinct days used count separately
 
 final class SessionManager: @unchecked Sendable {
     private struct StoredSession: Codable {
@@ -25,7 +24,7 @@ final class SessionManager: @unchecked Sendable {
     
     private static let sessionsKey = "sessions"
     private static let firstInstallDateKey = "firstInstallDate"
-    private static let distinctDaysUsedCountKey = "distinctDaysUsedCount"
+    private static let distinctDaysUsedKey = "distinctDaysUsed"
 
     private static let decoder: JSONDecoder = {
         let decoder = JSONDecoder()
@@ -66,6 +65,7 @@ final class SessionManager: @unchecked Sendable {
             self.sessions = []
         }
 
+        self.updateDistinctDaysUsed()
         self.setupAppLifecycleObservers()
     }
 
@@ -76,15 +76,15 @@ final class SessionManager: @unchecked Sendable {
         // if the sessions are empty, this must be the first start after installing the app
         if self.sessions.isEmpty {
             // this ensures we only use the date, not the time –> e.g. "2025-01-31"
-            let formattedDate = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
+            let todayFormatted = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
 
             TelemetryDeck.internalSignal(
                 "TelemetryDeck.Acquisition.newInstallDetected",
-                parameters: ["TelemetryDeck.Acquisition.firstSessionDate": formattedDate]
+                parameters: ["TelemetryDeck.Acquisition.firstSessionDate": todayFormatted]
             )
 
             self.persistenceQueue.async {
-                TelemetryDeck.customDefaults?.set(formattedDate, forKey: Self.firstInstallDateKey)
+                TelemetryDeck.customDefaults?.set(todayFormatted, forKey: Self.firstInstallDateKey)
             }
         }
 
@@ -133,8 +133,9 @@ final class SessionManager: @unchecked Sendable {
 
         // Save changes to UserDefaults without blocking Main thread
         self.persistenceQueue.async {
-            guard let updatedSessionData = try? Self.encoder.encode(self.sessions) else { return }
-            TelemetryDeck.customDefaults?.set(updatedSessionData, forKey: Self.sessionsKey)
+            if let updatedSessionData = try? Self.encoder.encode(self.sessions) {
+                TelemetryDeck.customDefaults?.set(updatedSessionData, forKey: Self.sessionsKey)
+            }
         }
     }
 
@@ -154,6 +155,28 @@ final class SessionManager: @unchecked Sendable {
             userInfo: nil,
             repeats: true
         )
+    }
+
+    private func updateDistinctDaysUsed() {
+        let todayFormatted = ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
+
+        var distinctDays: [String] = []
+        if
+            let existinDaysData = TelemetryDeck.customDefaults?.data(forKey: Self.distinctDaysUsedKey),
+            let existingDays = try? JSONDecoder().decode([String].self, from: existinDaysData)
+        {
+            distinctDays = existingDays
+        }
+
+        if distinctDays.last != todayFormatted {
+            distinctDays.append(todayFormatted)
+
+            self.persistenceQueue.async {
+                if let updatedDistinctDaysData = try? JSONEncoder().encode(distinctDays) {
+                    TelemetryDeck.customDefaults?.set(updatedDistinctDaysData, forKey: Self.distinctDaysUsedKey)
+                }
+            }
+        }
     }
 
     private func setupAppLifecycleObservers() {
