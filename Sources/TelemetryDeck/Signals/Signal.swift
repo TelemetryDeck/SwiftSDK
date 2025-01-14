@@ -123,7 +123,6 @@ extension DefaultSignalPayload {
         var a11yParams: [String: String] = [:]
 
         #if os(iOS) || os(tvOS)
-        a11yParams["TelemetryDeck.Accessibility.isVoiceOverEnabled"] = "\(UIAccessibility.isVoiceOverRunning)"
         a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(UIAccessibility.isReduceMotionEnabled)"
         a11yParams["TelemetryDeck.Accessibility.isBoldTextEnabled"] = "\(UIAccessibility.isBoldTextEnabled)"
         a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(UIAccessibility.isInvertColorsEnabled)"
@@ -134,9 +133,7 @@ extension DefaultSignalPayload {
         }
         a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
             .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
-        a11yParams["TelemetryDeck.Accessibility.isSwitchControlEnabled"] = "\(UIAccessibility.isSwitchControlRunning)"
         #elseif os(macOS)
-        a11yParams["TelemetryDeck.Accessibility.isVoiceOverEnabled"] = "\(NSWorkspace.shared.isVoiceOverEnabled)"
         if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {
             a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(systemPrefs["reduceMotion"] as? Bool ?? false)"
             a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(systemPrefs["InvertColors"] as? Bool ?? false)"
