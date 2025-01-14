@@ -122,7 +122,7 @@ public enum TelemetryDeck {
         self.internalSignal(signalName, parameters: durationParameters.merging(parameters) { $1 })
     }
 
-    /// A signal being sent without enriching the signal name with  a prefix. Also, any reserved signal name check are skipped. Only for internal use.
+    /// A signal being sent without enriching the signal name with a prefix. Also, any reserved signal name check are skipped. Only for internal use.
     static func internalSignal(
         _ signalName: String,
         parameters: [String: String] = [:],
@@ -211,5 +211,14 @@ public enum TelemetryDeck {
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
     public static func generateNewSession() {
         TelemetryManager.shared.configuration.sessionID = UUID()
+    }
+
+    // MARK: - Internals
+    /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
+    static var customDefaults: UserDefaults? {
+        guard let configuration = TelemetryManager.initializedTelemetryManager?.configuration else { return nil }
+
+        let appIdHash = CryptoHashing.sha256(string: configuration.telemetryAppID, salt: "")
+        return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
     }
 }
