@@ -48,38 +48,40 @@ public enum TelemetryDeck {
         let combinedSignalName = (configuration.defaultSignalPrefix ?? "") + signalName
         let prefixedParameters = parameters.mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
 
-        // warn users about reserved keys to avoid unexpected behavior
-        if combinedSignalName.lowercased().hasPrefix("telemetrydeck.") {
-            configuration.logHandler?.log(
-                .error,
-                message: "Sending signal with reserved prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
-            )
-        } else if Self.reservedKeysLowercased.contains(combinedSignalName.lowercased()) {
-            configuration.logHandler?.log(
-                .error,
-                message: "Sending signal with reserved name '\(combinedSignalName)' will cause unexpected behavior. Please use another name instead."
-            )
-        }
+        if configuration.reservedParameterWarningsEnabled {
+            // warn users about reserved keys to avoid unexpected behavior
+            if combinedSignalName.lowercased().hasPrefix("telemetrydeck.") {
+                configuration.logHandler?.log(
+                    .error,
+                    message: "Sending signal with reserved prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+                )
+            } else if Self.reservedKeysLowercased.contains(combinedSignalName.lowercased()) {
+                configuration.logHandler?.log(
+                    .error,
+                    message: "Sending signal with reserved name '\(combinedSignalName)' will cause unexpected behavior. Please use another name instead."
+                )
+            }
 
-        // only check parameters (not default ones)
-        for parameterKey in prefixedParameters.keys {
-            if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
-                configuration.logHandler?.log(
-                    .error,
-                    message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
-                )
-            } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
-                configuration.logHandler?.log(
-                    .error,
-                    message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
-                )
+            // only check parameters (not default ones)
+            for parameterKey in prefixedParameters.keys {
+                if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
+                    configuration.logHandler?.log(
+                        .error,
+                        message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+                    )
+                } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
+                    configuration.logHandler?.log(
+                        .error,
+                        message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
+                    )
+                }
             }
         }
 
         self.internalSignal(combinedSignalName, parameters: prefixedParameters, floatValue: floatValue, customUserID: customUserID)
     }
 
-    /// A signal being sent without enriching the signal name with  a prefix. Also, any reserved signal name check are skipped. Only for internal use.
+    /// A signal being sent without enriching the signal name with a prefix. Also, any reserved signal name checks are skipped. Only for internal use.
     static func internalSignal(
         _ signalName: String,
         parameters: [String: String] = [:],
