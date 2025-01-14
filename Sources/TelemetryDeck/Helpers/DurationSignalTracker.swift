@@ -6,16 +6,16 @@ import UIKit
 import AppKit
 #endif
 
-@MainActor
 @available(watchOS 7.0, *)
-final class DurationSignalTracker {
+final class DurationSignalTracker: @unchecked Sendable {
     static let shared = DurationSignalTracker()
 
-    private struct CachedData {
+    private struct CachedData: Sendable {
         let startTime: Date
         let parameters: [String: String]
     }
 
+    private let queue = DispatchQueue(label: "com.telemetrydeck.DurationSignalTracker")
     private var startedSignals: [String: CachedData] = [:]
     private var lastEnteredBackground: Date?
 
@@ -24,19 +24,23 @@ final class DurationSignalTracker {
     }
 
     func startTracking(_ signalName: String, parameters: [String: String]) {
-        self.startedSignals[signalName] = CachedData(startTime: Date(), parameters: parameters)
+        self.queue.sync {
+            self.startedSignals[signalName] = CachedData(startTime: Date(), parameters: parameters)
+        }
     }
 
     func stopTracking(_ signalName: String) -> (duration: TimeInterval, parameters: [String: String])? {
-        guard let trackingData = self.startedSignals[signalName] else { return nil }
-        self.startedSignals[signalName] = nil
+        self.queue.sync {
+            guard let trackingData = self.startedSignals[signalName] else { return nil }
+            self.startedSignals[signalName] = nil
 
-        let duration = Date().timeIntervalSince(trackingData.startTime)
-        return (duration, trackingData.parameters)
+            let duration = Date().timeIntervalSince(trackingData.startTime)
+            return (duration, trackingData.parameters)
+        }
     }
 
     private func setupAppLifecycleObservers() {
-#if canImport(WatchKit)
+        #if canImport(WatchKit)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackgroundNotification),
@@ -50,7 +54,7 @@ final class DurationSignalTracker {
             name: WKApplication.willEnterForegroundNotification,
             object: nil
         )
-#elseif canImport(UIKit)
+        #elseif canImport(UIKit)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackgroundNotification),
@@ -64,7 +68,7 @@ final class DurationSignalTracker {
             name: UIApplication.willEnterForegroundNotification,
             object: nil
         )
-#elseif canImport(AppKit)
+        #elseif canImport(AppKit)
         NotificationCenter.default.addObserver(
             self,
             selector: #selector(handleDidEnterBackgroundNotification),
@@ -78,26 +82,30 @@ final class DurationSignalTracker {
             name: NSApplication.willBecomeActiveNotification,
             object: nil
         )
-#endif
+        #endif
     }
 
     @objc
     private func handleDidEnterBackgroundNotification() {
-        self.lastEnteredBackground = Date()
+        self.queue.sync {
+            self.lastEnteredBackground = Date()
+        }
     }
 
     @objc
     private func handleWillEnterForegroundNotification() {
-        guard let lastEnteredBackground else { return }
-        let backgroundDuration = Date().timeIntervalSince(lastEnteredBackground)
+        self.queue.sync {
+            guard let lastEnteredBackground else { return }
+            let backgroundDuration = Date().timeIntervalSince(lastEnteredBackground)
 
-        for (signalName, data) in self.startedSignals {
-            self.startedSignals[signalName] = CachedData(
-                startTime: data.startTime.addingTimeInterval(backgroundDuration),
-                parameters: data.parameters
-            )
+            for (signalName, data) in self.startedSignals {
+                self.startedSignals[signalName] = CachedData(
+                    startTime: data.startTime.addingTimeInterval(backgroundDuration),
+                    parameters: data.parameters
+                )
+            }
+
+            self.lastEnteredBackground = nil
         }
-
-        self.lastEnteredBackground = nil
     }
 }
