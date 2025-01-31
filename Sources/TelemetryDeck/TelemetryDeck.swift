@@ -46,7 +46,10 @@ public enum TelemetryDeck {
         guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
 
         let combinedSignalName = (configuration.defaultSignalPrefix ?? "") + signalName
-        let prefixedParameters = parameters.mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
+        let prefixedParameters = parameters.mapKeys { parameter in
+            guard !parameter.hasPrefix("TelemetryDeck.") else { return parameter }
+            return (configuration.defaultParameterPrefix ?? "") + parameter
+        }
 
         if configuration.reservedParameterWarningsEnabled {
             // warn users about reserved keys to avoid unexpected behavior
@@ -137,7 +140,10 @@ public enum TelemetryDeck {
         // make sure to not send any signals when run by Xcode via SwiftUI previews
         guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
 
-        let prefixedDefaultParameters = configuration.defaultParameters().mapKeys { (configuration.defaultParameterPrefix ?? "") + $0 }
+        let prefixedDefaultParameters = configuration.defaultParameters().mapKeys { parameter in
+            guard !parameter.hasPrefix("TelemetryDeck.") else { return parameter }
+            return (configuration.defaultParameterPrefix ?? "") + parameter
+        }
         let combinedParameters = prefixedDefaultParameters.merging(parameters) { $1 }
 
         // check only default parameters
