@@ -75,15 +75,7 @@ TelemetryDeck.signal("Database.updated", parameters: ["numberOfDatabaseEntries":
 TelemetryDeck will automatically send base parameters, such as:
 
 - TelemetryDeck.Accessibility.isBoldTextEnabled
-- TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled
-- TelemetryDeck.Accessibility.isInvertColorsEnabled
-- TelemetryDeck.Accessibility.isReduceMotionEnabled
-- TelemetryDeck.Accessibility.isReduceTransparencyEnabled
-- TelemetryDeck.Accessibility.isSwitchControlEnabled
-- TelemetryDeck.Accessibility.isVoiceOverEnabled
 - TelemetryDeck.Accessibility.preferredContentSizeCategory
-- TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor
-
 - TelemetryDeck.AppInfo.buildNumber
 - TelemetryDeck.AppInfo.version
 - TelemetryDeck.Device.architecture
@@ -110,6 +102,27 @@ TelemetryDeck will automatically send base parameters, such as:
 - TelemetryDeck.UserPreference.region
 
 See our [Grand Renaming article](https://telemetrydeck.com/docs/articles/grand-rename/?source=github) for a full list.
+
+## App Extensions Support
+
+When using this SDK in an app extension target, add `TARGET_APP_EXTENSION` to your build settings to ensure extension-safe API usage:
+
+1. In Xcode, select your app extension target
+2. Go to "Build Settings"
+3. Find "Active Compilation Conditions"
+4. Add `TARGET_APP_EXTENSION` to the Debug and Release configurations
+
+![App Extension Build Settings](Images/TARGET_APP_EXTENSION.jpeg)
+
+> [!TIP]
+> You can can also just **copy** the following two lines, select the build setting and **paste** them in:
+> ```
+> SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Debug] = TARGET_APP_EXTENSION DEBUG
+> SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Release] = TARGET_APP_EXTENSION
+> ```
+
+> [!NOTE]
+> Only add this compilation condition to **extension** targets, not to your main app target.
 
 ## Sessions
 

@@ -123,21 +123,25 @@ extension DefaultSignalPayload {
         var a11yParams: [String: String] = [:]
 
         #if os(iOS) || os(tvOS)
-        a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(UIAccessibility.isReduceMotionEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isBoldTextEnabled"] = "\(UIAccessibility.isBoldTextEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(UIAccessibility.isInvertColorsEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled"] = "\(UIAccessibility.isDarkerSystemColorsEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isReduceTransparencyEnabled"] = "\(UIAccessibility.isReduceTransparencyEnabled)"
-        if #available(iOS 13.0, *) {
-            a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
-        }
-        a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
-            .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
+            a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(UIAccessibility.isReduceMotionEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isBoldTextEnabled"] = "\(UIAccessibility.isBoldTextEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(UIAccessibility.isInvertColorsEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled"] = "\(UIAccessibility.isDarkerSystemColorsEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isReduceTransparencyEnabled"] = "\(UIAccessibility.isReduceTransparencyEnabled)"
+            if #available(iOS 13.0, *) {
+                a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
+            }
+
+            #if !TARGET_APP_EXTENSION
+                a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
+                    .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
+            #endif
+
         #elseif os(macOS)
-        if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {
-            a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(systemPrefs["reduceMotion"] as? Bool ?? false)"
-            a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(systemPrefs["InvertColors"] as? Bool ?? false)"
-        }
+            if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {
+                a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(systemPrefs["reduceMotion"] as? Bool ?? false)"
+                a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(systemPrefs["InvertColors"] as? Bool ?? false)"
+            }
         #endif
 
         return a11yParams
