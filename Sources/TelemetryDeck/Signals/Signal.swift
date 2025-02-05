@@ -132,8 +132,11 @@ extension DefaultSignalPayload {
                 a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
             }
 
-            a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
-                .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
+            // in app extensions `UIApplication.shared` is not available
+            if !Bundle.main.bundlePath.hasSuffix(".appex") {
+                a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
+                    .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
+            }
 
         #elseif os(macOS)
             if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {
@@ -404,7 +407,12 @@ extension DefaultSignalPayload {
     @MainActor
     static var layoutDirection: String {
         #if os(iOS) || os(tvOS)
-        return UIApplication.shared.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
+        if Bundle.main.bundlePath.hasSuffix(".appex") {
+            // we're in an app extension, where `UIApplication.shared` is not available
+            return "N/A"
+        } else {
+            return UIApplication.shared.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
+        }
         #elseif os(macOS)
         if let nsApp = NSApp {
             return nsApp.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"

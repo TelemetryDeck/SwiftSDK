@@ -157,13 +157,18 @@ private extension SignalManager {
         #if os(watchOS) || os(macOS)
         self.signalCache.backupCache()
         #else
-        // run backup in background task to avoid blocking main thread while ensuring app stays open during write
-        let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
-        DispatchQueue.global(qos: .background).async {
+        if Bundle.main.bundlePath.hasSuffix(".appex") {
+            // we're in an app extension, where `UIApplication.shared` is not available
             self.signalCache.backupCache()
+        } else {
+            // run backup in background task to avoid blocking main thread while ensuring app stays open during write
+            let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
+            DispatchQueue.global(qos: .background).async {
+                self.signalCache.backupCache()
 
-            DispatchQueue.main.async {
-                UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                DispatchQueue.main.async {
+                    UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                }
             }
         }
         #endif
@@ -195,13 +200,18 @@ private extension SignalManager {
         #if os(watchOS) || os(macOS)
         self.signalCache.backupCache()
         #else
-        // run backup in background task to avoid blocking main thread while ensuring app stays open during write
-        let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
-        DispatchQueue.global(qos: .background).async {
+        if Bundle.main.bundlePath.hasSuffix(".appex") {
+            // we're in an app extension, where `UIApplication.shared` is not available
             self.signalCache.backupCache()
+        } else {
+            // run backup in background task to avoid blocking main thread while ensuring app stays open during write
+            let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
+            DispatchQueue.global(qos: .background).async {
+                self.signalCache.backupCache()
 
-            DispatchQueue.main.async {
-                UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                DispatchQueue.main.async {
+                    UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                }
             }
         }
         #endif
