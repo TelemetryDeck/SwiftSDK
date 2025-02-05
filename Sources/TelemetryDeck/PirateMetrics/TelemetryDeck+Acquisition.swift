@@ -1,15 +1,12 @@
 import Foundation
 
 extension TelemetryDeck {
-    // TODO: add documentation comment with common/recommended usage examples
-    public static func acquiredUser(
+    private static func acquiredUser(
         channel: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil
     ) {
         let acquisitionParameters = ["TelemetryDeck.Acquisition.channel": channel]
-
-        // TODO: persist channel and send with every request
 
         self.internalSignal(
             "TelemetryDeck.Acquisition.userAcquired",
@@ -18,8 +15,7 @@ extension TelemetryDeck {
         )
     }
 
-    // TODO: add documentation comment with common/recommended usage examples
-    public static func leadStarted(
+    private static func leadStarted(
         leadID: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil
@@ -33,8 +29,7 @@ extension TelemetryDeck {
         )
     }
 
-    // TODO: add documentation comment with common/recommended usage examples
-    public static func leadConverted(
+    private static func leadConverted(
         leadID: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil

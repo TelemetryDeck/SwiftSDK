@@ -1,14 +1,12 @@
 import Foundation
 
 extension TelemetryDeck {
-    // TODO: add documentation comment with common/recommended usage examples
-    public static func referralSent(
+    private static func referralSent(
         receiversCount: Int = 1,
         kind: String? = nil,
         parameters: [String: String] = [:],
         customUserID: String? = nil
     ) {
-        // TODO: document all new parameters and their types in the default parameters doc
         var referralParameters = ["TelemetryDeck.Referral.receiversCount": String(receiversCount)]
 
         if let kind {
@@ -22,9 +20,7 @@ extension TelemetryDeck {
         )
     }
 
-    // TODO: add documentation comment with common/recommended usage examples
-    // TODO: explicitly mention how this can be used for NPS Score or for App Store like ratings
-    public static func userRatingSubmitted(
+    private static func userRatingSubmitted(
         rating: Int,
         comment: String? = nil,
         parameters: [String: String] = [:],

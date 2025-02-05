@@ -1,8 +1,7 @@
 import Foundation
 
 extension TelemetryDeck {
-    // TODO: add documentation comment with common/recommended usage examples
-    public static func paywallShown(
+    private static func paywallShown(
         reason: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil

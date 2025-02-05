@@ -1,8 +1,7 @@
 import Foundation
 
 extension TelemetryDeck {
-    // TODO: add documentation comment with common/recommended usage examples
-    public static func onboardingCompleted(
+    private static func onboardingCompleted(
         parameters: [String: String] = [:],
         customUserID: String? = nil
     ) {
@@ -15,8 +14,7 @@ extension TelemetryDeck {
         )
     }
 
-    // TODO: add documentation comment with common/recommended usage examples
-    public static func coreFeatureUsed(
+    private static func coreFeatureUsed(
         featureName: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil

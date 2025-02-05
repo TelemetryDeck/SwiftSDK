@@ -19,10 +19,6 @@ extension TelemetryDeck {
         parameters: [String: String] = [:],
         customUserID: String? = nil
     ) {
-        // TODO: when a price of 0 and a subscription is detected, send `freeTrialStarted` signal
-        // TODO: persist free trial state
-        // TODO: add StoreKit integration to auto-detect free-trial conversions and send `convertedFromFreeTrial`
-
         let priceValueInNativeCurrency = NSDecimalNumber(decimal: transaction.price ?? Decimal()).doubleValue
 
         let priceValueInUSD: Double
