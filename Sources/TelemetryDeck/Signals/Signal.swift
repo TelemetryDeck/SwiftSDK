@@ -378,22 +378,16 @@ extension DefaultSignalPayload {
     static var colorScheme: String {
         #if os(iOS) || os(tvOS)
         switch UIScreen.main.traitCollection.userInterfaceStyle {
-        case .dark:
-            return "Dark"
-        case .light:
-            return "Light"
-        default:
-            return "N/A"
+        case .dark: return "Dark"
+        case .light: return "Light"
+        default: return "N/A"
         }
         #elseif os(macOS)
         if #available(macOS 10.14, *) {
             switch NSAppearance.current.name {
-            case .aqua:
-                return "Light"
-            case .darkAqua:
-                return "Dark"
-            default:
-                return "N/A"
+            case .aqua: return "Light"
+            case .darkAqua: return "Dark"
+            default: return "N/A"
             }
         } else {
             return "Light"
@@ -477,12 +471,9 @@ extension DefaultSignalPayload {
     static var orientation: String {
         #if os(iOS)
             switch UIDevice.current.orientation {
-            case .portrait, .portraitUpsideDown:
-                return "Portrait"
-            case .landscapeLeft, .landscapeRight:
-                return "Landscape"
-            default:
-                return "Unknown"
+            case .portrait, .portraitUpsideDown: return "Portrait"
+            case .landscapeLeft, .landscapeRight: return "Landscape"
+            default: return "Unknown"
             }
         #else
             return "Fixed"
