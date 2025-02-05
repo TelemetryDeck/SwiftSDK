@@ -123,21 +123,26 @@ extension DefaultSignalPayload {
         var a11yParams: [String: String] = [:]
 
         #if os(iOS) || os(tvOS)
-        a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(UIAccessibility.isReduceMotionEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isBoldTextEnabled"] = "\(UIAccessibility.isBoldTextEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(UIAccessibility.isInvertColorsEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled"] = "\(UIAccessibility.isDarkerSystemColorsEnabled)"
-        a11yParams["TelemetryDeck.Accessibility.isReduceTransparencyEnabled"] = "\(UIAccessibility.isReduceTransparencyEnabled)"
-        if #available(iOS 13.0, *) {
-            a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
-        }
-        a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
-            .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
+            a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(UIAccessibility.isReduceMotionEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isBoldTextEnabled"] = "\(UIAccessibility.isBoldTextEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(UIAccessibility.isInvertColorsEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled"] = "\(UIAccessibility.isDarkerSystemColorsEnabled)"
+            a11yParams["TelemetryDeck.Accessibility.isReduceTransparencyEnabled"] = "\(UIAccessibility.isReduceTransparencyEnabled)"
+            if #available(iOS 13.0, *) {
+                a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
+            }
+
+            // in app extensions `UIApplication.shared` is not available
+            if !Bundle.main.bundlePath.hasSuffix(".appex") {
+                a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
+                    .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
+            }
+
         #elseif os(macOS)
-        if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {
-            a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(systemPrefs["reduceMotion"] as? Bool ?? false)"
-            a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(systemPrefs["InvertColors"] as? Bool ?? false)"
-        }
+            if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {
+                a11yParams["TelemetryDeck.Accessibility.isReduceMotionEnabled"] = "\(systemPrefs["reduceMotion"] as? Bool ?? false)"
+                a11yParams["TelemetryDeck.Accessibility.isInvertColorsEnabled"] = "\(systemPrefs["InvertColors"] as? Bool ?? false)"
+            }
         #endif
 
         return a11yParams
@@ -373,22 +378,16 @@ extension DefaultSignalPayload {
     static var colorScheme: String {
         #if os(iOS) || os(tvOS)
         switch UIScreen.main.traitCollection.userInterfaceStyle {
-        case .dark:
-            return "Dark"
-        case .light:
-            return "Light"
-        default:
-            return "N/A"
+        case .dark: return "Dark"
+        case .light: return "Light"
+        default: return "N/A"
         }
         #elseif os(macOS)
         if #available(macOS 10.14, *) {
             switch NSAppearance.current.name {
-            case .aqua:
-                return "Light"
-            case .darkAqua:
-                return "Dark"
-            default:
-                return "N/A"
+            case .aqua: return "Light"
+            case .darkAqua: return "Dark"
+            default: return "N/A"
             }
         } else {
             return "Light"
@@ -402,7 +401,12 @@ extension DefaultSignalPayload {
     @MainActor
     static var layoutDirection: String {
         #if os(iOS) || os(tvOS)
-        return UIApplication.shared.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
+        if Bundle.main.bundlePath.hasSuffix(".appex") {
+            // we're in an app extension, where `UIApplication.shared` is not available
+            return "N/A"
+        } else {
+            return UIApplication.shared.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
+        }
         #elseif os(macOS)
         if let nsApp = NSApp {
             return nsApp.userInterfaceLayoutDirection == .leftToRight ? "leftToRight" : "rightToLeft"
@@ -467,12 +471,9 @@ extension DefaultSignalPayload {
     static var orientation: String {
         #if os(iOS)
             switch UIDevice.current.orientation {
-            case .portrait, .portraitUpsideDown:
-                return "Portrait"
-            case .landscapeLeft, .landscapeRight:
-                return "Landscape"
-            default:
-                return "Unknown"
+            case .portrait, .portraitUpsideDown: return "Portrait"
+            case .landscapeLeft, .landscapeRight: return "Landscape"
+            default: return "Unknown"
             }
         #else
             return "Fixed"

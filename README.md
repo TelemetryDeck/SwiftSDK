@@ -72,18 +72,11 @@ You can also send additional parameters with each signal:
 TelemetryDeck.signal("Database.updated", parameters: ["numberOfDatabaseEntries": "3831"])
 ```
 
-TelemetryDeck will automatically send base parameters, such as:
+<details>
+<summary>TelemetryDeck will automatically send base parameters, expand to see common examples</summary>
 
 - TelemetryDeck.Accessibility.isBoldTextEnabled
-- TelemetryDeck.Accessibility.isDarkerSystemColorsEnabled
-- TelemetryDeck.Accessibility.isInvertColorsEnabled
-- TelemetryDeck.Accessibility.isReduceMotionEnabled
-- TelemetryDeck.Accessibility.isReduceTransparencyEnabled
-- TelemetryDeck.Accessibility.isSwitchControlEnabled
-- TelemetryDeck.Accessibility.isVoiceOverEnabled
 - TelemetryDeck.Accessibility.preferredContentSizeCategory
-- TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor
-
 - TelemetryDeck.AppInfo.buildNumber
 - TelemetryDeck.AppInfo.version
 - TelemetryDeck.Device.architecture
@@ -109,7 +102,8 @@ TelemetryDeck will automatically send base parameters, such as:
 - TelemetryDeck.UserPreference.layoutDirection
 - TelemetryDeck.UserPreference.region
 
-See our [Grand Renaming article](https://telemetrydeck.com/docs/articles/grand-rename/?source=github) for a full list.
+See our [related documentation page](https://telemetrydeck.com/docs/api/default-parameters/?source=github.com) for a full list.
+</details>
 
 ## Sessions
 
