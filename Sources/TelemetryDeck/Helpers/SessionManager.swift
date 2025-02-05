@@ -60,6 +60,10 @@ final class SessionManager: @unchecked Sendable {
     }
 
     var averageSessionSeconds: Int {
+        guard self.recentSessions.count > 1 else {
+            return self.recentSessions.first?.durationInSeconds ?? -1
+        }
+
         let completedSessions = self.recentSessions.dropLast()
         let totalCompletedSessionSeconds = completedSessions.map(\.durationInSeconds).reduce(into: 0) { $0 += $1 }
         return totalCompletedSessionSeconds / completedSessions.count
