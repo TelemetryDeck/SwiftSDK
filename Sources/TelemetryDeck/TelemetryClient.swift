@@ -69,7 +69,9 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// Beginning a new session automatically sends a "TelemetryDeck.Session.started" Signal if `sendNewSessionBeganSignal` is `true`
     public var sessionID = UUID() {
         didSet {
-            SessionManager.shared.startNewSession()
+            if #available(watchOS 7, *) {
+                SessionManager.shared.startNewSession()
+            }
 
             if sendNewSessionBeganSignal {
                 TelemetryDeck.internalSignal("TelemetryDeck.Session.started")

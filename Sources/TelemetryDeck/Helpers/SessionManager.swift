@@ -6,6 +6,7 @@ import UIKit
 import AppKit
 #endif
 
+@available(watchOS 7, *)
 final class SessionManager: @unchecked Sendable {
     private struct StoredSession: Codable {
         let startedAt: Date
@@ -19,7 +20,7 @@ final class SessionManager: @unchecked Sendable {
     }
 
     static let shared = SessionManager()
-    
+
     private static let recentSessionsKey = "recentSessions"
     private static let deletedSessionsCountKey = "deletedSessionsCount"
 
@@ -60,7 +61,7 @@ final class SessionManager: @unchecked Sendable {
 
     var averageSessionSeconds: Int {
         let completedSessions = self.recentSessions.dropLast()
-        let totalCompletedSessionSeconds = completedSessions.map(\.durationInSeconds).reduce(into: 0) { $0 + $1 }
+        let totalCompletedSessionSeconds = completedSessions.map(\.durationInSeconds).reduce(into: 0) { $0 += $1 }
         return totalCompletedSessionSeconds / completedSessions.count
     }
 
