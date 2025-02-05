@@ -105,27 +105,6 @@ TelemetryDeck.signal("Database.updated", parameters: ["numberOfDatabaseEntries":
 See our [related documentation page](https://telemetrydeck.com/docs/api/default-parameters/?source=github.com) for a full list.
 </details>
 
-## App Extensions Support
-
-When using this SDK in an app extension target, add `TARGET_APP_EXTENSION` to your build settings to ensure extension-safe API usage:
-
-1. In Xcode, select your app extension target
-1. Go to "Build Settings"
-1. Find "Active Compilation Conditions" (make sure you have the "All" tab selected)
-1. Add `TARGET_APP_EXTENSION` to the Debug and Release configurations
-
-![App Extension Build Settings](Images/TARGET_APP_EXTENSION.jpeg)
-
-> [!TIP]
-> You can can also just **copy** the following two lines, select the build setting and **paste** them in:
-> ```
-> SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Debug] = TARGET_APP_EXTENSION DEBUG
-> SWIFT_ACTIVE_COMPILATION_CONDITIONS[config=Release] = TARGET_APP_EXTENSION
-> ```
-
-> [!NOTE]
-> Only add this compilation condition to **extension** targets, not to your main app target.
-
 ## Sessions
 
 With each Signal, the client sends a hash of your user ID as well as a _session ID_. This gets automatically generated when the client is initialized, so if you do nothing, you'll get a new session each time your app is started from cold storage.

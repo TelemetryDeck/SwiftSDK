@@ -132,10 +132,8 @@ extension DefaultSignalPayload {
                 a11yParams["TelemetryDeck.Accessibility.shouldDifferentiateWithoutColor"] = "\(UIAccessibility.shouldDifferentiateWithoutColor)"
             }
 
-            #if !TARGET_APP_EXTENSION
-                a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
-                    .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
-            #endif
+            a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
+                .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
 
         #elseif os(macOS)
             if let systemPrefs = UserDefaults.standard.persistentDomain(forName: "com.apple.universalaccess") {

@@ -154,7 +154,7 @@ private extension SignalManager {
     @objc func appWillTerminate() {
         configuration.logHandler?.log(.debug, message: #function)
 
-        #if os(watchOS) || os(macOS) || TARGET_APP_EXTENSION
+        #if os(watchOS) || os(macOS)
         self.signalCache.backupCache()
         #else
         // run backup in background task to avoid blocking main thread while ensuring app stays open during write
@@ -192,7 +192,7 @@ private extension SignalManager {
         sendTimer?.invalidate()
         sendTimer = nil
 
-        #if os(watchOS) || os(macOS) || TARGET_APP_EXTENSION
+        #if os(watchOS) || os(macOS)
         self.signalCache.backupCache()
         #else
         // run backup in background task to avoid blocking main thread while ensuring app stays open during write
