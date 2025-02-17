@@ -25,6 +25,10 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// (Don't change this unless you know exactly what you're doing)
     public let apiBaseURL: URL
 
+    /// The namespace to send signals to. Defaults to the default Telemetry API server namespace.
+    /// (Don't change this unless you know exactly what you're doing)
+    public let namespace: String?
+
     /// This string will be appended to to all user identifiers before hashing them.
     ///
     /// Set the salt to a random string of 64 letters, integers and special characters to prevent the unlikely
@@ -162,14 +166,23 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// Defaults to an empty array.
     public var metadataEnrichers: [SignalEnricher] = []
 
-    public init(appID: String, salt: String? = nil, baseURL: URL? = nil) {
-        telemetryAppID = appID
+    /// Creates a new configuration for the TelemetryDeck analytics service.
+    ///
+    /// - Parameters:
+    ///   - appID: Your application's unique identifier for TelemetryDeck
+    ///   - salt: A string used to salt user identifiers before hashing. If not provided, an empty string will be used.
+    ///   - baseURL: The base URL for the TelemetryDeck API. Defaults to the standard TelemetryDeck server if not specified.
+    ///   - namespace: An optional namespace for segregating signals. Do not specify unless you know what you're doing.
+    public init(appID: String, salt: String? = nil, baseURL: URL? = nil, namespace: String? = nil) {
+        self.telemetryAppID = appID
 
         if let baseURL = baseURL {
-            apiBaseURL = baseURL
+            self.apiBaseURL = baseURL
         } else {
-            apiBaseURL = URL(string: "https://nom.telemetrydeck.com")!
+            self.apiBaseURL = URL(string: "https://nom.telemetrydeck.com")!
         }
+
+        self.namespace = namespace
 
         if let salt = salt {
             self.salt = salt
