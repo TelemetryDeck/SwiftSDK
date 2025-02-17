@@ -94,6 +94,17 @@ final class SessionManager: @unchecked Sendable {
         }
     }
 
+    var distinctDaysUsedLastMonthCount: Int {
+        let dateFormatter = ISO8601DateFormatter()
+        dateFormatter.formatOptions = [.withFullDate]
+
+        // Get date 30 days ago
+        let thirtyDaysAgoDate = Date().addingTimeInterval(-(30 * 24 * 60 * 60))
+        let thirtyDaysAgoFormatted = dateFormatter.string(from: thirtyDaysAgoDate)
+
+        return self.distinctDaysUsed.countISODatesOnOrAfter(cutoffISODate: thirtyDaysAgoFormatted)
+    }
+
     private var currentSessionStartedAt: Date = .distantPast
     private var currentSessionDuration: TimeInterval = .zero
 
@@ -261,5 +272,18 @@ final class SessionManager: @unchecked Sendable {
             object: nil
         )
         #endif
+    }
+}
+
+extension [String] {
+    /// Counts ISO-formatted date strings (YYYY-MM-DD) that are on or after the given date.
+    /// Uses string comparison since ISO dates sort alphabetically like dates chronologically.
+    ///
+    /// - Parameter cutoffISODate: The ISO date string to compare against
+    /// - Returns: Count of dates on or after the cutoff
+    func countISODatesOnOrAfter(cutoffISODate: String) -> Int {
+        // Simply filter strings that are >= the cutoff date string
+        // (works because: String compares alphabetically & ISO date format sorts dates alphabetically)
+        self.filter { $0 >= cutoffISODate }.count
     }
 }

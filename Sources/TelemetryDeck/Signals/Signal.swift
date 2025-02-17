@@ -119,6 +119,7 @@ public struct DefaultSignalPayload: Encodable {
                     "TelemetryDeck.Acquisition.firstSessionDate": SessionManager.shared.firstSessionDate,
                     "TelemetryDeck.Retention.averageSessionSeconds": "\(SessionManager.shared.averageSessionSeconds)",
                     "TelemetryDeck.Retention.distinctDaysUsed": "\(SessionManager.shared.distinctDaysUsed.count)",
+                    "TelemetryDeck.Retention.distinctDaysUsedLastMonth": "\(SessionManager.shared.distinctDaysUsedLastMonthCount)",
                     "TelemetryDeck.Retention.totalSessionsCount": "\(SessionManager.shared.totalSessionsCount)",
                 ],
                 uniquingKeysWith: { $1 }
