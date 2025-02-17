@@ -19,34 +19,57 @@ extension TelemetryDeck {
         parameters: [String: String] = [:],
         customUserID: String? = nil
     ) {
-        let priceValueInNativeCurrency = NSDecimalNumber(decimal: transaction.price ?? Decimal()).doubleValue
-
-        let priceValueInUSD: Double
-
-        if #available(iOS 16, macOS 13, tvOS 16, watchOS 9, *) {
-            if transaction.currency?.identifier == "USD" {
-                priceValueInUSD = priceValueInNativeCurrency
-            } else if
-                let currencyCode = transaction.currency?.identifier,
-                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+        if #available(iOS 17.2, macOS 14.2, tvOS 17.2, visionOS 1.1, watchOS 10.2, *) {
+            // detect if the purchase is a free trial (using modern APIs)
+            if
+                transaction.productType == .autoRenewable,
+                transaction.offer?.type == .introductory,
+                transaction.price == nil || transaction.price!.isZero
             {
-                priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
+                self.reportFreeTrial(transaction: transaction, parameters: parameters, customUserID: customUserID)
             } else {
-                priceValueInUSD = 0
+                self.reportPaidPurchase(transaction: transaction, parameters: parameters, customUserID: customUserID)
             }
         } else {
-            if transaction.currencyCode == "USD" {
-                priceValueInUSD = priceValueInNativeCurrency
-            } else if
-                let currencyCode = transaction.currencyCode,
-                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+            // detect if the purchase is a free trial (using legacy APIs on older systems)
+            if
+                transaction.productType == .autoRenewable,
+                transaction.offerType == .introductory,
+                transaction.price == nil || transaction.price!.isZero
             {
-                priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
+                self.reportFreeTrial(transaction: transaction, parameters: parameters, customUserID: customUserID)
             } else {
-                priceValueInUSD = 0
+                self.reportPaidPurchase(transaction: transaction, parameters: parameters, customUserID: customUserID)
             }
         }
+    }
 
+    private static func reportFreeTrial(
+        transaction: StoreKit.Transaction,
+        parameters: [String: String],
+        customUserID: String?
+    ) {
+        self.internalSignal(
+            "TelemetryDeck.Purchase.freeTrialStarted",
+            parameters: self.purchaseParameters(transaction: transaction).merging(parameters) { $1 },
+            customUserID: customUserID
+        )
+    }
+
+    private static func reportPaidPurchase(
+        transaction: StoreKit.Transaction,
+        parameters: [String: String],
+        customUserID: String?
+    ) {
+        self.internalSignal(
+            "TelemetryDeck.Purchase.completed",
+            parameters: self.purchaseParameters(transaction: transaction).merging(parameters) { $1 },
+            floatValue: self.calculatePriceInUSD(transaction: transaction),
+            customUserID: customUserID
+        )
+    }
+
+    private static func purchaseParameters(transaction: StoreKit.Transaction) -> [String: String] {
         let countryCode: String
         if #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) {
             countryCode = transaction.storefront.countryCode
@@ -73,12 +96,38 @@ extension TelemetryDeck {
             }
         }
 
-        self.internalSignal(
-            "TelemetryDeck.Purchase.completed",
-            parameters: purchaseParameters.merging(parameters) { $1 },
-            floatValue: priceValueInUSD,
-            customUserID: customUserID
-        )
+        return purchaseParameters
+    }
+
+    private static func calculatePriceInUSD(transaction: StoreKit.Transaction) -> Double {
+        let priceValueInNativeCurrency = NSDecimalNumber(decimal: transaction.price ?? Decimal()).doubleValue
+        let priceValueInUSD: Double
+
+        if #available(iOS 16, macOS 13, tvOS 16, watchOS 9, *) {
+            if transaction.currency?.identifier == "USD" {
+                priceValueInUSD = priceValueInNativeCurrency
+            } else if
+                let currencyCode = transaction.currency?.identifier,
+                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+            {
+                priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
+            } else {
+                priceValueInUSD = 0
+            }
+        } else {
+            if transaction.currencyCode == "USD" {
+                priceValueInUSD = priceValueInNativeCurrency
+            } else if
+                let currencyCode = transaction.currencyCode,
+                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+            {
+                priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
+            } else {
+                priceValueInUSD = 0
+            }
+        }
+
+        return priceValueInUSD
     }
 
     private static let currencyCodeToOneUSDExchangeRate: [String: Double] = [
