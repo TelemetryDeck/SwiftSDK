@@ -86,20 +86,21 @@ final class TrialConversionTracker: @unchecked Sendable {
                     transaction.productID == currentTrial.productId,
                     transaction.originalID == currentTrial.originalTransactionId
                 {
-
-                    // Case 1: Trial converted to paid subscription
-                    if !transaction.isUpgraded && !transaction.isFreeTrial {
+                    if
+                        transaction.revocationDate != nil
+                        || transaction.expirationDate?.isInThePast == true
+                        || transaction.isUpgraded
+                    {
+                        // Trial was canceled, has expired, or was upgraded – let's clean up & stop observing
+                        self.clearCurrentTrial()
+                    } else if !transaction.isFreeTrial {
+                        // Trial converted to paid subscription
                         TelemetryDeck.internalSignal(
                             "TelemetryDeck.Purchase.convertedFromTrial",
                             parameters: transaction.purchaseParameters(),
                             floatValue: transaction.priceInUSD()
                         )
 
-                        self.clearCurrentTrial()
-                    }
-
-                    // Case 2: Trial was canceled or expired, let's clean up & stop observing
-                    else if transaction.revocationDate != nil || transaction.expirationDate?.isInThePast == true {
                         self.clearCurrentTrial()
                     }
                 }
