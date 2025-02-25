@@ -51,9 +51,11 @@ extension TelemetryDeck {
     ) {
         self.internalSignal(
             "TelemetryDeck.Purchase.freeTrialStarted",
-            parameters: self.purchaseParameters(transaction: transaction).merging(parameters) { $1 },
+            parameters: transaction.purchaseParameters().merging(parameters) { $1 },
             customUserID: customUserID
         )
+
+        TrialConversionTracker.shared.freeTrialStarted(transaction: transaction)
     }
 
     private static func reportPaidPurchase(
@@ -63,35 +65,39 @@ extension TelemetryDeck {
     ) {
         self.internalSignal(
             "TelemetryDeck.Purchase.completed",
-            parameters: self.purchaseParameters(transaction: transaction).merging(parameters) { $1 },
-            floatValue: self.calculatePriceInUSD(transaction: transaction),
+            parameters: transaction.purchaseParameters().merging(parameters) { $1 },
+            floatValue: transaction.priceInUSD(),
             customUserID: customUserID
         )
     }
+}
 
-    private static func purchaseParameters(transaction: StoreKit.Transaction) -> [String: String] {
+@available(iOS 15, macOS 12, tvOS 15, visionOS 1, watchOS 8, *)
+extension Transaction {
+    func purchaseParameters() -> [String: String] {
         let countryCode: String
         if #available(iOS 17, macOS 14, tvOS 17, watchOS 10, *) {
-            countryCode = transaction.storefront.countryCode
+            countryCode = self.storefront.countryCode
         } else {
             #if os(visionOS)
             countryCode = "US"
             #else
-            countryCode = transaction.storefrontCountryCode
+            countryCode = self.storefrontCountryCode
             #endif
         }
 
         var purchaseParameters: [String: String] = [
-            "TelemetryDeck.Purchase.type": transaction.subscriptionGroupID != nil ? "subscription" : "one-time-purchase",
+            "TelemetryDeck.Purchase.type": self.subscriptionGroupID != nil ? "subscription" : "one-time-purchase",
             "TelemetryDeck.Purchase.countryCode": countryCode,
+            "TelemetryDeck.Purchase.productID": self.productID,
         ]
 
         if #available(iOS 16, macOS 13, tvOS 16, watchOS 9, *) {
-            if let currencyCode = transaction.currency?.identifier {
+            if let currencyCode = self.currency?.identifier {
                 purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currencyCode
             }
         } else {
-            if let currencyCode = transaction.currencyCode {
+            if let currencyCode = self.currencyCode {
                 purchaseParameters["TelemetryDeck.Purchase.currencyCode"] = currencyCode
             }
         }
@@ -99,27 +105,27 @@ extension TelemetryDeck {
         return purchaseParameters
     }
 
-    private static func calculatePriceInUSD(transaction: StoreKit.Transaction) -> Double {
-        let priceValueInNativeCurrency = NSDecimalNumber(decimal: transaction.price ?? Decimal()).doubleValue
+    func priceInUSD() -> Double {
+        let priceValueInNativeCurrency = NSDecimalNumber(decimal: self.price ?? Decimal()).doubleValue
         let priceValueInUSD: Double
 
         if #available(iOS 16, macOS 13, tvOS 16, watchOS 9, *) {
-            if transaction.currency?.identifier == "USD" {
+            if self.currency?.identifier == "USD" {
                 priceValueInUSD = priceValueInNativeCurrency
             } else if
-                let currencyCode = transaction.currency?.identifier,
-                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+                let currencyCode = self.currency?.identifier,
+                let oneUSDExchangeRate = Self.currencyCodeToOneUSDExchangeRate[currencyCode]
             {
                 priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
             } else {
                 priceValueInUSD = 0
             }
         } else {
-            if transaction.currencyCode == "USD" {
+            if self.currencyCode == "USD" {
                 priceValueInUSD = priceValueInNativeCurrency
             } else if
-                let currencyCode = transaction.currencyCode,
-                let oneUSDExchangeRate = self.currencyCodeToOneUSDExchangeRate[currencyCode]
+                let currencyCode = self.currencyCode,
+                let oneUSDExchangeRate = Self.currencyCodeToOneUSDExchangeRate[currencyCode]
             {
                 priceValueInUSD = priceValueInNativeCurrency / oneUSDExchangeRate
             } else {
