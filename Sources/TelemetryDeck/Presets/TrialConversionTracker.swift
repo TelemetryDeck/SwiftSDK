@@ -17,8 +17,8 @@ import StoreKit
 @available(iOS 15, macOS 12, tvOS 15, watchOS 8, *)
 final class TrialConversionTracker: @unchecked Sendable {
     private struct StoredTrial: Codable {
-        let productId: String
-        let originalTransactionId: UInt64
+        let productID: String
+        let originalTransactionID: UInt64
     }
 
     static let shared = TrialConversionTracker()
@@ -60,7 +60,7 @@ final class TrialConversionTracker: @unchecked Sendable {
 
     /// Call this function only after having validated that the passed transaction is a free trial.
     func freeTrialStarted(transaction: Transaction) {
-        let trial = StoredTrial(productId: transaction.productID, originalTransactionId: transaction.originalID)
+        let trial = StoredTrial(productID: transaction.productID, originalTransactionID: transaction.originalID)
         self.currentTrial = trial
         self.startObservingTransactions()
     }
@@ -83,8 +83,8 @@ final class TrialConversionTracker: @unchecked Sendable {
                 // Check if this transaction matches our trial product
                 if
                     let currentTrial = self.currentTrial,
-                    transaction.productID == currentTrial.productId,
-                    transaction.originalID == currentTrial.originalTransactionId
+                    transaction.productID == currentTrial.productID,
+                    transaction.originalID == currentTrial.originalTransactionID
                 {
                     if
                         transaction.revocationDate != nil
