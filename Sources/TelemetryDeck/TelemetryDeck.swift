@@ -120,7 +120,7 @@ public enum TelemetryDeck {
     @available(watchOS 7.0, *)
     public static func stopAndSendDurationSignal(_ signalName: String, parameters: [String: String] = [:]) {
         guard let (exactDuration, startParameters) = DurationSignalTracker.shared.stopTracking(signalName) else { return }
-        let roundedDuration = (exactDuration * 1_000).rounded(.down) * 1_000  // rounds down to 3 fraction digits
+        let roundedDuration = (exactDuration * 1_000).rounded(.down) / 1_000  // rounds down to 3 fraction digits
 
         var durationParameters = ["TelemetryDeck.Signal.durationInSeconds": String(roundedDuration)]
         durationParameters.merge(startParameters) { $1 }
