@@ -7,7 +7,8 @@ import AppKit
 #endif
 
 @available(watchOS 7.0, *)
-final class DurationSignalTracker: @unchecked Sendable {
+@MainActor
+final class DurationSignalTracker {
     static let shared = DurationSignalTracker()
 
     private struct CachedData: Sendable {
@@ -15,7 +16,6 @@ final class DurationSignalTracker: @unchecked Sendable {
         let parameters: [String: String]
     }
 
-    private let queue = DispatchQueue(label: "com.telemetrydeck.DurationSignalTracker")
     private var startedSignals: [String: CachedData] = [:]
     private var lastEnteredBackground: Date?
 
@@ -24,19 +24,15 @@ final class DurationSignalTracker: @unchecked Sendable {
     }
 
     func startTracking(_ signalName: String, parameters: [String: String]) {
-        self.queue.sync {
-            self.startedSignals[signalName] = CachedData(startTime: Date(), parameters: parameters)
-        }
+        self.startedSignals[signalName] = CachedData(startTime: Date(), parameters: parameters)
     }
 
     func stopTracking(_ signalName: String) -> (duration: TimeInterval, parameters: [String: String])? {
-        self.queue.sync {
-            guard let trackingData = self.startedSignals[signalName] else { return nil }
-            self.startedSignals[signalName] = nil
+        guard let trackingData = self.startedSignals[signalName] else { return nil }
+        self.startedSignals[signalName] = nil
 
-            let duration = Date().timeIntervalSince(trackingData.startTime)
-            return (duration, trackingData.parameters)
-        }
+        let duration = Date().timeIntervalSince(trackingData.startTime)
+        return (duration, trackingData.parameters)
     }
 
     private func setupAppLifecycleObservers() {
@@ -87,25 +83,21 @@ final class DurationSignalTracker: @unchecked Sendable {
 
     @objc
     private func handleDidEnterBackgroundNotification() {
-        self.queue.sync {
-            self.lastEnteredBackground = Date()
-        }
+        self.lastEnteredBackground = Date()
     }
 
     @objc
     private func handleWillEnterForegroundNotification() {
-        self.queue.sync {
-            guard let lastEnteredBackground else { return }
-            let backgroundDuration = Date().timeIntervalSince(lastEnteredBackground)
+        guard let lastEnteredBackground else { return }
+        let backgroundDuration = Date().timeIntervalSince(lastEnteredBackground)
 
-            for (signalName, data) in self.startedSignals {
-                self.startedSignals[signalName] = CachedData(
-                    startTime: data.startTime.addingTimeInterval(backgroundDuration),
-                    parameters: data.parameters
-                )
-            }
-
-            self.lastEnteredBackground = nil
+        for (signalName, data) in self.startedSignals {
+            self.startedSignals[signalName] = CachedData(
+                startTime: data.startTime.addingTimeInterval(backgroundDuration),
+                parameters: data.parameters
+            )
         }
+
+        self.lastEnteredBackground = nil
     }
 }
