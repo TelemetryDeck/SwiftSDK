@@ -13,6 +13,7 @@ final class DurationSignalTracker: @unchecked Sendable {
     private struct CachedData: Sendable {
         let startTime: Date
         let parameters: [String: String]
+        let includeBackgroundTime: Bool
     }
 
     private let queue = DispatchQueue(label: "com.telemetrydeck.DurationSignalTracker")
@@ -23,9 +24,13 @@ final class DurationSignalTracker: @unchecked Sendable {
         self.setupAppLifecycleObservers()
     }
 
-    func startTracking(_ signalName: String, parameters: [String: String]) {
+    func startTracking(_ signalName: String, parameters: [String: String], includeBackgroundTime: Bool) {
         self.queue.sync {
-            self.startedSignals[signalName] = CachedData(startTime: Date(), parameters: parameters)
+            self.startedSignals[signalName] = CachedData(
+                startTime: Date(),
+                parameters: parameters,
+                includeBackgroundTime: includeBackgroundTime
+            )
         }
     }
 
@@ -99,9 +104,15 @@ final class DurationSignalTracker: @unchecked Sendable {
             let backgroundDuration = Date().timeIntervalSince(lastEnteredBackground)
 
             for (signalName, data) in self.startedSignals {
+                // skip offsetting by background time if background time explicitly requested by developer
+                if data.includeBackgroundTime {
+                    continue
+                }
+
                 self.startedSignals[signalName] = CachedData(
                     startTime: data.startTime.addingTimeInterval(backgroundDuration),
-                    parameters: data.parameters
+                    parameters: data.parameters,
+                    includeBackgroundTime: data.includeBackgroundTime
                 )
             }
 

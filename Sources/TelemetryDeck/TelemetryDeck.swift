@@ -89,6 +89,7 @@ public enum TelemetryDeck {
     /// - Parameters:
     ///   - signalName: The name of the signal to track. This will be used to identify and stop the duration tracking later.
     ///   - parameters: A dictionary of additional string key-value pairs that will be included when the duration signal is eventually sent. Default is empty.
+    ///   - includeBackgroundTime: An optional Bool where you can specify to actually include (and not exclude) the time when your app is in the background.
     ///
     /// This function only starts tracking time – it does not send a signal. You must call `stopAndSendDurationSignal(_:parameters:)`
     /// with the same signal name to finalize and actually send the signal with the tracked duration.
@@ -98,8 +99,12 @@ public enum TelemetryDeck {
     /// If a new duration signal ist started while an existing duration signal with the same name was not stopped yet, the old one is replaced with the new one.
     @MainActor
     @available(watchOS 7.0, *)
-    public static func startDurationSignal(_ signalName: String, parameters: [String: String] = [:]) {
-        DurationSignalTracker.shared.startTracking(signalName, parameters: parameters)
+    public static func startDurationSignal(
+        _ signalName: String,
+        parameters: [String: String] = [:],
+        includeBackgroundTime: Bool = false
+    ) {
+        DurationSignalTracker.shared.startTracking(signalName, parameters: parameters, includeBackgroundTime: includeBackgroundTime)
     }
 
     /// Stops tracking the duration of a signal and sends it with the total duration.
@@ -107,10 +112,12 @@ public enum TelemetryDeck {
     /// - Parameters:
     ///   - signalName: The name of the signal that was previously started with `startDurationSignal(_:parameters:)`.
     ///   - parameters: Additional parameters to include with the signal. These will be merged with the parameters provided at the start. Default is empty.
+    ///   - floatValue: An optional floating-point number that can be used to provide numerical data about the signal. Default is `nil`.
+    ///   - customUserID: An optional string specifying a custom user identifier. If provided, it will override the default user identifier from the configuration. Default is `nil`.
     ///
     /// This function finalizes the duration tracking by:
     /// 1. Stopping the timer for the given signal name
-    /// 2. Calculating the duration in seconds (excluding background time)
+    /// 2. Calculating the duration in seconds (excluding background time by default)
     /// 3. Sending a signal that includes the start parameters, stop parameters, and calculated duration
     ///
     /// The duration is included in the `TelemetryDeck.Signal.durationInSeconds` parameter.
@@ -118,14 +125,24 @@ public enum TelemetryDeck {
     /// If no matching signal was started, this function does nothing.
     @MainActor
     @available(watchOS 7.0, *)
-    public static func stopAndSendDurationSignal(_ signalName: String, parameters: [String: String] = [:]) {
+    public static func stopAndSendDurationSignal(
+        _ signalName: String,
+        parameters: [String: String] = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) {
         guard let (exactDuration, startParameters) = DurationSignalTracker.shared.stopTracking(signalName) else { return }
         let roundedDuration = (exactDuration * 1_000).rounded(.down) / 1_000  // rounds down to 3 fraction digits
 
         var durationParameters = ["TelemetryDeck.Signal.durationInSeconds": String(roundedDuration)]
         durationParameters.merge(startParameters) { $1 }
 
-        self.internalSignal(signalName, parameters: durationParameters.merging(parameters) { $1 })
+        self.internalSignal(
+            signalName,
+            parameters: durationParameters.merging(parameters) { $1 },
+            floatValue: floatValue,
+            customUserID: customUserID
+        )
     }
 
     /// A signal being sent without enriching the signal name with a prefix. Also, any reserved signal name checks are skipped. Only for internal use.
