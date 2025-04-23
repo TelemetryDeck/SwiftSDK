@@ -73,7 +73,7 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// Beginning a new session automatically sends a "TelemetryDeck.Session.started" Signal if `sendNewSessionBeganSignal` is `true`
     public var sessionID = UUID() {
         didSet {
-            if #available(watchOS 7, *) {
+            if #available(watchOS 7, *), self.sessionStatsEnabled {
                 SessionManager.shared.startNewSession()
             }
 
@@ -149,6 +149,11 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     ///
     /// - NOTE: Do not change this property if you're using our SDK in your app. This is for usage from other TelemetryDeck SDKs only.
     public var reservedParameterWarningsEnabled: Bool = true
+
+    /// If `true` the TelemetryDeck SDK will automatically track some basic session length and count statistics in a privacy-preserving manner for built-in insights. Defaults to `true`.
+    ///
+    /// Can be used to manually opt-out of session tracking if for some reason you don't want us to write to UserDefaults once every second.
+    public var sessionStatsEnabled: Bool = true
 
     /// Log the current status to the signal cache to the console.
     @available(*, deprecated, message: "Please use the logHandler property instead")
