@@ -29,7 +29,7 @@ extension TelemetryDeck {
                 "TelemetryDeck.Navigation.schemaVersion": "1",
                 "TelemetryDeck.Navigation.identifier": "\(source) -> \(destination)",
                 "TelemetryDeck.Navigation.sourcePath": source,
-                "TelemetryDeck.Navigation.destinationPath": destination
+                "TelemetryDeck.Navigation.destinationPath": destination,
             ],
             customUserID: customUserID
         )

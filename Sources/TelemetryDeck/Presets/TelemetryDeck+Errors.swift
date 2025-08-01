@@ -1,6 +1,6 @@
 import Foundation
 
-public extension TelemetryDeck {
+extension TelemetryDeck {
     /// Sends a telemetry signal indicating that an error has occurred.
     ///
     /// - Parameters:
@@ -10,7 +10,7 @@ public extension TelemetryDeck {
     ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
     ///   - floatValue: An optional floating-point value to include with the signal. Default is `nil`.
     ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
-    static func errorOccurred(
+    public static func errorOccurred(
         id: String,
         category: ErrorCategory? = nil,
         message: String? = nil,
@@ -44,7 +44,7 @@ public extension TelemetryDeck {
     ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
     ///   - floatValue: An optional floating-point value to include with the signal. Default is `nil`.
     ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
-    static func errorOccurred(
+    public static func errorOccurred(
         identifiableError: IdentifiableError,
         category: ErrorCategory = .thrownException,
         parameters: [String: String] = [:],
@@ -74,7 +74,7 @@ public extension TelemetryDeck {
     ///  - Note: Use this overload if you want to provide a custom `message` parameter. Prefer ``errorOccurred(identifiableError:category:parameters:floatValue:customUserID:)`` to send
     ///    `error.localizedDescription` as the `message` automatically.
     @_disfavoredOverload
-    static func errorOccurred(
+    public static func errorOccurred(
         identifiableError: IdentifiableError,
         category: ErrorCategory = .thrownException,
         message: String? = nil,

@@ -1,17 +1,23 @@
 import Foundation
 
 #if os(iOS) || os(visionOS)
-import UIKit
+    import UIKit
 #elseif os(macOS)
-import AppKit
+    import AppKit
 #elseif os(watchOS)
-import WatchKit
+    import WatchKit
 #elseif os(tvOS)
-import TVUIKit
+    import TVUIKit
 #endif
 
 protocol SignalManageable {
-    func processSignal(_ signalName: String, parameters: [String: String], floatValue: Double?, customUserID: String?, configuration: TelemetryManagerConfiguration)
+    func processSignal(
+        _ signalName: String,
+        parameters: [String: String],
+        floatValue: Double?,
+        customUserID: String?,
+        configuration: TelemetryManagerConfiguration
+    )
     func attemptToSendNextBatchOfCachedSignals()
 
     @MainActor var defaultUserIdentifier: String { get }
@@ -39,23 +45,48 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         // watchOS and tvOS - We can only really monitor moving to background and foreground to save/load the cache.
         // watchOS pre7.0 - Doesn't have any kind of notification to monitor.
         #if os(macOS)
-        NotificationCenter.default.addObserver(self, selector: #selector(appWillTerminate), name: NSApplication.willTerminateNotification, object: nil)
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(appWillTerminate),
+                name: NSApplication.willTerminateNotification,
+                object: nil
+            )
         #elseif os(watchOS)
-        if #available(watchOS 7.0, *) {
-            // We need to use a delay with these type of notifications because they fire on app load which causes a double load of the cache from disk
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: WKExtension.applicationWillEnterForegroundNotification, object: nil)
-                NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterBackground), name: WKExtension.applicationDidEnterBackgroundNotification, object: nil)
+            if #available(watchOS 7.0, *) {
+                // We need to use a delay with these type of notifications because they fire on app load which causes a double load of the cache from disk
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    NotificationCenter.default.addObserver(
+                        self,
+                        selector: #selector(self.didEnterForeground),
+                        name: WKExtension.applicationWillEnterForegroundNotification,
+                        object: nil
+                    )
+                    NotificationCenter.default.addObserver(
+                        self,
+                        selector: #selector(self.didEnterBackground),
+                        name: WKExtension.applicationDidEnterBackgroundNotification,
+                        object: nil
+                    )
+                }
+            } else {
+                // Pre watchOS 7.0, this library will not use disk caching at all as there are no notifications we can observe.
             }
-        } else {
-            // Pre watchOS 7.0, this library will not use disk caching at all as there are no notifications we can observe.
-        }
         #elseif os(tvOS) || os(iOS) || os(visionOS)
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            // We need to use a delay with these type of notifications because they fire on app load which causes a double load of the cache from disk
-            NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterForeground), name: UIApplication.willEnterForegroundNotification, object: nil)
-            NotificationCenter.default.addObserver(self, selector: #selector(self.didEnterBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
-        }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                // We need to use a delay with these type of notifications because they fire on app load which causes a double load of the cache from disk
+                NotificationCenter.default.addObserver(
+                    self,
+                    selector: #selector(self.didEnterForeground),
+                    name: UIApplication.willEnterForegroundNotification,
+                    object: nil
+                )
+                NotificationCenter.default.addObserver(
+                    self,
+                    selector: #selector(self.didEnterBackground),
+                    name: UIApplication.didEnterBackgroundNotification,
+                    object: nil
+                )
+            }
         #endif
 
         sendCachedSignalsRepeatedly()
@@ -66,7 +97,13 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         attemptToSendNextBatchOfCachedSignals()
 
         sendTimer?.invalidate()
-        sendTimer = Timer.scheduledTimer(timeInterval: Self.minimumSecondsToPassBetweenRequests, target: self, selector: #selector(attemptToSendNextBatchOfCachedSignals), userInfo: nil, repeats: true)
+        sendTimer = Timer.scheduledTimer(
+            timeInterval: Self.minimumSecondsToPassBetweenRequests,
+            target: self,
+            selector: #selector(attemptToSendNextBatchOfCachedSignals),
+            userInfo: nil,
+            repeats: true
+        )
     }
 
     /// Adds a signal to the process queue
@@ -87,7 +124,8 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
                     .map { $0.enrich(signalType: signalName, for: customUserID, floatValue: floatValue) }
                     .reduce([String: String]()) { $0.applying($1) }
 
-                let payload = defaultParameters
+                let payload =
+                    defaultParameters
                     .applying(enrichedMetadata)
                     .applying(parameters)
 
@@ -149,28 +187,28 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
 
 // MARK: - Notifications
 
-private extension SignalManager {
+extension SignalManager {
     @MainActor
-    @objc func appWillTerminate() {
+    @objc fileprivate func appWillTerminate() {
         configuration.logHandler?.log(.debug, message: #function)
 
         #if os(watchOS) || os(macOS)
-        self.signalCache.backupCache()
-        #else
-        if Bundle.main.bundlePath.hasSuffix(".appex") {
-            // we're in an app extension, where `UIApplication.shared` is not available
             self.signalCache.backupCache()
-        } else {
-            // run backup in background task to avoid blocking main thread while ensuring app stays open during write
-            let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
-            DispatchQueue.global(qos: .background).async {
+        #else
+            if Bundle.main.bundlePath.hasSuffix(".appex") {
+                // we're in an app extension, where `UIApplication.shared` is not available
                 self.signalCache.backupCache()
+            } else {
+                // run backup in background task to avoid blocking main thread while ensuring app stays open during write
+                let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
+                DispatchQueue.global(qos: .background).async {
+                    self.signalCache.backupCache()
 
-                DispatchQueue.main.async {
-                    UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                    DispatchQueue.main.async {
+                        UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                    }
                 }
             }
-        }
         #endif
     }
 
@@ -179,49 +217,49 @@ private extension SignalManager {
     /// reload the cache. This also means we miss any signals sent during watchDidEnterForeground
     /// so we merge them into the new cache.
     #if os(watchOS) || os(tvOS) || os(iOS) || os(visionOS)
-    @objc func didEnterForeground() {
-        configuration.logHandler?.log(.debug, message: #function)
+        @objc func didEnterForeground() {
+            configuration.logHandler?.log(.debug, message: #function)
 
-        let currentCache = signalCache.pop()
-        configuration.logHandler?.log(.debug, message: "current cache is \(currentCache.count) signals")
-        signalCache = SignalCache(logHandler: configuration.logHandler)
-        signalCache.push(currentCache)
+            let currentCache = signalCache.pop()
+            configuration.logHandler?.log(.debug, message: "current cache is \(currentCache.count) signals")
+            signalCache = SignalCache(logHandler: configuration.logHandler)
+            signalCache.push(currentCache)
 
-        sendCachedSignalsRepeatedly()
-    }
-
-    @MainActor
-    @objc func didEnterBackground() {
-        configuration.logHandler?.log(.debug, message: #function)
-
-        sendTimer?.invalidate()
-        sendTimer = nil
-
-        #if os(watchOS) || os(macOS)
-        self.signalCache.backupCache()
-        #else
-        if Bundle.main.bundlePath.hasSuffix(".appex") {
-            // we're in an app extension, where `UIApplication.shared` is not available
-            self.signalCache.backupCache()
-        } else {
-            // run backup in background task to avoid blocking main thread while ensuring app stays open during write
-            let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
-            DispatchQueue.global(qos: .background).async {
-                self.signalCache.backupCache()
-
-                DispatchQueue.main.async {
-                    UIApplication.shared.endBackgroundTask(backgroundTaskID)
-                }
-            }
+            sendCachedSignalsRepeatedly()
         }
-        #endif
-    }
+
+        @MainActor
+        @objc func didEnterBackground() {
+            configuration.logHandler?.log(.debug, message: #function)
+
+            sendTimer?.invalidate()
+            sendTimer = nil
+
+            #if os(watchOS) || os(macOS)
+                self.signalCache.backupCache()
+            #else
+                if Bundle.main.bundlePath.hasSuffix(".appex") {
+                    // we're in an app extension, where `UIApplication.shared` is not available
+                    self.signalCache.backupCache()
+                } else {
+                    // run backup in background task to avoid blocking main thread while ensuring app stays open during write
+                    let backgroundTaskID = UIApplication.shared.beginBackgroundTask()
+                    DispatchQueue.global(qos: .background).async {
+                        self.signalCache.backupCache()
+
+                        DispatchQueue.main.async {
+                            UIApplication.shared.endBackgroundTask(backgroundTaskID)
+                        }
+                    }
+                }
+            #endif
+        }
     #endif
 }
 
 // MARK: - Comms
 
-private extension SignalManager {
+extension SignalManager {
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
             let subpath: String
@@ -261,35 +299,37 @@ extension SignalManager {
         guard configuration.defaultUser == nil else { return configuration.defaultUser! }
 
         #if os(iOS) || os(tvOS) || os(visionOS)
-        return UIDevice.current.identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
+            return UIDevice.current.identifierForVendor?.uuidString
+                ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #elseif os(watchOS)
-        if #available(watchOS 6.2, *) {
-            return WKInterfaceDevice.current().identifierForVendor?.uuidString ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
-        } else {
-            return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
-        }
+            if #available(watchOS 6.2, *) {
+                return WKInterfaceDevice.current().identifierForVendor?.uuidString
+                    ?? "unknown user \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
+            } else {
+                return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
+            }
         #elseif os(macOS)
-        if let customDefaults = TelemetryDeck.customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
-            return defaultUserIdentifier
-        } else {
-            let defaultUserIdentifier = UUID().uuidString
-            TelemetryDeck.customDefaults?.set(defaultUserIdentifier, forKey: "defaultUserIdentifier")
-            return defaultUserIdentifier
-        }
+            if let customDefaults = TelemetryDeck.customDefaults, let defaultUserIdentifier = customDefaults.string(forKey: "defaultUserIdentifier") {
+                return defaultUserIdentifier
+            } else {
+                let defaultUserIdentifier = UUID().uuidString
+                TelemetryDeck.customDefaults?.set(defaultUserIdentifier, forKey: "defaultUserIdentifier")
+                return defaultUserIdentifier
+            }
         #else
-        #if DEBUG
-        let line1 = "[Telemetry] On this platform, Telemetry can't generate a unique user identifier."
-        let line2 = "It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html"
-        configuration.logHandler?.log(message: "\(line1) \(line2)")
-        #endif
-        return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
+            #if DEBUG
+                let line1 = "[Telemetry] On this platform, Telemetry can't generate a unique user identifier."
+                let line2 = "It is recommended you supply one yourself. More info: https://telemetrydeck.com/pages/signal-reference.html"
+                configuration.logHandler?.log(message: "\(line1) \(line2)")
+            #endif
+            return "unknown user \(DefaultSignalPayload.platform) \(DefaultSignalPayload.systemVersion) \(DefaultSignalPayload.buildNumber)"
         #endif
     }
 }
 
-private extension URLResponse {
+extension URLResponse {
     /// Returns the HTTP status code
-    func statusCode() -> Int? {
+    fileprivate func statusCode() -> Int? {
         if let httpResponse = self as? HTTPURLResponse {
             return httpResponse.statusCode
         }
@@ -297,9 +337,9 @@ private extension URLResponse {
     }
 
     /// Returns an `Error` if not a valid statusCode
-    func statusCodeError() -> Error? {
+    fileprivate func statusCodeError() -> Error? {
         // Check for valid response in the 200-299 range
-        guard (200 ... 299).contains(statusCode() ?? 0) else {
+        guard (200...299).contains(statusCode() ?? 0) else {
             if statusCode() == 401 {
                 return TelemetryError.unauthorised
             } else if statusCode() == 403 {

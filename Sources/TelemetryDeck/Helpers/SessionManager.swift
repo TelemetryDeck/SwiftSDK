@@ -1,9 +1,9 @@
 #if canImport(WatchKit)
-import WatchKit
+    import WatchKit
 #elseif canImport(UIKit)
-import UIKit
+    import UIKit
 #elseif canImport(AppKit)
-import AppKit
+    import AppKit
 #endif
 
 @available(watchOS 7, *)
@@ -114,8 +114,7 @@ final class SessionManager: @unchecked Sendable {
     private let persistenceQueue = DispatchQueue(label: "com.telemetrydeck.sessionmanager.persistence")
 
     private init() {
-        if
-            let existingSessionData = TelemetryDeck.customDefaults?.data(forKey: Self.recentSessionsKey),
+        if let existingSessionData = TelemetryDeck.customDefaults?.data(forKey: Self.recentSessionsKey),
             let existingSessions = try? Self.decoder.decode([StoredSession].self, from: existingSessionData)
         {
             // upon app start, clean up any sessions older than 90 days to keep dict small
@@ -230,47 +229,47 @@ final class SessionManager: @unchecked Sendable {
 
     private func setupAppLifecycleObservers() {
         #if canImport(WatchKit)
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleDidEnterBackgroundNotification),
-            name: WKApplication.didEnterBackgroundNotification,
-            object: nil
-        )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleDidEnterBackgroundNotification),
+                name: WKApplication.didEnterBackgroundNotification,
+                object: nil
+            )
 
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleWillEnterForegroundNotification),
-            name: WKApplication.willEnterForegroundNotification,
-            object: nil
-        )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleWillEnterForegroundNotification),
+                name: WKApplication.willEnterForegroundNotification,
+                object: nil
+            )
         #elseif canImport(UIKit)
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleDidEnterBackgroundNotification),
-            name: UIApplication.didEnterBackgroundNotification,
-            object: nil
-        )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleDidEnterBackgroundNotification),
+                name: UIApplication.didEnterBackgroundNotification,
+                object: nil
+            )
 
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleWillEnterForegroundNotification),
-            name: UIApplication.willEnterForegroundNotification,
-            object: nil
-        )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleWillEnterForegroundNotification),
+                name: UIApplication.willEnterForegroundNotification,
+                object: nil
+            )
         #elseif canImport(AppKit)
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleDidEnterBackgroundNotification),
-            name: NSApplication.didResignActiveNotification,
-            object: nil
-        )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleDidEnterBackgroundNotification),
+                name: NSApplication.didResignActiveNotification,
+                object: nil
+            )
 
-        NotificationCenter.default.addObserver(
-            self,
-            selector: #selector(handleWillEnterForegroundNotification),
-            name: NSApplication.willBecomeActiveNotification,
-            object: nil
-        )
+            NotificationCenter.default.addObserver(
+                self,
+                selector: #selector(handleWillEnterForegroundNotification),
+                name: NSApplication.willBecomeActiveNotification,
+                object: nil
+            )
         #endif
     }
 }

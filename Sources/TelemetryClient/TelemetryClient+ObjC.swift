@@ -1,5 +1,5 @@
-import TelemetryDeck
 import Foundation
+import TelemetryDeck
 
 @objc(TelemetryManagerConfiguration)
 public final class TelemetryManagerConfigurationObjCProxy: NSObject {

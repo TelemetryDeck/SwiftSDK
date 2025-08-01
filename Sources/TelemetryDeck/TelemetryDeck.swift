@@ -61,7 +61,8 @@ public enum TelemetryDeck {
             } else if Self.reservedKeysLowercased.contains(combinedSignalName.lowercased()) {
                 configuration.logHandler?.log(
                     .error,
-                    message: "Sending signal with reserved name '\(combinedSignalName)' will cause unexpected behavior. Please use another name instead."
+                    message:
+                        "Sending signal with reserved name '\(combinedSignalName)' will cause unexpected behavior. Please use another name instead."
                 )
             }
 
@@ -70,12 +71,14 @@ public enum TelemetryDeck {
                 if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
                     configuration.logHandler?.log(
                         .error,
-                        message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+                        message:
+                            "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
                     )
                 } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
                     configuration.logHandler?.log(
                         .error,
-                        message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
+                        message:
+                            "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
                     )
                 }
             }
@@ -169,7 +172,8 @@ public enum TelemetryDeck {
             if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
                 configuration.logHandler?.log(
                     .error,
-                    message: "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
+                    message:
+                        "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
                 )
             } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
                 configuration.logHandler?.log(

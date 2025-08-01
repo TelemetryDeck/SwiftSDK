@@ -1,8 +1,9 @@
-#if canImport(CryptoKit)
-import CryptoKit
-#endif
 import CommonCrypto
 import Foundation
+
+#if canImport(CryptoKit)
+    import CryptoKit
+#endif
 
 /// A wrapper for crypto hash algorithms.
 enum CryptoHashing {

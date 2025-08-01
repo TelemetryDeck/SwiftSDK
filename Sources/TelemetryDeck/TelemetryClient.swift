@@ -198,7 +198,7 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
 
     @available(*, deprecated, renamed: "sendSignalsInDebugConfiguration")
     public var telemetryAllowDebugBuilds: Bool {
-        get { return sendSignalsInDebugConfiguration }
+        get { sendSignalsInDebugConfiguration }
         set { sendSignalsInDebugConfiguration = newValue }
     }
 }
@@ -212,7 +212,12 @@ public final class TelemetryManager: @unchecked Sendable {
         initializedTelemetryManager != nil
     }
 
-    @available(*, deprecated, renamed: "TelemetryDeck.initialize(config:)", message: "This call was renamed to `TelemetryDeck.initialize(config:)`. Please migrate – a fix-it is available.")
+    @available(
+        *,
+        deprecated,
+        renamed: "TelemetryDeck.initialize(config:)",
+        message: "This call was renamed to `TelemetryDeck.initialize(config:)`. Please migrate – a fix-it is available."
+    )
     public static func initialize(with configuration: TelemetryManagerConfiguration) {
         initializedTelemetryManager = TelemetryManager(configuration: configuration)
     }
@@ -224,7 +229,12 @@ public final class TelemetryManager: @unchecked Sendable {
     /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
     ///
     /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
-    @available(*, deprecated, renamed: "TelemetryDeck.terminate()", message: "This call was renamed to `TelemetryDeck.terminate()`. Please migrate – a fix-it is available.")
+    @available(
+        *,
+        deprecated,
+        renamed: "TelemetryDeck.terminate()",
+        message: "This call was renamed to `TelemetryDeck.terminate()`. Please migrate – a fix-it is available."
+    )
     public static func terminate() {
         TelemetryDeck.terminate()
     }
@@ -232,7 +242,12 @@ public final class TelemetryManager: @unchecked Sendable {
     /// Send a Signal to TelemetryDeck, to record that an event has occurred.
     ///
     /// If you specify parameters, they will be sent in addition to the default parameters which include OS Version, App Version, and more.
-    @available(*, deprecated, renamed: "TelemetryDeck.signal(_:parameters:)", message: "This call was renamed to `TelemetryDeck.signal(_:parameters:)`. Please migrate – a fix-it is available.")
+    @available(
+        *,
+        deprecated,
+        renamed: "TelemetryDeck.signal(_:parameters:)",
+        message: "This call was renamed to `TelemetryDeck.signal(_:parameters:)`. Please migrate – a fix-it is available."
+    )
     public static func send(_ signalName: String, with parameters: [String: String] = [:]) {
         send(signalName, for: nil, floatValue: nil, with: parameters)
     }
@@ -244,10 +259,13 @@ public final class TelemetryManager: @unchecked Sendable {
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     @_disfavoredOverload
     @available(
-        *, deprecated,
-        message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
+        *,
+        deprecated,
+        message:
+            "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
     )
-    public static func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
+    public static func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:])
+    {
         TelemetryManager.shared.send(signalName, for: customUserID, floatValue: floatValue, with: parameters)
     }
 
@@ -257,7 +275,12 @@ public final class TelemetryManager: @unchecked Sendable {
     ///
     /// This function does not guarantee that the signal cache will be sent right away. Calling this after every ``send`` will not make data reach our servers faster, so avoid doing that.
     /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn data because a user closes your app and doesn't reopen it anytime soon (if at all).
-    @available(*, deprecated, renamed: "TelemetryDeck.requestImmediateSync()", message: "This call was renamed to `TelemetryDeck.requestImmediateSync()`. Please migrate – a fix-it is available.")
+    @available(
+        *,
+        deprecated,
+        renamed: "TelemetryDeck.requestImmediateSync()",
+        message: "This call was renamed to `TelemetryDeck.requestImmediateSync()`. Please migrate – a fix-it is available."
+    )
     public static func requestImmediateSync() {
         TelemetryManager.shared.requestImmediateSync()
     }
@@ -284,7 +307,12 @@ public final class TelemetryManager: @unchecked Sendable {
     ///
     /// Note that just as with specifying the user identifier with the `send` call, the identifier will never leave the device.
     /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
-    @available(*, deprecated, renamed: "TelemetryDeck.updateDefaultUserID(to:)", message: "This call was renamed to `TelemetryDeck.updateDefaultUserID(to:)`. Please migrate – a fix-it is available.")
+    @available(
+        *,
+        deprecated,
+        renamed: "TelemetryDeck.updateDefaultUserID(to:)",
+        message: "This call was renamed to `TelemetryDeck.updateDefaultUserID(to:)`. Please migrate – a fix-it is available."
+    )
     public static func updateDefaultUser(to newDefaultUser: String?) {
         TelemetryManager.shared.updateDefaultUser(to: newDefaultUser)
     }
@@ -300,7 +328,12 @@ public final class TelemetryManager: @unchecked Sendable {
     }
 
     /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
-    @available(*, deprecated, renamed: "TelemetryDeck.generateNewSession()", message: "This call was renamed to `TelemetryDeck.generateNewSession()`. Please migrate – a fix-it is available.")
+    @available(
+        *,
+        deprecated,
+        renamed: "TelemetryDeck.generateNewSession()",
+        message: "This call was renamed to `TelemetryDeck.generateNewSession()`. Please migrate – a fix-it is available."
+    )
     public static func generateNewSession() {
         TelemetryManager.shared.generateNewSession()
     }
@@ -315,8 +348,10 @@ public final class TelemetryManager: @unchecked Sendable {
     ///
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     @available(
-        *, deprecated,
-        message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
+        *,
+        deprecated,
+        message:
+            "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
     )
     public func send(_ signalName: String, with parameters: [String: String] = [:]) {
         send(signalName, for: nil, floatValue: nil, with: parameters)
@@ -329,8 +364,10 @@ public final class TelemetryManager: @unchecked Sendable {
     /// If you specify a payload, it will be sent in addition to the default payload which includes OS Version, App Version, and more.
     @_disfavoredOverload
     @available(
-        *, deprecated,
-        message: "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
+        *,
+        deprecated,
+        message:
+            "This call was renamed to `TelemetryDeck.signal(_:parameters:floatValue:customUserID:)`. Please migrate – no fix-it possible due to the changed order of arguments."
     )
     public func send(_ signalName: String, for customUserID: String? = nil, floatValue: Double? = nil, with parameters: [String: String] = [:]) {
         TelemetryDeck.signal(signalName, parameters: parameters, floatValue: floatValue, customUserID: customUserID)

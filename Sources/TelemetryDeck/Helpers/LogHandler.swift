@@ -1,6 +1,7 @@
 import Foundation
+
 #if canImport(OSLog)
-import OSLog
+    import OSLog
 #endif
 
 public struct LogHandler: Sendable {
@@ -37,13 +38,13 @@ public struct LogHandler: Sendable {
 
     public static func standard(_ logLevel: LogLevel) -> LogHandler {
         #if canImport(OSLog)
-        if #available(iOS 15, macOS 11, tvOS 15, watchOS 8, *) {
-            return Self.oslog(logLevel)
-        } else {
-            return Self.stdout(logLevel)
-        }
+            if #available(iOS 15, macOS 11, tvOS 15, watchOS 8, *) {
+                return Self.oslog(logLevel)
+            } else {
+                return Self.stdout(logLevel)
+            }
         #else
-        return Self.stdout(logLevel)
+            return Self.stdout(logLevel)
         #endif
     }
 

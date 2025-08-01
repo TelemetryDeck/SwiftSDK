@@ -30,8 +30,7 @@ final class TrialConversionTracker: @unchecked Sendable {
 
     private var currentTrial: StoredTrial? {
         get {
-            if
-                let trialData = TelemetryDeck.customDefaults?.data(forKey: Self.lastTrialKey),
+            if let trialData = TelemetryDeck.customDefaults?.data(forKey: Self.lastTrialKey),
                 let trial = try? JSONDecoder().decode(StoredTrial.self, from: trialData)
             {
                 return trial
@@ -81,13 +80,11 @@ final class TrialConversionTracker: @unchecked Sendable {
                 guard case .verified(let transaction) = verificationResult else { continue }
 
                 // Check if this transaction matches our trial product
-                if
-                    let currentTrial = self.currentTrial,
+                if let currentTrial = self.currentTrial,
                     transaction.productID == currentTrial.productID,
                     transaction.originalID == currentTrial.originalTransactionID
                 {
-                    if
-                        transaction.revocationDate != nil
+                    if transaction.revocationDate != nil
                         || transaction.expirationDate?.isInThePast == true
                         || transaction.isUpgraded
                     {

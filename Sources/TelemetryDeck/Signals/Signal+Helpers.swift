@@ -1,14 +1,14 @@
 import Foundation
 
 #if os(iOS)
-import UIKit
+    import UIKit
 #elseif os(macOS)
-import AppKit
-import IOKit
+    import AppKit
+    import IOKit
 #elseif os(watchOS)
-import WatchKit
+    import WatchKit
 #elseif os(tvOS)
-import TVUIKit
+    import TVUIKit
 #endif
 
 extension DefaultSignalPayload {
@@ -34,7 +34,7 @@ extension DefaultSignalPayload {
         return [
             // Day-based metrics
             "TelemetryDeck.Calendar.dayOfMonth": "\(components.day ?? -1)",
-            "TelemetryDeck.Calendar.dayOfWeek": "\(dayOfWeek)", // 1 = Monday, 7 = Sunday
+            "TelemetryDeck.Calendar.dayOfWeek": "\(dayOfWeek)",  // 1 = Monday, 7 = Sunday
             "TelemetryDeck.Calendar.dayOfYear": "\(dayOfYear)",
 
             // Week-based metrics
@@ -46,7 +46,7 @@ extension DefaultSignalPayload {
             "TelemetryDeck.Calendar.quarterOfYear": "\(components.quarter ?? -1)",
 
             // Hours in 1-24 format
-            "TelemetryDeck.Calendar.hourOfDay": "\((components.hour ?? -1) + 1)"
+            "TelemetryDeck.Calendar.hourOfDay": "\((components.hour ?? -1) + 1)",
         ]
     }
 
@@ -128,7 +128,7 @@ extension DefaultSignalPayload {
 
     /// The major system version, i.e. iOS 15
     static var majorSystemVersion: String {
-        return "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
+        "\(platform) \(ProcessInfo.processInfo.operatingSystemVersion.majorVersion)"
     }
 
     /// The major system version, i.e. iOS 15
@@ -177,7 +177,8 @@ extension DefaultSignalPayload {
                 let service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
                 var modelIdentifier: String?
 
-                if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data {
+                if let modelData = IORegistryEntryCreateCFProperty(service, "model" as CFString, kCFAllocatorDefault, 0).takeRetainedValue() as? Data
+                {
                     if let modelIdentifierCString = String(data: modelData, encoding: .utf8)?.cString(using: .utf8) {
                         modelIdentifier = String(cString: modelIdentifierCString)
                     }
@@ -277,7 +278,7 @@ extension DefaultSignalPayload {
 
     /// The locale identifier the app currently runs in. E.g. `en_DE` for an app that does not support German on a device with preferences `[German, English]`, and region Germany.
     static var locale: String {
-        return Locale.current.identifier
+        Locale.current.identifier
     }
 
     /// The region identifier both the user most prefers and also the app is set to. They are always the same because formatters in apps always auto-adjust to the users preferences.
