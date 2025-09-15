@@ -34,6 +34,7 @@ final class DurationSignalTracker: @unchecked Sendable {
         }
     }
 
+    @discardableResult
     func stopTracking(_ signalName: String) -> (duration: TimeInterval, parameters: [String: String])? {
         self.queue.sync {
             guard let trackingData = self.startedSignals[signalName] else { return nil }
