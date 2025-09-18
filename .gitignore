@@ -2,3 +2,6 @@
 /.build
 /Packages
 xcuserdata/
+.claude/
+Context.md
+Context/
