@@ -120,10 +120,8 @@ public enum TelemetryDeck {
     /// If no matching signal was started, this function does nothing.
     @MainActor
     @available(watchOS 7.0, *)
-    public static func cancelDurationSignal(
-        _ signalName: String
-    ) {
-        guard DurationSignalTracker.shared.stopTracking(signalName) != nil else { return }
+    public static func cancelDurationSignal(_ signalName: String) {
+        DurationSignalTracker.shared.stopTracking(signalName)
     }
 
     /// Stops tracking the duration of a signal and sends it with the total duration.
