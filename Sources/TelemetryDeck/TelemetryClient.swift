@@ -10,7 +10,7 @@ import Foundation
     import TVUIKit
 #endif
 
-let sdkVersion = "2.9.4"
+let sdkVersion = "2.9.5"
 
 /// Configuration for TelemetryManager
 ///
