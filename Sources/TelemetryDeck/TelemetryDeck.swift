@@ -110,6 +110,20 @@ public enum TelemetryDeck {
         DurationSignalTracker.shared.startTracking(signalName, parameters: parameters, includeBackgroundTime: includeBackgroundTime)
     }
 
+    /// Cancels tracking of a duration signal without sending it.
+    ///
+    /// - Parameter signalName: The name of the signal that was previously started with ``startDurationSignal(_:parameters:includeBackgroundTime:)``.
+    ///
+    /// Call this function when you want to discard a duration signal entirely without transmitting it.
+    /// This is useful in cases such as when a user disables telemetry mid-session and any active timers should be cancelled without sending data.
+    ///
+    /// If no matching signal was started, this function does nothing.
+    @MainActor
+    @available(watchOS 7.0, *)
+    public static func cancelDurationSignal(_ signalName: String) {
+        DurationSignalTracker.shared.stopTracking(signalName)
+    }
+
     /// Stops tracking the duration of a signal and sends it with the total duration.
     ///
     /// - Parameters:
