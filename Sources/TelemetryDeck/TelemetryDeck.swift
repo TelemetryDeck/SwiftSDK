@@ -22,6 +22,15 @@ public enum TelemetryDeck {
     /// For example, you might want to call this in your `init` method of your app's `@main` entry point.
     public static func initialize(config: Config) {
         TelemetryManager.initializedTelemetryManager = TelemetryManager(configuration: config)
+
+        // Initialize environment detection asynchronously
+        // This will use StoreKit 2 on iOS 16+ or fallback to receipt-based detection
+        if #available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *) {
+            Task {
+                await DefaultSignalPayload.initializeEnvironmentDetection()
+            }
+        }
+        // On older OS versions, the fallback method will be used on first access
     }
 
     /// Sends a telemetry signal with optional parameters to TelemetryDeck.
