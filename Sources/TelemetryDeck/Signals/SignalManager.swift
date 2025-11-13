@@ -262,13 +262,16 @@ extension SignalManager {
 extension SignalManager {
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
-            let subpath: String
+            let url: URL
             if let namespace = self.configuration.namespace, !namespace.isEmpty {
-                subpath = "/v2/namespace/\(namespace)/"
+                url = self.configuration.apiBaseURL
+                    .appendingPathComponent("v2")
+                    .appendingPathComponent("namespace")
+                    .appendingPathComponent(namespace)
             } else {
-                subpath = "/v2/"
+                url = self.configuration.apiBaseURL
+                    .appendingPathComponent("v2")
             }
-            let url = self.configuration.apiBaseURL.appendingPathComponent(subpath)
 
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
