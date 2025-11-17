@@ -263,11 +263,14 @@ extension SignalManager {
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
             guard let url = SignalManager.getServiceUrl(baseURL: self.configuration.apiBaseURL, namespace: self.configuration.namespace) else {
-                self.configuration.logHandler?.log(.error, message: "Unable to construct signal API URL for namespace \(self.configuration.namespace ?? "nil")")
+                self.configuration.logHandler?.log(
+                    .error,
+                    message: "Unable to construct signal API URL for namespace \(self.configuration.namespace ?? "nil")"
+                )
                 DispatchQueue.main.async { completionHandler(nil, nil, TelemetryError.invalidEndpointUrl) }
                 return
             }
-            
+
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
