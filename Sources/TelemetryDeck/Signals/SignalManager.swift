@@ -262,15 +262,13 @@ extension SignalManager {
 extension SignalManager {
     private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
-            let url: URL
-            if let namespace = self.configuration.namespace, !namespace.isEmpty {
-                url = self.configuration.apiBaseURL
-                    .appendingPathComponent("v2")
-                    .appendingPathComponent("namespace")
-                    .appendingPathComponent(namespace)
-            } else {
-                url = self.configuration.apiBaseURL
-                    .appendingPathComponent("v2")
+            guard let url = SignalManager.getServiceUrl(baseURL: self.configuration.apiBaseURL, namespace: self.configuration.namespace) else {
+                self.configuration.logHandler?.log(
+                    .error,
+                    message: "Unable to construct signal API URL for namespace \(self.configuration.namespace ?? "nil")"
+                )
+                DispatchQueue.main.async { completionHandler(nil, nil, TelemetryError.invalidEndpointUrl) }
+                return
             }
 
             var urlRequest = URLRequest(url: url)
@@ -290,6 +288,21 @@ extension SignalManager {
             let task = self.configuration.urlSession.dataTask(with: urlRequest, completionHandler: completionHandler)
             task.resume()
         }
+    }
+
+    static func getServiceUrl(baseURL: URL, namespace: String? = nil) -> URL? {
+        let path =
+            if let namespace = namespace, !namespace.isEmpty {
+                "/v2/namespace/\(namespace)/"
+            } else {
+                "/v2/"
+            }
+
+        guard let serviceURL = URL(string: path, relativeTo: baseURL)?.standardized else {
+            return nil
+        }
+
+        return serviceURL
     }
 }
 
@@ -364,6 +377,7 @@ private enum TelemetryError: Error {
     case forbidden
     case payloadTooLarge
     case invalidStatusCode(statusCode: Int)
+    case invalidEndpointUrl
 }
 
 extension TelemetryError: LocalizedError {
@@ -377,6 +391,8 @@ extension TelemetryError: LocalizedError {
             return "Forbidden (403)"
         case .payloadTooLarge:
             return "Payload is too large (413)"
+        case .invalidEndpointUrl:
+            return "Invalid endpoint URL"
         }
     }
 }
