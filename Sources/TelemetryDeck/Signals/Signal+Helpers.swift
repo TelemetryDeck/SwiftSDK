@@ -11,53 +11,7 @@ import Foundation
     import TVUIKit
 #endif
 
-#if canImport(StoreKit)
-    import StoreKit
-#endif
-
 extension DefaultSignalPayload {
-    /// Cached TestFlight detection from StoreKit 2 (true=TestFlight, false=AppStore, nil=unknown).
-    private nonisolated(unsafe) static var cachedIsTestFlight: Bool?
-
-    /// Initializes environment detection (StoreKit 2 on iOS 16+, receipt-based fallback on older OS).
-    @available(macOS 10.15, iOS 13.0, watchOS 6.0, tvOS 13.0, *)
-    static func initializeEnvironmentDetection() async {
-        // Use StoreKit 2 on iOS 16+ for most reliable detection
-        #if canImport(StoreKit)
-            if #available(iOS 16.0, macOS 13.0, tvOS 16.0, watchOS 9.0, *) {
-                do {
-                    let transaction = try await AppTransaction.shared
-
-                    switch transaction {
-                    case let .verified(appTransaction):
-                        // Check the environment property
-                        Self.cachedIsTestFlight = appTransaction.environment == .sandbox
-                        return
-                    case .unverified:
-                        // If verification fails, fall back to receipt-based detection
-                        Self.cachedIsTestFlight = Self.isTestFlightViaReceipt()
-                        return
-                    }
-                } catch {
-                    // If AppTransaction fails, fall back to receipt-based detection
-                    Self.cachedIsTestFlight = Self.isTestFlightViaReceipt()
-                    return
-                }
-            }
-        #endif
-
-        // For iOS < 16, use receipt-based detection
-        Self.cachedIsTestFlight = isTestFlightViaReceipt()
-    }
-
-    /// Receipt-based TestFlight detection fallback for iOS < 16 or when StoreKit 2 is unavailable.
-    private static func isTestFlightViaReceipt() -> Bool {
-        guard let receiptURL = Bundle.main.appStoreReceiptURL else {
-            return false
-        }
-        // TestFlight builds have "sandboxReceipt" while App Store builds have "receipt"
-        return receiptURL.lastPathComponent == "sandboxReceipt"
-    }
 
     static var calendarParameters: [String: String] {
         let calendar = Calendar(identifier: .gregorian)
@@ -147,23 +101,13 @@ extension DefaultSignalPayload {
     }
 
     /// Detects if the app is running in a TestFlight environment.
-    ///
-    /// Uses StoreKit 2's `AppTransaction.shared.environment` on iOS 16+ for reliable detection,
-    /// falling back to receipt-based detection (`sandboxReceipt` vs `receipt`) on earlier OS versions.
-    ///
-    /// The environment is detected asynchronously during `TelemetryDeck.initialize()` and cached
-    /// for fast synchronous access throughout the app session.
+    /// This check is based on whether `Bundle.main.appStoreReceiptURL?.path` contains `sandboxReceipt`. The property is always false when the `DEBUG` compiler flag has been set or when running in the simulator. This check relies on the app receipt being present and available, otherwise it returns `false`.
     ///
     /// - Returns: `true` if running in TestFlight, `false` otherwise
     static var isTestFlight: Bool {
-        #if DEBUG
-            return false
-        #elseif targetEnvironment(simulator)
-            return false
-        #else
-            // Use cached value if available, otherwise use receipt-based fallback
-            return cachedIsTestFlight ?? isTestFlightViaReceipt()
-        #endif
+        guard !isDebug, !isSimulator else { return false }
+        guard let receiptURL = Bundle.main.appStoreReceiptURL else { return false }
+        return receiptURL.lastPathComponent == "sandboxReceipt" || receiptURL.path.contains("sandboxReceipt")
     }
 
     /// Detects if the app is running in an App Store production environment.
