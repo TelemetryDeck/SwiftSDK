@@ -101,13 +101,16 @@ extension DefaultSignalPayload {
     }
 
     /// Detects if the app is running in a TestFlight environment.
-    /// This check is based on whether `Bundle.main.appStoreReceiptURL?.path` contains `sandboxReceipt`. The property is always false when the `DEBUG` compiler flag has been set or when running in the simulator. This check relies on the app receipt being present and available, otherwise it returns `false`.
+    /// This check is based on whether `Bundle.main.appStoreReceiptURL?.path` contains `sandboxReceipt`.
+    /// The property is always false when the `DEBUG` compiler flag has been set or when running in the simulator.
+    /// This check relies on the app receipt being present and available, otherwise it returns `false`.
     ///
     /// - Returns: `true` if running in TestFlight, `false` otherwise
     static var isTestFlight: Bool {
         guard !isDebug, !isSimulator else { return false }
         guard let receiptURL = Bundle.main.appStoreReceiptURL else { return false }
-        return receiptURL.lastPathComponent == "sandboxReceipt" || receiptURL.path.contains("sandboxReceipt")
+        return receiptURL.lastPathComponent == "sandboxReceipt" ||
+        receiptURL.path.contains("sandboxReceipt")
     }
 
     /// Detects if the app is running in an App Store production environment.
