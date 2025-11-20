@@ -127,11 +127,7 @@ extension DefaultSignalPayload {
         #elseif targetEnvironment(simulator)
             return false
         #else
-            // Use cached value if available, otherwise use receipt-based fallback
-            if let isTestFlight = cachedIsTestFlight {
-                return !isTestFlight
-            }
-            return !Self.isTestFlightViaReceipt()
+            return !isSimulatorOrTestFlight
         #endif
     }
 
