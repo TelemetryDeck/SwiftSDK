@@ -195,7 +195,7 @@ extension SignalManager {
         #if os(watchOS) || os(macOS)
             self.signalCache.backupCache()
         #else
-            if Bundle.main.bundlePath.hasSuffix(".appex") {
+            if TelemetryEnvironment.isAppExtension {
                 // we're in an app extension, where `UIApplication.shared` is not available
                 self.signalCache.backupCache()
             } else {
@@ -238,7 +238,7 @@ extension SignalManager {
             #if os(watchOS) || os(macOS)
                 self.signalCache.backupCache()
             #else
-                if Bundle.main.bundlePath.hasSuffix(".appex") {
+                if TelemetryEnvironment.isAppExtension {
                     // we're in an app extension, where `UIApplication.shared` is not available
                     self.signalCache.backupCache()
                 } else {
