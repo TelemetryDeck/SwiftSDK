@@ -66,7 +66,7 @@ extension DefaultSignalPayload {
             }
 
             // in app extensions `UIApplication.shared` is not available
-            if !Bundle.main.bundlePath.hasSuffix(".appex") {
+            if !TelemetryEnvironment.isAppExtension {
                 a11yParams["TelemetryDeck.Accessibility.preferredContentSizeCategory"] = UIApplication.shared.preferredContentSizeCategory.rawValue
                     .replacingOccurrences(of: "UICTContentSizeCategory", with: "")  // replaces output "UICTContentSizeCategoryL" with "L"
             }
@@ -346,7 +346,7 @@ extension DefaultSignalPayload {
     @MainActor
     static var layoutDirection: String {
         #if os(iOS) || os(tvOS)
-            if Bundle.main.bundlePath.hasSuffix(".appex") {
+            if TelemetryEnvironment.isAppExtension {
                 // we're in an app extension, where `UIApplication.shared` is not available
                 return "N/A"
             } else {
