@@ -1,7 +1,14 @@
 import Foundation
 
 extension TelemetryDeck {
-    private static func referralSent(
+    /// Sends a telemetry signal indicating that a referral has been sent.
+    ///
+    /// - Parameters:
+    ///   - receiversCount: The number of recipients who received the referral. Default is `1`.
+    ///   - kind: An optional categorization of the referral type (e.g., "email", "social", "sms"). Default is `nil`.
+    ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
+    ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
+    public static func referralSent(
         receiversCount: Int = 1,
         kind: String? = nil,
         parameters: [String: String] = [:],
@@ -20,7 +27,14 @@ extension TelemetryDeck {
         )
     }
 
-    private static func userRatingSubmitted(
+    /// Sends a telemetry signal indicating that a user has submitted a rating.
+    ///
+    /// - Parameters:
+    ///   - rating: The rating value submitted by the user. Must be between 0 and 10 inclusive.
+    ///   - comment: An optional comment or feedback text accompanying the rating. Default is `nil`.
+    ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
+    ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
+    public static func userRatingSubmitted(
         rating: Int,
         comment: String? = nil,
         parameters: [String: String] = [:],
