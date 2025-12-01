@@ -1,7 +1,12 @@
 import Foundation
 
 extension TelemetryDeck {
-    private static func onboardingCompleted(
+    /// Sends a telemetry signal indicating that a user has completed the onboarding process.
+    ///
+    /// - Parameters:
+    ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
+    ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
+    public static func onboardingCompleted(
         parameters: [String: String] = [:],
         customUserID: String? = nil
     ) {
@@ -14,7 +19,13 @@ extension TelemetryDeck {
         )
     }
 
-    private static func coreFeatureUsed(
+    /// Sends a telemetry signal indicating that a core feature of the application has been used.
+    ///
+    /// - Parameters:
+    ///   - featureName: The name of the core feature that was used.
+    ///   - parameters: Additional parameters to include with the signal. Default is an empty dictionary.
+    ///   - customUserID: An optional custom user identifier. If provided, it overrides the default user identifier from the configuration. Default is `nil`.
+    public static func coreFeatureUsed(
         featureName: String,
         parameters: [String: String] = [:],
         customUserID: String? = nil
