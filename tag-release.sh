@@ -12,10 +12,10 @@ fi
 version=$1
 
 # Replace version String in TelemetryClient.swift with specified version
-sed -i '' "s/\"SwiftClient .*\"/\"SwiftClient $version\"/g" Sources/TelemetryClient/TelemetryClient.swift
+sed -i '' "s/\"SwiftClient .*\"/\"SwiftClient $version\"/g" Sources/TelemetryDeck/TelemetryClient.swift
 
 # Make a commit & tag it
-git add Sources/TelemetryClient/TelemetryClient.swift
+git add Sources/TelemetryDeck/TelemetryClient.swift
 git commit -m "Bump Version to $version"
 git tag $version $(git rev-parse HEAD)
 
