@@ -12,7 +12,7 @@ fi
 version=$1
 
 # Replace version String in TelemetryClient.swift with specified version
-sed -i '' "s/\"SwiftClient .*\"/\"SwiftClient $version\"/g" Sources/TelemetryDeck/TelemetryClient.swift
+sed -i '' "s/let sdkVersion = \".*\"/let sdkVersion = \"$version\"/" Sources/TelemetryDeck/TelemetryClient.swift
 
 # Make a commit & tag it
 git add Sources/TelemetryDeck/TelemetryClient.swift
