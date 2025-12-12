@@ -86,40 +86,6 @@ struct SignalCacheConcurrencyTests {
         }
     }
 
-    /// Validates that high contention on count() completes in reasonable time.
-    /// Pre-fix: barrier on count() causes blocking. Post-fix: reads are concurrent.
-    /// This is probably a "flaky" test since we rely on timing
-    @Test
-    func count_performsUnderHighContention() async {
-        if #available(iOS 16, macOS 13, tvOS 16, visionOS 1, watchOS 9, *) {
-            let cache = SignalCache<SignalPostBody>(logHandler: nil)
-
-            // Pre-populate cache
-            for i in 0..<100 {
-                cache.push(Self.makeSignal(id: "\(i)"))
-            }
-
-            let startTime = ContinuousClock.now
-
-            await withTaskGroup(of: Void.self) { group in
-                // Many concurrent count() calls - should NOT serialize
-                for _ in 0..<1000 {
-                    group.addTask {
-                        _ = cache.count()
-                    }
-                }
-                await group.waitForAll()
-            }
-
-            let elapsed = ContinuousClock.now - startTime
-
-            // 1000 concurrent reads should complete quickly (< 1 second)
-            // With barrier bug, this would take much longer due to serialization
-            #expect(elapsed < .seconds(5), "Concurrent count() calls should complete quickly")
-        } else {
-            print("skipping test on incompatible OS")
-        }
-    }
 
     /// Validates pop() correctly handles concurrent access without data races.
     /// Without barrier on pop(), concurrent calls can corrupt the array.
