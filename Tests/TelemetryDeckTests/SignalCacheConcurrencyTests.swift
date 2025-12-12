@@ -86,7 +86,6 @@ struct SignalCacheConcurrencyTests {
         }
     }
 
-
     /// Validates pop() correctly handles concurrent access without data races.
     /// Without barrier on pop(), concurrent calls can corrupt the array.
     /// Run multiple iterations to increase probability of catching race condition.

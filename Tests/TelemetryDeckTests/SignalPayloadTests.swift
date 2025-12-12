@@ -1,5 +1,6 @@
-@testable import TelemetryDeck
 import Testing
+
+@testable import TelemetryDeck
 
 struct DefaultSignalPayloadTests {
     @Test
@@ -68,7 +69,7 @@ struct DefaultSignalPayloadTests {
     @Test
     func operatingSystem() {
         let expectedResult: String
-        
+
         #if os(macOS)
             expectedResult = "macOS"
         #elseif os(iOS)
@@ -84,7 +85,7 @@ struct DefaultSignalPayloadTests {
         #else
             return "Unknown Operating System"
         #endif
-        
+
         #expect(expectedResult == DefaultSignalPayload.operatingSystem)
 
         print("operatingSystem", DefaultSignalPayload.operatingSystem)

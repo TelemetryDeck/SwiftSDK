@@ -1,5 +1,6 @@
-@testable import TelemetryDeck
 import Testing
+
+@testable import TelemetryDeck
 
 actor LogHandlerTests {
     var counter: Int = 0
@@ -17,7 +18,7 @@ actor LogHandlerTests {
                 await self.increment()
             }
         }
-        
+
         #expect(counter == 0)
 
         handler.log(.debug, message: "")
@@ -40,7 +41,7 @@ actor LogHandlerTests {
                 await self.setLastLevel(level)
             }
         }
-        
+
         handler.log(message: "")
         try await Task.sleep(nanoseconds: 10_000_000)  // 10 milliseconds
         #expect(lastLevel == .info)

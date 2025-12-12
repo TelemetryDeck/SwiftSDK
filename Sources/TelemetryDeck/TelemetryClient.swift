@@ -419,19 +419,19 @@ public final class TelemetryManager: @unchecked Sendable {
 
     private var _configuration: TelemetryManagerConfiguration
     var configuration: TelemetryManagerConfiguration {
-        get { queue.sync(flags: .barrier) { return _configuration } }
+        get { queue.sync(flags: .barrier) { _configuration } }
         set { queue.sync(flags: .barrier) { _configuration = newValue } }
     }
 
     private var _lastTimeImmediateSyncRequested: Date = .distantPast
     var lastTimeImmediateSyncRequested: Date {
-        get { queue.sync(flags: .barrier) { return _lastTimeImmediateSyncRequested } }
+        get { queue.sync(flags: .barrier) { _lastTimeImmediateSyncRequested } }
         set { queue.sync(flags: .barrier) { _lastTimeImmediateSyncRequested = newValue } }
     }
 
     private var _lastDateAppEnteredBackground: Date = .distantPast
     private var lastDateAppEnteredBackground: Date {
-        get { queue.sync(flags: .barrier) { return _lastDateAppEnteredBackground } }
+        get { queue.sync(flags: .barrier) { _lastDateAppEnteredBackground } }
         set { queue.sync(flags: .barrier) { _lastDateAppEnteredBackground = newValue } }
     }
 

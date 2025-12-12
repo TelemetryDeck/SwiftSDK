@@ -109,8 +109,7 @@ extension DefaultSignalPayload {
     static var isTestFlight: Bool {
         guard !isDebug, !isSimulator else { return false }
         guard let receiptURL = Bundle.main.appStoreReceiptURL else { return false }
-        return receiptURL.lastPathComponent == "sandboxReceipt" ||
-        receiptURL.path.contains("sandboxReceipt")
+        return receiptURL.lastPathComponent == "sandboxReceipt" || receiptURL.path.contains("sandboxReceipt")
     }
 
     /// Detects if the app is running in an App Store production environment.
