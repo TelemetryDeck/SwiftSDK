@@ -1,5 +1,6 @@
-@testable import TelemetryDeck
 import Testing
+
+@testable import TelemetryDeck
 
 enum ArrayExtensionTests {
     enum CountISODatesOnOrAfter {
@@ -32,7 +33,7 @@ enum ArrayExtensionTests {
                 "2025-01-01",  // Duplicate
                 "2025-02-01",
                 "2025-02-01",  // Duplicate
-                "2025-03-01"
+                "2025-03-01",
             ]
 
             #expect(datesWithDuplicates.countISODatesOnOrAfter(cutoffISODate: "2025-01-01") == 5)
@@ -58,7 +59,7 @@ enum ArrayExtensionTests {
                 "2024-02-28",  // End of February
                 "2024-02-29",  // Leap year day
                 "2024-03-01",  // Start of March
-                "2025-01-01"   // Far future
+                "2025-01-01",  // Far future
             ]
 
             // Test year boundaries

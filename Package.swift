@@ -31,6 +31,6 @@ let package = Package(
             name: "TelemetryDeckTests",
             dependencies: ["TelemetryDeck"],
             swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
-        )
+        ),
     ]
 )
