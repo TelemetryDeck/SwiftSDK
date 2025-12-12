@@ -142,3 +142,11 @@ This allows for compatibility with other logging solutions, such as [swift-log](
 Your PRs on TelemetryDeck's Swift SDK are very much welcome. Check out the [SwiftClientTester](https://github.com/TelemetryDeck/SwiftClientTester) project, which provides a harness you can use to work on the library and try out new things.
 
 When making a new release, run `./tag-release.sh MAJOR.MINOR.PATCH` to bump the version string in the SDK, create a new commit and tag that commit accordingly all in one step.
+
+The project includes a Makefile at the root with some useful commands:
+
+- `build`: Build the library
+- `lint`:  Applies all auto-correctable lint issues and reformats all source files
+- `test`:  Run unit tests
+
+Before finalising your PR, please run `make lint`.
