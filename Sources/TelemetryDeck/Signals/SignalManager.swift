@@ -29,7 +29,8 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
 
-    private var sendTimer: Timer?
+    private var sendTimerSource: DispatchSourceTimer?
+    private let timerQueue = DispatchQueue(label: "com.telemetrydeck.SignalTimer", qos: .utility)
 
     init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
@@ -96,14 +97,17 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
     private func sendCachedSignalsRepeatedly() {
         attemptToSendNextBatchOfCachedSignals()
 
-        sendTimer?.invalidate()
-        sendTimer = Timer.scheduledTimer(
-            timeInterval: Self.minimumSecondsToPassBetweenRequests,
-            target: self,
-            selector: #selector(attemptToSendNextBatchOfCachedSignals),
-            userInfo: nil,
-            repeats: true
+        sendTimerSource?.cancel()
+        let source = DispatchSource.makeTimerSource(queue: timerQueue)
+        source.schedule(
+            deadline: .now() + Self.minimumSecondsToPassBetweenRequests,
+            repeating: Self.minimumSecondsToPassBetweenRequests
         )
+        source.setEventHandler { [weak self] in
+            self?.attemptToSendNextBatchOfCachedSignals()
+        }
+        source.resume()
+        sendTimerSource = source
     }
 
     /// Adds a signal to the process queue
@@ -149,7 +153,6 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
 
     /// Sends one batch of signals from the cache if not empty.
     /// If signals fail to send, we put them back into the cache to try again later.
-    @objc
     @Sendable
     func attemptToSendNextBatchOfCachedSignals() {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
@@ -232,8 +235,8 @@ extension SignalManager {
         @objc func didEnterBackground() {
             configuration.logHandler?.log(.debug, message: #function)
 
-            sendTimer?.invalidate()
-            sendTimer = nil
+            sendTimerSource?.cancel()
+            sendTimerSource = nil
 
             #if os(watchOS) || os(macOS)
                 self.signalCache.backupCache()

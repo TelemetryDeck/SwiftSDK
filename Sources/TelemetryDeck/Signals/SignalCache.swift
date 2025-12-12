@@ -17,7 +17,7 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
 
     /// How many Signals are cached
     func count() -> Int {
-        queue.sync(flags: .barrier) {
+        queue.sync {
             self.cachedSignals.count
         }
     }
@@ -41,15 +41,12 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     /// You should hold on to the signals returned by this function. If the action you are trying to do with them fails
     /// (e.g. sending them to a server) you should reinsert them into the cache with the `push` function.
     func pop() -> [T] {
-        var poppedSignals: [T]!
-
-        queue.sync {
+        queue.sync(flags: .barrier) {
             let sliceSize = min(maximumNumberOfSignalsToPopAtOnce, cachedSignals.count)
-            poppedSignals = Array(cachedSignals[..<sliceSize])
+            let poppedSignals = Array(cachedSignals[..<sliceSize])
             cachedSignals.removeFirst(sliceSize)
+            return poppedSignals
         }
-
-        return poppedSignals
     }
 
     private func fileURL() -> URL {
