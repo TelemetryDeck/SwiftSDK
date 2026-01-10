@@ -160,7 +160,7 @@ final class SessionManager: @unchecked Sendable {
         // start automatic duration counting of new session
         self.updateSessionDuration()
         self.sessionDurationUpdater = Timer.scheduledTimer(
-            timeInterval: 1,
+            timeInterval: 5,
             target: self,
             selector: #selector(updateSessionDuration),
             userInfo: nil,
@@ -216,7 +216,7 @@ final class SessionManager: @unchecked Sendable {
         appIsInForeground = true
         self.updateSessionDuration()
         self.sessionDurationUpdater = Timer.scheduledTimer(
-            timeInterval: 1,
+            timeInterval: 5,
             target: self,
             selector: #selector(updateSessionDuration),
             userInfo: nil,
