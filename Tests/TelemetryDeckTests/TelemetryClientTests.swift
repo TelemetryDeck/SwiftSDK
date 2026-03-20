@@ -31,4 +31,40 @@ struct TelemetryClientTests {
         #expect(result != nil)
         #expect(result?.absoluteString == "https://nom.telemetrydeck.com/v2/namespace/deltaquadrant/")
     }
+
+    @Test
+    func `SignalManager preserves base URL path components`() {
+        let baseURL = URL(string: "https://example.com/array/sensors")!
+        let result = SignalManager.getServiceUrl(baseURL: baseURL)
+
+        #expect(result != nil)
+        #expect(result?.absoluteString == "https://example.com/array/sensors/v2/")
+    }
+
+    @Test
+    func `SignalManager preserves base URL path components with trailing slash`() {
+        let baseURL = URL(string: "https://example.com/array/sensors/")!
+        let result = SignalManager.getServiceUrl(baseURL: baseURL)
+
+        #expect(result != nil)
+        #expect(result?.absoluteString == "https://example.com/array/sensors/v2/")
+    }
+
+    @Test
+    func `SignalManager preserves base URL path components with namespace`() {
+        let baseURL = URL(string: "https://example.com/array/sensors")!
+        let result = SignalManager.getServiceUrl(baseURL: baseURL, namespace: "deltaquadrant")
+
+        #expect(result != nil)
+        #expect(result?.absoluteString == "https://example.com/array/sensors/v2/namespace/deltaquadrant/")
+    }
+
+    @Test
+    func `SignalManager preserves base URL path components with trailing slash and namespace`() {
+        let baseURL = URL(string: "https://example.com/array/sensors/")!
+        let result = SignalManager.getServiceUrl(baseURL: baseURL, namespace: "deltaquadrant")
+
+        #expect(result != nil)
+        #expect(result?.absoluteString == "https://example.com/array/sensors/v2/namespace/deltaquadrant/")
+    }
 }

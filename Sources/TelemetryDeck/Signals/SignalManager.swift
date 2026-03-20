@@ -294,17 +294,20 @@ extension SignalManager {
     }
 
     static func getServiceUrl(baseURL: URL, namespace: String? = nil) -> URL? {
-        let path =
-            if let namespace = namespace, !namespace.isEmpty {
-                "/v2/namespace/\(namespace)/"
-            } else {
-                "/v2/"
-            }
-
-        guard let serviceURL = URL(string: path, relativeTo: baseURL)?.standardized else {
-            return nil
+        var base = baseURL.absoluteString
+        if !base.hasSuffix("/") {
+            base += "/"
         }
 
+        let suffix: String
+        if let namespace, !namespace.isEmpty {
+            suffix = "v2/namespace/\(namespace)/"
+        } else {
+            suffix = "v2/"
+        }
+
+        let serviceURL = URL(string: base + suffix)
+        assert(serviceURL != nil, "Failed to construct service URL from base: \(baseURL)")
         return serviceURL
     }
 }
