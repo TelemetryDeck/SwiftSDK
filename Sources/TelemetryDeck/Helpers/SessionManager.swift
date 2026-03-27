@@ -44,6 +44,8 @@ final class SessionManager: @unchecked Sendable {
         return encoder
     }()
 
+    private var appIsInForeground = true
+
     private var recentSessions: [StoredSession]
 
     private var deletedSessionsCount: Int {
@@ -132,6 +134,9 @@ final class SessionManager: @unchecked Sendable {
     }
 
     func startNewSession() {
+        // Prevent incorrectly starting new session (and persistence timer) if in background
+        guard appIsInForeground else { return }
+
         // stop automatic duration counting of previous session
         self.stopSessionTimer()
 
@@ -155,7 +160,7 @@ final class SessionManager: @unchecked Sendable {
         // start automatic duration counting of new session
         self.updateSessionDuration()
         self.sessionDurationUpdater = Timer.scheduledTimer(
-            timeInterval: 1,
+            timeInterval: 5,
             target: self,
             selector: #selector(updateSessionDuration),
             userInfo: nil,
@@ -201,15 +206,17 @@ final class SessionManager: @unchecked Sendable {
 
     @objc
     private func handleDidEnterBackgroundNotification() {
+        appIsInForeground = false
         self.updateSessionDuration()
         self.stopSessionTimer()
     }
 
     @objc
     private func handleWillEnterForegroundNotification() {
+        appIsInForeground = true
         self.updateSessionDuration()
         self.sessionDurationUpdater = Timer.scheduledTimer(
-            timeInterval: 1,
+            timeInterval: 5,
             target: self,
             selector: #selector(updateSessionDuration),
             userInfo: nil,
