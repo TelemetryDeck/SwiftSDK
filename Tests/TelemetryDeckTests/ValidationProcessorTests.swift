@@ -154,6 +154,63 @@ struct ValidationProcessorTests {
     }
 
     @Test
+    func skipsReservedPrefixValidationForEventName() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("TelemetryDeck.Session.started", skipsReservedPrefixValidation: true)
+        let context = EventContext()
+        _ = try await pipeline.process(input, context: context)
+
+        #expect(logger.errorMessages().isEmpty)
+    }
+
+    @Test
+    func skipsReservedPrefixValidationForParameterKey() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("MyApp.event", parameters: ["TelemetryDeck.Activation.featureName": "photos"], skipsReservedPrefixValidation: true)
+        let context = EventContext()
+        _ = try await pipeline.process(input, context: context)
+
+        #expect(logger.errorMessages().isEmpty)
+    }
+
+    @Test
+    func reservedKeyValidationStillActiveWhenSkippingPrefix() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("platform", parameters: ["appVersion": "1.0"], skipsReservedPrefixValidation: true)
+        let context = EventContext()
+        _ = try await pipeline.process(input, context: context)
+
+        #expect(logger.errorMessages().count == 2)
+    }
+
+    @Test
     func validationDoesNotFilterSignal() async throws {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let logger = SpyLogger()

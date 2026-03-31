@@ -166,6 +166,31 @@ public enum TelemetryDeck {
         await storage.send(input)
     }
 
+    static func sdkEvent<S: RawRepresentable>(
+        _ name: S,
+        parameters: EventParameters = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) async where S.RawValue == String {
+        await sdkEvent(name.rawValue, parameters: parameters, floatValue: floatValue, customUserID: customUserID)
+    }
+
+    static func sdkEvent(
+        _ name: String,
+        parameters: EventParameters = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) async {
+        let input = EventInput(
+            name,
+            parameters: parameters,
+            floatValue: floatValue,
+            customUserID: customUserID,
+            skipsReservedPrefixValidation: true
+        )
+        await storage.send(input)
+    }
+
     /// Sends an event without awaiting completion; suitable for fire-and-forget usage.
     public static func event(
         _ name: String,

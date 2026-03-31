@@ -39,7 +39,7 @@
         ) async {
             var params = EventParameters(transaction.purchaseParameters())
             params.merge(parameters)
-            await event(DefaultEvents.Purchase.freeTrialStarted, parameters: params, customUserID: customUserID)
+            await sdkEvent(DefaultEvents.Purchase.freeTrialStarted, parameters: params, customUserID: customUserID)
 
             guard let client = await TelemetryDeck.client() else { return }
             if let processor = await client.processor(ofType: TrialConversionProcessor.self) {
@@ -54,7 +54,7 @@
         ) async {
             var params = EventParameters(transaction.purchaseParameters())
             params.merge(parameters)
-            await event(
+            await sdkEvent(
                 DefaultEvents.Purchase.completed,
                 parameters: params,
                 floatValue: transaction.priceInUSD(),

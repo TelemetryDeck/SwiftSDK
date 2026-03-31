@@ -29,16 +29,18 @@ public actor ValidationProcessor: EventProcessor {
         context: EventContext,
         next: @Sendable (EventInput, EventContext) async throws -> Event
     ) async throws -> Event {
-        if input.name.lowercased().hasPrefix("telemetrydeck.") {
+        let nameLowercased = input.name.lowercased()
+        if !input.skipsReservedPrefixValidation && nameLowercased.hasPrefix("telemetrydeck.") {
             logger.log(.error, "Event name '\(input.name)' uses reserved prefix 'TelemetryDeck.'")
-        } else if Self.reservedKeysLowercased.contains(input.name.lowercased()) {
+        } else if Self.reservedKeysLowercased.contains(nameLowercased) {
             logger.log(.error, "Event name '\(input.name)' is a reserved name")
         }
 
         for key in input.parameters.keys {
-            if key.lowercased().hasPrefix("telemetrydeck.") {
+            let keyLowercased = key.lowercased()
+            if !input.skipsReservedPrefixValidation && keyLowercased.hasPrefix("telemetrydeck.") {
                 logger.log(.error, "Parameter key '\(key)' uses reserved prefix 'TelemetryDeck.'")
-            } else if Self.reservedKeysLowercased.contains(key.lowercased()) {
+            } else if Self.reservedKeysLowercased.contains(keyLowercased) {
                 logger.log(.error, "Parameter key '\(key)' is a reserved name")
             }
         }

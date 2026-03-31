@@ -11,7 +11,7 @@ extension TelemetryDeck {
     ) async {
         var params: EventParameters = [DefaultParams.Acquisition.channel.rawValue: channel]
         params.merge(parameters)
-        await event(DefaultEvents.Acquisition.userAcquired, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Acquisition.userAcquired, parameters: params, customUserID: customUserID)
     }
 
     /// Sends an event indicating that a lead funnel has started for the given lead identifier.
@@ -22,7 +22,7 @@ extension TelemetryDeck {
     ) async {
         var params: EventParameters = [DefaultParams.Acquisition.leadID.rawValue: leadID]
         params.merge(parameters)
-        await event(DefaultEvents.Acquisition.leadStarted, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Acquisition.leadStarted, parameters: params, customUserID: customUserID)
     }
 
     /// Sends an event indicating that a lead has converted for the given lead identifier.
@@ -33,7 +33,7 @@ extension TelemetryDeck {
     ) async {
         var params: EventParameters = [DefaultParams.Acquisition.leadID.rawValue: leadID]
         params.merge(parameters)
-        await event(DefaultEvents.Acquisition.leadConverted, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Acquisition.leadConverted, parameters: params, customUserID: customUserID)
     }
 }
 
@@ -45,7 +45,7 @@ extension TelemetryDeck {
         parameters: EventParameters = [:],
         customUserID: String? = nil
     ) async {
-        await event(DefaultEvents.Activation.onboardingCompleted, parameters: parameters, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Activation.onboardingCompleted, parameters: parameters, customUserID: customUserID)
     }
 
     /// Sends an event indicating that the user engaged with a core feature.
@@ -56,7 +56,7 @@ extension TelemetryDeck {
     ) async {
         var params: EventParameters = [DefaultParams.Activation.featureName.rawValue: featureName]
         params.merge(parameters)
-        await event(DefaultEvents.Activation.coreFeatureUsed, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Activation.coreFeatureUsed, parameters: params, customUserID: customUserID)
     }
 }
 
@@ -75,7 +75,7 @@ extension TelemetryDeck {
             params[DefaultParams.Referral.kind] = kind
         }
         params.merge(parameters)
-        await event(DefaultEvents.Referral.sent, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Referral.sent, parameters: params, customUserID: customUserID)
     }
 
     /// Sends an event recording a user-submitted rating (0–10) and optional comment.
@@ -94,7 +94,7 @@ extension TelemetryDeck {
             params[DefaultParams.Referral.ratingComment] = comment
         }
         params.merge(parameters)
-        await event(DefaultEvents.Referral.userRatingSubmitted, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Referral.userRatingSubmitted, parameters: params, customUserID: customUserID)
     }
 }
 
@@ -109,6 +109,6 @@ extension TelemetryDeck {
     ) async {
         var params: EventParameters = [DefaultParams.Revenue.paywallShowReason.rawValue: reason]
         params.merge(parameters)
-        await event(DefaultEvents.Revenue.paywallShown, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Revenue.paywallShown, parameters: params, customUserID: customUserID)
     }
 }

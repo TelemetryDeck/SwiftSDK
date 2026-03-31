@@ -26,7 +26,7 @@ extension TelemetryDeck {
             DefaultParams.Navigation.sourcePath.rawValue: source,
             DefaultParams.Navigation.destinationPath.rawValue: destination,
         ]
-        await event(DefaultEvents.Navigation.pathChanged, parameters: params, customUserID: customUserID)
+        await sdkEvent(DefaultEvents.Navigation.pathChanged, parameters: params, customUserID: customUserID)
     }
 
     /// Sends a navigation event to `destination`, using the last recorded path as the source.

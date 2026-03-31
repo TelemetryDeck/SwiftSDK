@@ -61,7 +61,7 @@ extension TelemetryDeck {
 
         errorParameters.merge(parameters)
 
-        await event(
+        await sdkEvent(
             DefaultEvents.Error.occurred,
             parameters: errorParameters,
             floatValue: floatValue,

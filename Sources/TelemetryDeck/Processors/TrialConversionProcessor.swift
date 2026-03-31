@@ -92,7 +92,8 @@
                         let input = EventInput(
                             DefaultEvents.Purchase.convertedFromTrial.rawValue,
                             parameters: EventParameters(params),
-                            floatValue: usdValue
+                            floatValue: usdValue,
+                            skipsReservedPrefixValidation: true
                         )
                         await self.emitter?.send(input)
                         await self.clearCurrentTrial()

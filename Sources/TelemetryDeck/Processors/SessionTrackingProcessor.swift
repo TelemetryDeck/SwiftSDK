@@ -54,7 +54,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         currentSession = newID
         recordSessionStart()
         if sendSessionStartedEvent {
-            await emitter?.send(EventInput(DefaultEvents.Session.started.rawValue))
+            await emitter?.send(EventInput(DefaultEvents.Session.started.rawValue, skipsReservedPrefixValidation: true))
         }
         return newID
     }
@@ -110,13 +110,14 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
             await emitter.send(
                 EventInput(
                     DefaultEvents.Acquisition.newInstallDetected.rawValue,
-                    parameters: [DefaultParams.Acquisition.firstSessionDate.rawValue: dateStr]
+                    parameters: [DefaultParams.Acquisition.firstSessionDate.rawValue: dateStr],
+                    skipsReservedPrefixValidation: true
                 )
             )
         }
 
         if sendSessionStartedEvent {
-            await emitter.send(EventInput(DefaultEvents.Session.started.rawValue))
+            await emitter.send(EventInput(DefaultEvents.Session.started.rawValue, skipsReservedPrefixValidation: true))
         }
     }
 
@@ -242,7 +243,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         }
 
         if didRotate, sendSessionStartedEvent {
-            await emitter?.send(EventInput(DefaultEvents.Session.started.rawValue))
+            await emitter?.send(EventInput(DefaultEvents.Session.started.rawValue, skipsReservedPrefixValidation: true))
         }
     }
 
