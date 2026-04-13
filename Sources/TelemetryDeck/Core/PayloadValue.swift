@@ -7,11 +7,13 @@ public enum PayloadValue: Sendable, Codable, Equatable, Hashable {
     case double(Double)
     case bool(Bool)
 
-    /// Decodes from a single JSON value, interpreting all numbers as doubles.
+    /// Decodes from a single JSON value, preserving integer and double distinctions.
     public init(from decoder: any Decoder) throws {
         let container = try decoder.singleValueContainer()
         if let boolValue = try? container.decode(Bool.self) {
             self = .bool(boolValue)
+        } else if let intValue = try? container.decode(Int64.self) {
+            self = .int(intValue)
         } else if let doubleValue = try? container.decode(Double.self) {
             self = .double(doubleValue)
         } else if let stringValue = try? container.decode(String.self) {

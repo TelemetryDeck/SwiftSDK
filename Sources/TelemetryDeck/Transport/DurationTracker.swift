@@ -3,7 +3,7 @@ import Foundation
 actor DurationTracker: DurationTracking {
     private struct ActiveDuration: Codable {
         let startDate: Date
-        let parameters: [String: String]
+        let parameters: [String: PayloadValue]
         let includeBackgroundTime: Bool
     }
 
@@ -61,7 +61,7 @@ actor DurationTracker: DurationTracking {
     ) {
         activeDurations[eventName] = ActiveDuration(
             startDate: Date(),
-            parameters: parameters.stringDictionary,
+            parameters: parameters.payloadDictionary,
             includeBackgroundTime: includeBackgroundTime
         )
         Task { await persistState() }

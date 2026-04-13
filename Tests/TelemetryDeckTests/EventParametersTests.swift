@@ -41,7 +41,7 @@ struct EventParametersTests {
     }
 
     @Test
-    func stringDictionaryConvertsTypes() {
+    func payloadDictionaryConvertsTypes() {
         let params: EventParameters = [
             "stringValue": "hello",
             "intValue": 42,
@@ -51,14 +51,14 @@ struct EventParametersTests {
             "dateValue": Date(timeIntervalSince1970: 0),
         ]
 
-        let stringDict = params.stringDictionary
+        let dict = params.payloadDictionary
 
-        #expect(stringDict["stringValue"] == "hello")
-        #expect(stringDict["intValue"] == "42")
-        #expect(stringDict["doubleValue"] == "3.14")
-        #expect(stringDict["boolValue"] == "true")
-        #expect(stringDict["uuidValue"] == "12345678-1234-1234-1234-123456789012")
-        #expect(stringDict["dateValue"]?.contains("1970-01-01") == true)
+        #expect(dict["stringValue"] == .string("hello"))
+        #expect(dict["intValue"] == .int(42))
+        #expect(dict["doubleValue"] == .double(3.14))
+        #expect(dict["boolValue"] == .bool(true))
+        #expect(dict["uuidValue"] == .string("12345678-1234-1234-1234-123456789012"))
+        #expect(dict["dateValue"]?.description.contains("1970-01-01") == true)
     }
 
     @Test
@@ -117,22 +117,5 @@ struct EventParametersTests {
         #expect(keys.contains("key1"))
         #expect(keys.contains("key2"))
         #expect(keys.count == 2)
-    }
-
-    @Test
-    func parameterValueConversions() {
-        #expect("hello".parameterStringValue == "hello")
-        #expect(true.parameterStringValue == "true")
-        #expect(false.parameterStringValue == "false")
-        #expect(42.parameterStringValue == "42")
-        #expect(Int64(100).parameterStringValue == "100")
-        #expect(3.14.parameterStringValue == "3.14")
-        #expect(Float(2.5).parameterStringValue == "2.5")
-
-        let uuid = UUID(uuidString: "12345678-1234-1234-1234-123456789012")!
-        #expect(uuid.parameterStringValue == "12345678-1234-1234-1234-123456789012")
-
-        let date = Date(timeIntervalSince1970: 0)
-        #expect(date.parameterStringValue.contains("1970"))
     }
 }

@@ -52,10 +52,10 @@ struct PayloadValueTests {
     }
 
     @Test
-    func jsonIntegerDecodesAsDouble() throws {
+    func jsonIntegerDecodesAsInt() throws {
         let data = Data("42".utf8)
         let value = try JSONDecoder().decode(PayloadValue.self, from: data)
-        #expect(value == .double(42.0))
+        #expect(value == .int(42))
     }
 
     @Test

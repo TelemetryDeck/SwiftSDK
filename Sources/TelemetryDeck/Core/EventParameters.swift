@@ -19,6 +19,11 @@ public struct EventParameters: Sendable, ExpressibleByDictionaryLiteral, Sequenc
         self.storage = dictionary
     }
 
+    /// Creates a parameters collection from a typed payload dictionary.
+    public init(_ dictionary: [String: PayloadValue]) {
+        self.storage = dictionary
+    }
+
     /// Accesses a parameter value by string key.
     public subscript(key: String) -> (any ParameterValue)? {
         get { storage[key] }
@@ -43,11 +48,6 @@ public struct EventParameters: Sendable, ExpressibleByDictionaryLiteral, Sequenc
         for (key, value) in other {
             storage[key] = value
         }
-    }
-
-    /// All parameters converted to a plain `[String: String]` dictionary.
-    public var stringDictionary: [String: String] {
-        storage.mapValues { $0.parameterStringValue }
     }
 
     /// All parameters converted to a typed `[String: PayloadValue]` dictionary.

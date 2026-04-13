@@ -81,8 +81,8 @@ struct DurationTrackerTests {
         let result = await tracker.stopDuration("test.duration")
 
         #expect(result != nil)
-        #expect(result!.startParameters.stringDictionary["key1"] == "value1")
-        #expect(result!.startParameters.stringDictionary["key2"] == "value2")
+        #expect(result!.startParameters.payloadDictionary["key1"] == .string("value1"))
+        #expect(result!.startParameters.payloadDictionary["key2"] == .string("value2"))
 
         await tracker.stop()
     }
@@ -179,7 +179,7 @@ struct DurationTrackerTests {
 
         #expect(result != nil)
         #expect(result!.durationInSeconds > 0.05)
-        #expect(result!.startParameters.stringDictionary["key"] == "value")
+        #expect(result!.startParameters.payloadDictionary["key"] == .string("value"))
 
         await tracker2.stop()
     }
