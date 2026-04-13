@@ -23,7 +23,7 @@ public struct EventFinalizer: Sendable {
             ),
             sessionID: context.sessionID?.uuidString,
             receivedAt: input.timestamp,
-            payload: merged.stringDictionary,
+            payload: merged.payloadDictionary,
             floatValue: input.floatValue,
             isTestMode: context.isTestMode ?? false
         )

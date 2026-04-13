@@ -221,7 +221,7 @@ struct PresetIntegrationTests {
         let events = await cache.pop()
         #expect(events.count == 1)
         #expect(events[0].type == "TelemetryDeck.Referral.userRatingSubmitted")
-        #expect(events[0].payload["TelemetryDeck.Referral.ratingValue"] == "8")
+        #expect(events[0].payload["TelemetryDeck.Referral.ratingValue"] == 8)
         #expect(events[0].payload["TelemetryDeck.Referral.ratingComment"] == "Great app!")
         #expect(events[0].floatValue == nil)
 

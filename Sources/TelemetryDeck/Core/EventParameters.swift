@@ -50,6 +50,11 @@ public struct EventParameters: Sendable, ExpressibleByDictionaryLiteral, Sequenc
         storage.mapValues { $0.parameterStringValue }
     }
 
+    /// All parameters converted to a typed `[String: PayloadValue]` dictionary.
+    public var payloadDictionary: [String: PayloadValue] {
+        storage.mapValues { $0.payloadValue }
+    }
+
     /// The number of parameters in the collection.
     public var count: Int { storage.count }
     /// Whether the collection contains no parameters.

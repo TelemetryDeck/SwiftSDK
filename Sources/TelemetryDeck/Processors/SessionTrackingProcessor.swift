@@ -161,13 +161,13 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
             let totalSeconds = completedSessions.reduce(0) { $0 + $1.durationInSeconds }
             averageSessionSeconds = Int(Double(totalSeconds) / Double(completedSessions.count))
         }
-        context.addParameter(DefaultParams.Retention.averageSessionSeconds, value: "\(averageSessionSeconds)")
+        context.addParameter(DefaultParams.Retention.averageSessionSeconds, value: averageSessionSeconds)
 
         if recentSessions.count >= 2 {
             let previousSession = recentSessions[recentSessions.count - 2]
             context.addParameter(
                 DefaultParams.Retention.previousSessionSeconds,
-                value: "\(previousSession.durationInSeconds)"
+                value: previousSession.durationInSeconds
             )
         }
 

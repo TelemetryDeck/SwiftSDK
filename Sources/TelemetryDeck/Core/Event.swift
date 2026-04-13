@@ -12,8 +12,8 @@ public struct Event: Sendable, Codable {
     public let sessionID: String?
     /// The timestamp at which the event was recorded on the client.
     public let receivedAt: Date
-    /// The enriched parameter payload as string key-value pairs.
-    public let payload: [String: String]
+    /// The enriched parameter payload.
+    public let payload: [String: PayloadValue]
     /// An optional numeric value associated with the event.
     public let floatValue: Double?
     /// Indicates whether this event is a test-mode event ("true" or "false").
@@ -26,7 +26,7 @@ public struct Event: Sendable, Codable {
         clientUser: String,
         sessionID: String?,
         receivedAt: Date,
-        payload: [String: String],
+        payload: [String: PayloadValue],
         floatValue: Double?,
         isTestMode: Bool
     ) {

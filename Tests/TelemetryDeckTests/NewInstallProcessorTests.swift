@@ -38,7 +38,7 @@ struct NewInstallProcessorTests {
         let input = EventInput("Test.signal")
         let signal = try await pipeline.process(input, context: EventContext())
 
-        #expect(signal.payload["TelemetryDeck.Acquisition.isNewInstall"] == "true")
+        #expect(signal.payload["TelemetryDeck.Acquisition.isNewInstall"] == true)
 
         await processor.stop()
     }
@@ -57,7 +57,7 @@ struct NewInstallProcessorTests {
         )
 
         let signal1 = try await pipeline.process(EventInput("First.signal"), context: EventContext())
-        #expect(signal1.payload["TelemetryDeck.Acquisition.isNewInstall"] == "true")
+        #expect(signal1.payload["TelemetryDeck.Acquisition.isNewInstall"] == true)
 
         let signal2 = try await pipeline.process(EventInput("Second.signal"), context: EventContext())
         #expect(signal2.payload["TelemetryDeck.Acquisition.isNewInstall"] == nil)

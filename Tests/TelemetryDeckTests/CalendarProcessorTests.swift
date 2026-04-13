@@ -50,10 +50,8 @@ struct CalendarProcessorTests {
         let nowComponents = calendar2.dateComponents([.weekday], from: input.timestamp)
         let expectedDayOfWeek = nowComponents.weekday.map { $0 == 1 ? 7 : $0 - 1 } ?? -1
 
-        if let dayOfWeekStr = signal.payload["TelemetryDeck.Calendar.dayOfWeek"],
-            let dayOfWeek = Int(dayOfWeekStr)
-        {
-            #expect(dayOfWeek == expectedDayOfWeek)
+        if case .int(let dayOfWeek) = signal.payload["TelemetryDeck.Calendar.dayOfWeek"] {
+            #expect(Int(dayOfWeek) == expectedDayOfWeek)
         } else {
             Issue.record("dayOfWeek not found in payload")
         }
@@ -70,9 +68,7 @@ struct CalendarProcessorTests {
         let context = EventContext()
         let signal = try await pipeline.process(input, context: context)
 
-        if let hourStr = signal.payload["TelemetryDeck.Calendar.hourOfDay"],
-            let hour = Int(hourStr)
-        {
+        if case .int(let hour) = signal.payload["TelemetryDeck.Calendar.hourOfDay"] {
             #expect(hour >= 1)
             #expect(hour <= 24)
         } else {
@@ -96,8 +92,8 @@ struct CalendarProcessorTests {
         let dayOfWeek = nowComponents.weekday.map { $0 == 1 ? 7 : $0 - 1 } ?? -1
         let expectedIsWeekend = dayOfWeek >= 6
 
-        if let isWeekendStr = signal.payload["TelemetryDeck.Calendar.isWeekend"] {
-            #expect(isWeekendStr == (expectedIsWeekend ? "true" : "false"))
+        if case .bool(let isWeekend) = signal.payload["TelemetryDeck.Calendar.isWeekend"] {
+            #expect(isWeekend == expectedIsWeekend)
         } else {
             Issue.record("isWeekend not found in payload")
         }
@@ -114,9 +110,7 @@ struct CalendarProcessorTests {
         let context = EventContext()
         let signal = try await pipeline.process(input, context: context)
 
-        if let quarterStr = signal.payload["TelemetryDeck.Calendar.quarterOfYear"],
-            let quarter = Int(quarterStr)
-        {
+        if case .int(let quarter) = signal.payload["TelemetryDeck.Calendar.quarterOfYear"] {
             #expect(quarter >= 1)
             #expect(quarter <= 4)
         } else {
@@ -135,9 +129,7 @@ struct CalendarProcessorTests {
         let context = EventContext()
         let signal = try await pipeline.process(input, context: context)
 
-        if let weekStr = signal.payload["TelemetryDeck.Calendar.weekOfYear"],
-            let week = Int(weekStr)
-        {
+        if case .int(let week) = signal.payload["TelemetryDeck.Calendar.weekOfYear"] {
             #expect(week >= 1)
             #expect(week <= 53)
         } else {

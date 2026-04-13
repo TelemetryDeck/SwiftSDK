@@ -25,7 +25,10 @@ struct RetentionProcessorTests {
 
         #expect(signal.payload["TelemetryDeck.Acquisition.firstSessionDate"] != nil)
 
-        let dateString = signal.payload["TelemetryDeck.Acquisition.firstSessionDate"]!
+        guard case .string(let dateString) = signal.payload["TelemetryDeck.Acquisition.firstSessionDate"] else {
+            Issue.record("firstSessionDate is not a string PayloadValue")
+            return
+        }
         let formatter = ISO8601DateFormatter()
         formatter.formatOptions = [.withFullDate]
         let date = formatter.date(from: dateString)
@@ -52,7 +55,7 @@ struct RetentionProcessorTests {
         let context = EventContext()
         let signal = try await pipeline.process(input, context: context)
 
-        #expect(signal.payload["TelemetryDeck.Retention.totalSessionsCount"] == "2")
+        #expect(signal.payload["TelemetryDeck.Retention.totalSessionsCount"] == 2)
 
         await processor.stop()
     }
@@ -74,7 +77,7 @@ struct RetentionProcessorTests {
         let context = EventContext()
         let signal = try await pipeline.process(input, context: context)
 
-        #expect(signal.payload["TelemetryDeck.Retention.distinctDaysUsed"] == "1")
+        #expect(signal.payload["TelemetryDeck.Retention.distinctDaysUsed"] == 1)
 
         await processor.stop()
     }
@@ -102,12 +105,10 @@ struct RetentionProcessorTests {
         let signal = try await pipeline.process(input, context: context)
 
         #expect(signal.payload["TelemetryDeck.Retention.averageSessionSeconds"] != nil)
-        #expect(signal.payload["TelemetryDeck.Retention.averageSessionSeconds"] == "100")
+        #expect(signal.payload["TelemetryDeck.Retention.averageSessionSeconds"] == 100)
 
-        if let avgStr = signal.payload["TelemetryDeck.Retention.averageSessionSeconds"],
-            let avg = Double(avgStr)
-        {
-            #expect(avg == 100.0)
+        if case .int(let avg) = signal.payload["TelemetryDeck.Retention.averageSessionSeconds"] {
+            #expect(avg == 100)
         } else {
             Issue.record("averageSessionSeconds not found or not parseable")
         }
@@ -132,7 +133,7 @@ struct RetentionProcessorTests {
         let context = EventContext()
         let signal = try await pipeline.process(input, context: context)
 
-        #expect(signal.payload["TelemetryDeck.Retention.averageSessionSeconds"] == "-1")
+        #expect(signal.payload["TelemetryDeck.Retention.averageSessionSeconds"] == -1)
 
         await processor.stop()
     }
@@ -160,12 +161,10 @@ struct RetentionProcessorTests {
         let signal = try await pipeline.process(input, context: context)
 
         #expect(signal.payload["TelemetryDeck.Retention.previousSessionSeconds"] != nil)
-        #expect(signal.payload["TelemetryDeck.Retention.previousSessionSeconds"] == "120")
+        #expect(signal.payload["TelemetryDeck.Retention.previousSessionSeconds"] == 120)
 
-        if let prevStr = signal.payload["TelemetryDeck.Retention.previousSessionSeconds"],
-            let prev = Double(prevStr)
-        {
-            #expect(prev == 120.0)
+        if case .int(let prev) = signal.payload["TelemetryDeck.Retention.previousSessionSeconds"] {
+            #expect(prev == 120)
         } else {
             Issue.record("previousSessionSeconds not found or not parseable")
         }
@@ -201,7 +200,7 @@ struct RetentionProcessorTests {
 
         // Pre-loaded: 1 old (deleted, count → 6) + 1 recent + 1 from start() = 2 recent + 6 deleted = 8
         let totalSessionsStr = signal.payload["TelemetryDeck.Retention.totalSessionsCount"]
-        #expect(totalSessionsStr == "8")
+        #expect(totalSessionsStr == 8)
 
         await processor.stop()
 
@@ -220,7 +219,7 @@ struct RetentionProcessorTests {
         let signal2 = try await pipeline2.process(input2, context: context2)
 
         // Previous 2 recent sessions + new session from start() = 3 recent + 6 deleted = 9
-        #expect(signal2.payload["TelemetryDeck.Retention.totalSessionsCount"] == "9")
+        #expect(signal2.payload["TelemetryDeck.Retention.totalSessionsCount"] == 9)
 
         await processor2.stop()
     }
@@ -244,7 +243,7 @@ struct RetentionProcessorTests {
         let context1 = EventContext()
         let signal1 = try await pipeline1.process(input1, context: context1)
 
-        #expect(signal1.payload["TelemetryDeck.Retention.totalSessionsCount"] == "2")
+        #expect(signal1.payload["TelemetryDeck.Retention.totalSessionsCount"] == 2)
         #expect(signal1.payload["TelemetryDeck.Acquisition.firstSessionDate"] != nil)
 
         let firstSessionDate = signal1.payload["TelemetryDeck.Acquisition.firstSessionDate"]
@@ -266,7 +265,7 @@ struct RetentionProcessorTests {
         let signal2 = try await pipeline2.process(input2, context: context2)
 
         // processor1 persisted 2 sessions; processor2.start() records 1 more → total = 3
-        #expect(signal2.payload["TelemetryDeck.Retention.totalSessionsCount"] == "3")
+        #expect(signal2.payload["TelemetryDeck.Retention.totalSessionsCount"] == 3)
         #expect(signal2.payload["TelemetryDeck.Acquisition.firstSessionDate"] == firstSessionDate)
 
         await processor2.stop()

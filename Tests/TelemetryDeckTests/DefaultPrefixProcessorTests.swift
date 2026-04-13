@@ -38,7 +38,7 @@ struct DefaultPrefixProcessorTests {
         let signal = try await pipeline.process(input, context: EventContext())
 
         #expect(signal.payload["app.customKey"] == "value")
-        #expect(signal.payload["app.anotherKey"] == "42")
+        #expect(signal.payload["app.anotherKey"] == 42)
     }
 
     @Test

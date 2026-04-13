@@ -179,7 +179,11 @@ struct IntegrationTests {
         let dateParam = events[0].payload[DefaultParams.Acquisition.firstSessionDate.rawValue]
         #expect(dateParam != nil)
 
-        let parsedDate = formatter.date(from: dateParam ?? "")
+        guard case .string(let dateStr) = dateParam else {
+            Issue.record("firstSessionDate is not a string PayloadValue")
+            return
+        }
+        let parsedDate = formatter.date(from: dateStr)
         #expect(parsedDate != nil)
 
         await client.shutdown()
