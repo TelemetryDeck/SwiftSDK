@@ -64,6 +64,9 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// Defaults to true. Set to false to prevent automatically sending this signal.
     public var sendNewSessionBeganSignal: Bool = true
 
+    /// If `true` the TelemetryDeck SDK will count system-scheduled background launches as user sesssions.
+    public var registerBackgroundSessions: Bool = false
+
     /// A random identifier for the current user session.
     ///
     /// On iOS, tvOS, and watchOS, the session identifier will automatically update whenever your app returns from background after 5 minutes,
@@ -438,6 +441,18 @@ public final class TelemetryManager: @unchecked Sendable {
     private func startSessionAndObserveAppForegrounding() {
         // initially start a new session upon app start (delayed so that `didSet` triggers)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            #if os(iOS) || os(tvOS)
+            // Skip the initial session for pure background cold launches (Background app refresh,
+            // HealthKit background delivery, content-available push, etc.) unless the consumer
+            // has opted into `registerBackgroundSessions`. The `willEnterForeground`
+            // observer registered below still handles the case where the user later opens
+            // the app from this background-launched process.
+            guard TelemetryManager.shared.configuration.registerBackgroundSessions
+                || TelemetryEnvironment.isAppExtension
+                || UIApplication.shared.applicationState != .background else {
+                return
+            }
+            #endif
             TelemetryDeck.generateNewSession()
         }
 
