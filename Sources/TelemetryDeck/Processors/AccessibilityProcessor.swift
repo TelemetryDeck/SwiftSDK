@@ -31,9 +31,16 @@ public actor AccessibilityProcessor: EventProcessor {
 
     private var cachedParams: EventParameters?
     private var cacheTimestamp: Date?
+    private let dateProvider: DateProvider
 
     /// Creates an accessibility processor.
-    public init() {}
+    public init() {
+        self.dateProvider = .system
+    }
+
+    init(dateProvider: DateProvider) {
+        self.dateProvider = dateProvider
+    }
 
     /// Adds accessibility flags, screen dimensions, colour scheme, and layout direction to the context.
     public func process(
@@ -53,14 +60,14 @@ public actor AccessibilityProcessor: EventProcessor {
         if !isTestMode,
             let cached = cachedParams,
             let timestamp = cacheTimestamp,
-            Date().timeIntervalSince(timestamp) < Self.cacheLifetime
+            dateProvider.now().timeIntervalSince(timestamp) < Self.cacheLifetime
         {
             return cached
         }
 
         let fresh = await readAccessibilityParams()
         cachedParams = fresh
-        cacheTimestamp = Date()
+        cacheTimestamp = dateProvider.now()
         return fresh
     }
 

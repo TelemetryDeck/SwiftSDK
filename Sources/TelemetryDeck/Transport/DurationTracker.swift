@@ -11,8 +11,13 @@ actor DurationTracker: DurationTracking {
     private var lastEnteredBackground: Date?
     private var storage: (any ProcessorStorage)?
     private var lifecycleTask: Task<Void, Never>?
+    private let dateProvider: DateProvider
 
     private static let storageKey = "durationTrackerState"
+
+    init(dateProvider: DateProvider = .system) {
+        self.dateProvider = dateProvider
+    }
 
     func start(storage: any ProcessorStorage) async {
         self.storage = storage
@@ -37,12 +42,12 @@ actor DurationTracker: DurationTracking {
     }
 
     func handleBackground() {
-        lastEnteredBackground = Date()
+        lastEnteredBackground = dateProvider.now()
     }
 
     func handleForeground() {
         guard let backgroundDate = lastEnteredBackground else { return }
-        let backgroundDuration = Date().timeIntervalSince(backgroundDate)
+        let backgroundDuration = dateProvider.now().timeIntervalSince(backgroundDate)
         lastEnteredBackground = nil
 
         for (name, duration) in activeDurations where !duration.includeBackgroundTime {
@@ -60,7 +65,7 @@ actor DurationTracker: DurationTracking {
         includeBackgroundTime: Bool
     ) {
         activeDurations[eventName] = ActiveDuration(
-            startDate: Date(),
+            startDate: dateProvider.now(),
             parameters: parameters.payloadDictionary,
             includeBackgroundTime: includeBackgroundTime
         )
@@ -72,7 +77,7 @@ actor DurationTracker: DurationTracking {
             return nil
         }
         Task { await persistState() }
-        let elapsed = Date().timeIntervalSince(duration.startDate)
+        let elapsed = dateProvider.now().timeIntervalSince(duration.startDate)
         return DurationResult(
             durationInSeconds: elapsed,
             startParameters: EventParameters(duration.parameters)

@@ -6,9 +6,8 @@ import Testing
 struct DurationTrackerTests {
     @Test
     func startAndStopReturnsElapsedDuration() async throws {
-        let tracker = DurationTracker()
-        let storage = InMemoryProcessorStorage()
-        await tracker.start(storage: storage)
+        let clock = MutableClock()
+        let tracker = DurationTracker(dateProvider: clock.dateProvider)
 
         await tracker.startDuration(
             "test.duration",
@@ -16,55 +15,48 @@ struct DurationTrackerTests {
             includeBackgroundTime: true
         )
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.1)
 
         let result = await tracker.stopDuration("test.duration")
 
         #expect(result != nil)
-        #expect(result!.durationInSeconds > 0)
-
-        await tracker.stop()
+        #expect(abs(result!.durationInSeconds - 0.1) < 0.0001)
     }
 
     @Test
     func stopNonexistentDurationReturnsNil() async throws {
-        let tracker = DurationTracker()
-        let storage = InMemoryProcessorStorage()
-        await tracker.start(storage: storage)
+        let clock = MutableClock()
+        let tracker = DurationTracker(dateProvider: clock.dateProvider)
 
         let result = await tracker.stopDuration("nonexistent.duration")
 
         #expect(result == nil)
-
-        await tracker.stop()
     }
 
     @Test
     func cancelDurationPreventsStop() async throws {
-        let tracker = DurationTracker()
-        let storage = InMemoryProcessorStorage()
-        await tracker.start(storage: storage)
+        let clock = MutableClock()
+        let tracker = DurationTracker(dateProvider: clock.dateProvider)
 
         await tracker.startDuration(
             "test.duration",
             parameters: EventParameters(),
             includeBackgroundTime: true
         )
+
+        clock.advance(by: 0.1)
 
         await tracker.cancelDuration("test.duration")
 
         let result = await tracker.stopDuration("test.duration")
 
         #expect(result == nil)
-
-        await tracker.stop()
     }
 
     @Test
     func startParametersAreReturnedOnStop() async throws {
-        let tracker = DurationTracker()
-        let storage = InMemoryProcessorStorage()
-        await tracker.start(storage: storage)
+        let clock = MutableClock()
+        let tracker = DurationTracker(dateProvider: clock.dateProvider)
 
         var params = EventParameters()
         params["key1"] = "value1"
@@ -76,24 +68,19 @@ struct DurationTrackerTests {
             includeBackgroundTime: true
         )
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.1)
 
         let result = await tracker.stopDuration("test.duration")
 
         #expect(result != nil)
         #expect(result!.startParameters.payloadDictionary["key1"] == .string("value1"))
         #expect(result!.startParameters.payloadDictionary["key2"] == .string("value2"))
-
-        await tracker.stop()
     }
 
     @Test
     func backgroundTimeExcludedWhenFlagIsFalse() async throws {
-        let tracker = DurationTracker()
-        let storage = InMemoryProcessorStorage()
-        await tracker.start(storage: storage)
-
-        let startTime = Date()
+        let clock = MutableClock()
+        let tracker = DurationTracker(dateProvider: clock.dateProvider)
 
         await tracker.startDuration(
             "test.duration",
@@ -101,31 +88,26 @@ struct DurationTrackerTests {
             includeBackgroundTime: false
         )
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.05)
 
         await tracker.handleBackground()
 
-        try await Task.sleep(nanoseconds: 100_000_000)
+        clock.advance(by: 0.10)
 
         await tracker.handleForeground()
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.05)
 
         let result = await tracker.stopDuration("test.duration")
-        let wallClockElapsed = Date().timeIntervalSince(startTime)
 
         #expect(result != nil)
-        #expect(result!.durationInSeconds < wallClockElapsed)
-        #expect(result!.durationInSeconds < 0.25)
-
-        await tracker.stop()
+        #expect(abs(result!.durationInSeconds - 0.10) < 0.0001)
     }
 
     @Test
     func backgroundTimeIncludedWhenFlagIsTrue() async throws {
-        let tracker = DurationTracker()
-        let storage = InMemoryProcessorStorage()
-        await tracker.start(storage: storage)
+        let clock = MutableClock()
+        let tracker = DurationTracker(dateProvider: clock.dateProvider)
 
         await tracker.startDuration(
             "test.duration",
@@ -133,28 +115,28 @@ struct DurationTrackerTests {
             includeBackgroundTime: true
         )
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.05)
 
         await tracker.handleBackground()
 
-        try await Task.sleep(nanoseconds: 100_000_000)
+        clock.advance(by: 0.10)
 
         await tracker.handleForeground()
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.05)
 
         let result = await tracker.stopDuration("test.duration")
 
         #expect(result != nil)
-
-        await tracker.stop()
+        #expect(abs(result!.durationInSeconds - 0.20) < 0.0001)
     }
 
     @Test
     func persistAndRestoreRoundtrip() async throws {
+        let clock = MutableClock()
         let storage = InMemoryProcessorStorage()
 
-        let tracker1 = DurationTracker()
+        let tracker1 = DurationTracker(dateProvider: clock.dateProvider)
         await tracker1.start(storage: storage)
 
         var params = EventParameters()
@@ -166,14 +148,14 @@ struct DurationTrackerTests {
             includeBackgroundTime: false
         )
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.05)
 
         await tracker1.stop()
 
-        let tracker2 = DurationTracker()
+        let tracker2 = DurationTracker(dateProvider: clock.dateProvider)
         await tracker2.start(storage: storage)
 
-        try await Task.sleep(nanoseconds: 50_000_000)
+        clock.advance(by: 0.05)
 
         let result = await tracker2.stopDuration("test.duration")
 

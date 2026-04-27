@@ -84,14 +84,16 @@ struct RetentionProcessorTests {
 
     @Test
     func averageSessionSecondsCalculatedFromCompletedSessions() async throws {
+        let clock = MutableClock()
         let storage = InMemoryProcessorStorage()
 
+        let sessionStarted = clock.now.addingTimeInterval(-200)
         let session1 = """
-            [{"st":\(Date().addingTimeInterval(-200).timeIntervalSince1970),"dn":100}]
+            [{"st":\(sessionStarted.timeIntervalSince1970),"dn":100}]
             """.data(using: .utf8)!
         await storage.set(session1, forKey: "recentSessions")
 
-        let processor = SessionTrackingProcessor()
+        let processor = SessionTrackingProcessor(dateProvider: clock.dateProvider)
         let logger = NoOpLogger()
         await processor.start(storage: storage, logger: logger, emitter: MockEventSender())
 
@@ -140,14 +142,16 @@ struct RetentionProcessorTests {
 
     @Test
     func previousSessionSecondsReportedAfterTwoSessions() async throws {
+        let clock = MutableClock()
         let storage = InMemoryProcessorStorage()
 
+        let sessionStarted = clock.now.addingTimeInterval(-300)
         let sessions = """
-            [{"st":\(Date().addingTimeInterval(-300).timeIntervalSince1970),"dn":120}]
+            [{"st":\(sessionStarted.timeIntervalSince1970),"dn":120}]
             """.data(using: .utf8)!
         await storage.set(sessions, forKey: "recentSessions")
 
-        let processor = SessionTrackingProcessor()
+        let processor = SessionTrackingProcessor(dateProvider: clock.dateProvider)
         let logger = NoOpLogger()
         await processor.start(storage: storage, logger: logger, emitter: MockEventSender())
 
@@ -174,10 +178,11 @@ struct RetentionProcessorTests {
 
     @Test
     func cleanOldSessionsRemovesEntriesOlderThan90Days() async throws {
+        let clock = MutableClock()
         let storage = InMemoryProcessorStorage()
 
-        let oldDate = Date().addingTimeInterval(-91 * 24 * 3600)
-        let recentDate = Date().addingTimeInterval(-10 * 24 * 3600)
+        let oldDate = clock.now.addingTimeInterval(-91 * 24 * 3600)
+        let recentDate = clock.now.addingTimeInterval(-10 * 24 * 3600)
 
         let sessions = """
             [{"st":\(oldDate.timeIntervalSince1970),"dn":100},{"st":\(recentDate.timeIntervalSince1970),"dn":200}]
@@ -185,7 +190,7 @@ struct RetentionProcessorTests {
         await storage.set(sessions, forKey: "recentSessions")
         await storage.set(5, forKey: "deletedSessionsCount")
 
-        let processor = SessionTrackingProcessor()
+        let processor = SessionTrackingProcessor(dateProvider: clock.dateProvider)
         let logger = NoOpLogger()
         await processor.start(storage: storage, logger: logger, emitter: MockEventSender())
 
@@ -206,7 +211,7 @@ struct RetentionProcessorTests {
 
         try await Task.sleep(nanoseconds: 200_000_000)
 
-        let processor2 = SessionTrackingProcessor()
+        let processor2 = SessionTrackingProcessor(dateProvider: clock.dateProvider)
         await processor2.start(storage: storage, logger: logger, emitter: MockEventSender())
 
         let pipeline2 = ProcessorPipeline(

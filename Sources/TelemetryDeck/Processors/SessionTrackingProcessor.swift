@@ -15,6 +15,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
     private static let backgroundThreshold: TimeInterval = 5 * 60
 
     private let sendSessionStartedEvent: Bool
+    private let dateProvider: DateProvider
 
     private var currentSession: UUID
     private var backgroundDate: Date?
@@ -39,6 +40,13 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
     /// Creates a session tracking processor.
     public init(sendSessionStartedEvent: Bool = true) {
         self.sendSessionStartedEvent = sendSessionStartedEvent
+        self.dateProvider = .system
+        self.currentSession = UUID()
+    }
+
+    init(sendSessionStartedEvent: Bool = true, dateProvider: DateProvider) {
+        self.sendSessionStartedEvent = sendSessionStartedEvent
+        self.dateProvider = dateProvider
         self.currentSession = UUID()
     }
 
@@ -106,7 +114,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         recordSessionStart()
 
         if isNewInstall {
-            let dateStr = firstSessionDate ?? dateString(from: Date())
+            let dateStr = firstSessionDate ?? dateString(from: dateProvider.now())
             await emitter.send(
                 EventInput(
                     DefaultEvents.Acquisition.newInstallDetected.rawValue,
@@ -149,7 +157,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         context.addParameter(DefaultParams.Retention.totalSessionsCount, value: totalCount)
         context.addParameter(DefaultParams.Retention.distinctDaysUsed, value: distinctDaysUsed.count)
 
-        let thirtyDaysAgo = dateString(from: Date().addingTimeInterval(-30 * 24 * 3600))
+        let thirtyDaysAgo = dateString(from: dateProvider.now().addingTimeInterval(-30 * 24 * 3600))
         let recentDays = distinctDaysUsed.filter { $0 >= thirtyDaysAgo }
         context.addParameter(DefaultParams.Retention.distinctDaysUsedLastMonth, value: recentDays.count)
 
@@ -189,7 +197,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
     }
 
     private func recordSessionStart() {
-        let now = Date()
+        let now = dateProvider.now()
         currentSessionStart = now
         currentSessionPausedAt = nil
         currentSessionAccumulatedSeconds = 0
@@ -208,8 +216,8 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         schedulePersist { await self.persistSessions() }
     }
 
-    private func handleBackground() {
-        let now = Date()
+    func handleBackground() {
+        let now = dateProvider.now()
         backgroundDate = now
 
         guard let start = currentSessionStart else { return }
@@ -224,9 +232,9 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         currentSessionAccumulatedSeconds += elapsed
     }
 
-    private func handleForeground() async {
+    func handleForeground() async {
         let didRotate: Bool
-        if let bgDate = backgroundDate, Date().timeIntervalSince(bgDate) > Self.backgroundThreshold {
+        if let bgDate = backgroundDate, dateProvider.now().timeIntervalSince(bgDate) > Self.backgroundThreshold {
             backgroundDate = nil
             if var lastSession = recentSessions.last, currentSessionAccumulatedSeconds > 0 {
                 lastSession.durationInSeconds = currentSessionAccumulatedSeconds
@@ -248,7 +256,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
     }
 
     private func cleanOldSessions() {
-        let cutoff = Date().addingTimeInterval(-90 * 24 * 3600)
+        let cutoff = dateProvider.now().addingTimeInterval(-90 * 24 * 3600)
         let kept = recentSessions.filter { $0.startedAt >= cutoff }
         let removed = recentSessions.count - kept.count
         if removed > 0 {

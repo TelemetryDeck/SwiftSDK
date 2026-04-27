@@ -86,4 +86,42 @@ struct SessionProcessorTests {
         await processor.start(storage: storage, logger: DefaultLogger(), emitter: MockEventSender())
         await processor.stop()
     }
+
+    @Test
+    func shortBackgroundKeepsSameSession() async throws {
+        let clock = MutableClock()
+        let processor = SessionTrackingProcessor(sendSessionStartedEvent: false, dateProvider: clock.dateProvider)
+        let storage = InMemoryProcessorStorage()
+        await processor.start(storage: storage, logger: DefaultLogger(), emitter: MockEventSender())
+
+        let sessionBefore = await processor.currentSessionID()
+
+        await processor.handleBackground()
+        clock.advance(by: 60)
+        await processor.handleForeground()
+
+        let sessionAfter = await processor.currentSessionID()
+        #expect(sessionBefore == sessionAfter)
+
+        await processor.stop()
+    }
+
+    @Test
+    func longBackgroundRotatesSession() async throws {
+        let clock = MutableClock()
+        let processor = SessionTrackingProcessor(sendSessionStartedEvent: false, dateProvider: clock.dateProvider)
+        let storage = InMemoryProcessorStorage()
+        await processor.start(storage: storage, logger: DefaultLogger(), emitter: MockEventSender())
+
+        let sessionBefore = await processor.currentSessionID()
+
+        await processor.handleBackground()
+        clock.advance(by: 360)
+        await processor.handleForeground()
+
+        let sessionAfter = await processor.currentSessionID()
+        #expect(sessionBefore != sessionAfter)
+
+        await processor.stop()
+    }
 }
