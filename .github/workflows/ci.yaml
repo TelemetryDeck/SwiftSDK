@@ -30,8 +30,8 @@ jobs:
                     - "test -sdk iphonesimulator -destination 'platform=iOS Simulator,OS=26.4.1,name=iPhone 17'"
                     - "test -sdk macosx -destination 'platform=macOS'"
                     - "test -sdk xrsimulator -destination 'platform=visionOS Simulator,OS=26.4.1,name=Apple Vision Pro'"
-                    - "test -sdk appletvsimulator -destination 'platform=tvOS Simulator,OS=26.4.1,name=Apple TV 4K (3rd generation)'"
-                    - "test -sdk watchsimulator -destination 'platform=watchOS Simulator,OS=26.4.1,name=Apple Watch Series 11 (46mm)'"
+                    - "test -sdk appletvsimulator -destination 'platform=tvOS Simulator,OS=26.4,name=Apple TV 4K (3rd generation)'"
+                    - "test -sdk watchsimulator -destination 'platform=watchOS Simulator,OS=26.4,name=Apple Watch Series 11 (46mm)'"
                     - "build -destination 'platform=macOS,variant=Mac Catalyst'"
         steps:
             - name: Repository checkout
