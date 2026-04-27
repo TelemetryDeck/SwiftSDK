@@ -97,18 +97,10 @@ public enum TelemetryDeck {
         )
     }
 
-    /// Initialises the SDK with default processors and the given configuration.
-    public static func initialize(configuration: Config) async throws(TelemetryDeckError) {
-        try await initialize(
-            configuration: configuration,
-            processors: defaultProcessors()
-        )
-    }
-
-    /// Initialises the SDK with a custom processor list and optional dependency overrides.
+    /// Initialises the SDK with the given configuration, optionally overriding processors and dependencies.
     public static func initialize(
         configuration: Config,
-        processors: [any EventProcessor],
+        processors: [any EventProcessor] = TelemetryDeck.defaultProcessors(),
         cache: (any EventCaching)? = nil,
         transmitter: (any EventTransmitting)? = nil,
         logger: (any Logging)? = nil,
