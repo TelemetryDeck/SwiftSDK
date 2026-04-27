@@ -2,8 +2,8 @@ import Foundation
 
 // Based on https://gist.github.com/lukaskubanek/cbfcab29c0c93e0e9e0a16ab09586996
 
-public final class RuntimeContextDetector {
-    public init() {}
+final class RuntimeContextDetector {
+    init() {}
 
     func isTestFlightContext() -> Bool {
         #if os(macOS) || targetEnvironment(macCatalyst)
