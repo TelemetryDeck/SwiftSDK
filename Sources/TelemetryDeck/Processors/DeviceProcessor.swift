@@ -95,7 +95,7 @@ public struct DeviceProcessor: EventProcessor {
                 return false
             #else
                 guard let appStoreReceiptURL = Bundle.main.appStoreReceiptURL else { return false }
-                return appStoreReceiptURL.lastPathComponent == "sandboxReceipt"
+                return appStoreReceiptURL.lastPathComponent == "sandboxReceipt" || appStoreReceiptURL.path.contains("sandboxReceipt")
             #endif
         }()
         parameters[DefaultParams.RunContext.isTestFlight] = isTestFlight ? "true" : "false"
