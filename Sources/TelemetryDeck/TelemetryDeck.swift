@@ -49,7 +49,7 @@ public enum TelemetryDeck {
         sendSessionStartedEvent: Bool = true,
         defaultParameters: EventParameters = [:]
     ) -> [any EventProcessor] {
-        [
+        var processors: [any EventProcessor] = [
             PreviewFilterProcessor(),
             DefaultParametersProcessor(parameters: defaultParameters),
             DefaultPrefixProcessor(eventPrefix: eventPrefix, parameterPrefix: parameterPrefix),
@@ -62,8 +62,13 @@ public enum TelemetryDeck {
             LocaleProcessor(),
             CalendarProcessor(),
             AccessibilityProcessor(),
-            TrialConversionProcessor(),
         ]
+        #if canImport(StoreKit)
+            if #available(iOS 15, macCatalyst 15, *) {
+                processors.append(TrialConversionProcessor())
+            }
+        #endif
+        return processors
     }
 
     /// Initialises the SDK with the given app identity and processor-level options.

@@ -3,7 +3,7 @@
     import StoreKit
 
     /// Monitors StoreKit transaction updates to detect when a user converts from a free trial to a paid subscription.
-    @available(iOS 15, macOS 12, tvOS 15, watchOS 8, *)
+    @available(iOS 15, macCatalyst 15, macOS 12, tvOS 15, watchOS 8, *)
     public actor TrialConversionProcessor: EventProcessor {
         private struct StoredTrial: Codable {
             let productID: String

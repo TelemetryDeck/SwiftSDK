@@ -20,11 +20,15 @@ public struct DefaultLogger: Logging {
         let messageText = message()
 
         #if canImport(OSLog)
-            let osLog = os.Logger(subsystem: "TelemetryDeck", category: "SDK")
-            switch level {
-            case .debug: osLog.debug("\(messageText)")
-            case .info: osLog.info("\(messageText)")
-            case .error: osLog.error("\(messageText)")
+            if #available(iOS 14, macCatalyst 14, *) {
+                let osLog = os.Logger(subsystem: "TelemetryDeck", category: "SDK")
+                switch level {
+                case .debug: osLog.debug("\(messageText)")
+                case .info: osLog.info("\(messageText)")
+                case .error: osLog.error("\(messageText)")
+                }
+            } else {
+                print("[TelemetryDeck] \(messageText)")
             }
         #else
             print("[TelemetryDeck] \(messageText)")

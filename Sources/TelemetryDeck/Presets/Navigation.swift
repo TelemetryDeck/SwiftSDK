@@ -39,6 +39,7 @@ extension TelemetryDeck {
     }
 }
 
+@available(iOS 14, macCatalyst 14, *)
 extension View {
     @ViewBuilder
     fileprivate func _onChangeCompat<V: Equatable>(of value: V, perform action: @escaping (V) -> Void) -> some View {
@@ -52,6 +53,7 @@ extension View {
     }
 }
 
+@available(iOS 14, macCatalyst 14, *)
 extension View {
     /// Automatically sends a navigation event when the view appears and whenever `path` changes.
     public func trackNavigation(path: String) -> some View {
