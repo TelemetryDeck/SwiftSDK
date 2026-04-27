@@ -155,6 +155,26 @@ public struct DeviceProcessor: EventProcessor {
                 if let modelIdentifier { return modelIdentifier }
             }
         #endif
+        #if os(visionOS)
+            #if targetEnvironment(simulator)
+                if let simulatorModelIdentifier = ProcessInfo.processInfo.environment["SIMULATOR_MODEL_IDENTIFIER"],
+                    !simulatorModelIdentifier.isEmpty
+                {
+                    return simulatorModelIdentifier
+                }
+            #else
+                var size = 0
+                sysctlbyname("hw.machine", nil, &size, nil, 0)
+                if size > 0 {
+                    var machine = [CChar](repeating: 0, count: size)
+                    sysctlbyname("hw.machine", &machine, &size, nil, 0)
+                    let identifier = String(cString: machine)
+                    if !identifier.isEmpty, identifier != "arm64", identifier != "x86_64" {
+                        return identifier
+                    }
+                }
+            #endif
+        #endif
         var systemInfo = utsname()
         uname(&systemInfo)
         let machineMirror = Mirror(reflecting: systemInfo.machine)
