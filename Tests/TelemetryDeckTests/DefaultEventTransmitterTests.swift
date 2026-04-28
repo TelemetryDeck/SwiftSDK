@@ -3,60 +3,6 @@ import Testing
 
 @testable import TelemetryDeck
 
-private final class MockURLProtocol: URLProtocol {
-    private static let handlerLock = NSLock()
-    private nonisolated(unsafe) static var responseHandler: ((URLRequest) -> (HTTPURLResponse?, Error?))?
-
-    static func setResponseHandler(_ handler: @escaping (URLRequest) -> (HTTPURLResponse?, Error?)) {
-        handlerLock.lock()
-        defer { handlerLock.unlock() }
-        responseHandler = handler
-    }
-
-    static func reset() {
-        handlerLock.lock()
-        defer { handlerLock.unlock() }
-        responseHandler = nil
-    }
-
-    override class func canInit(with request: URLRequest) -> Bool {
-        true
-    }
-
-    override class func canonicalRequest(for request: URLRequest) -> URLRequest {
-        request
-    }
-
-    override func startLoading() {
-        Self.handlerLock.lock()
-        let handler = Self.responseHandler
-        Self.handlerLock.unlock()
-
-        guard let handler = handler else {
-            client?.urlProtocol(self, didFailWithError: NSError(domain: "MockError", code: -1))
-            return
-        }
-
-        let (response, error) = handler(request)
-
-        if let error = error {
-            client?.urlProtocol(self, didFailWithError: error)
-        } else if let response = response {
-            client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-            client?.urlProtocol(self, didLoad: Data())
-            client?.urlProtocolDidFinishLoading(self)
-        }
-    }
-
-    override func stopLoading() {}
-}
-
-private func createMockURLSession() -> URLSession {
-    let config = URLSessionConfiguration.ephemeral
-    config.protocolClasses = [MockURLProtocol.self]
-    return URLSession(configuration: config)
-}
-
 private func createTestEvent(type: String = "test.event") -> Event {
     Event(
         appID: "test-app-id",
@@ -70,7 +16,7 @@ private func createTestEvent(type: String = "test.event") -> Event {
     )
 }
 
-@Suite("DefaultEventTransmitter Tests", .serialized)
+@Suite("DefaultEventTransmitter Tests")
 struct DefaultEventTransmitterTests {
     @Test
     func serviceURLConstructedCorrectly() async {
@@ -82,31 +28,18 @@ struct DefaultEventTransmitterTests {
             apiBaseURL: baseURL
         )
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 200, url: baseURL)
 
-        let requestCapture = Locked<URLRequest?>(nil)
-        MockURLProtocol.setResponseHandler { request in
-            requestCapture.withLock { $0 = request }
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
-        let testTransmitter = DefaultEventTransmitter(
+        let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
-        let event = createTestEvent()
-        _ = await testTransmitter.transmit([event])
+        _ = await transmitter.transmit([createTestEvent()])
 
-        let capturedRequest = requestCapture.withLock { $0 }
+        let capturedRequest = stub.lastRequest
         #expect(capturedRequest != nil)
 
         if let url = capturedRequest?.url {
@@ -115,8 +48,6 @@ struct DefaultEventTransmitterTests {
             #expect(url.scheme == baseURL.scheme)
             #expect(url.host == baseURL.host)
         }
-
-        MockURLProtocol.reset()
     }
 
     @Test
@@ -129,30 +60,18 @@ struct DefaultEventTransmitterTests {
             apiBaseURL: baseURL
         )
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 200, url: baseURL)
 
-        let requestCapture = Locked<URLRequest?>(nil)
-        MockURLProtocol.setResponseHandler { request in
-            requestCapture.withLock { $0 = request }
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         _ = await transmitter.transmit([createTestEvent()])
 
-        let capturedRequest = requestCapture.withLock { $0 }
+        let capturedRequest = stub.lastRequest
         #expect(capturedRequest != nil)
 
         if let url = capturedRequest?.url {
@@ -160,8 +79,6 @@ struct DefaultEventTransmitterTests {
             #expect(url.scheme == "https")
             #expect(url.host == "example.com")
         }
-
-        MockURLProtocol.reset()
     }
 
     @Test
@@ -174,30 +91,18 @@ struct DefaultEventTransmitterTests {
             apiBaseURL: baseURL
         )
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 200, url: baseURL)
 
-        let requestCapture = Locked<URLRequest?>(nil)
-        MockURLProtocol.setResponseHandler { request in
-            requestCapture.withLock { $0 = request }
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         _ = await transmitter.transmit([createTestEvent()])
 
-        let capturedRequest = requestCapture.withLock { $0 }
+        let capturedRequest = stub.lastRequest
         #expect(capturedRequest != nil)
 
         if let url = capturedRequest?.url {
@@ -205,34 +110,19 @@ struct DefaultEventTransmitterTests {
             #expect(url.scheme == "https")
             #expect(url.host == "example.com")
         }
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func transmitReturnsEmptyOnSuccess() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
 
-        MockURLProtocol.setResponseHandler { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         let events = [
@@ -243,69 +133,40 @@ struct DefaultEventTransmitterTests {
 
         let failed = await transmitter.transmit(events)
 
+        #expect(stub.lastRequest != nil)
         #expect(failed.isEmpty)
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func transmitReturnsEmptyOn201Created() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 201, url: URL(string: "https://nom.telemetrydeck.com")!)
 
-        MockURLProtocol.setResponseHandler { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 201,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
-        let events = [createTestEvent()]
-        let failed = await transmitter.transmit(events)
+        let failed = await transmitter.transmit([createTestEvent()])
 
+        #expect(stub.lastRequest != nil)
         #expect(failed.isEmpty)
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func transmitReturnsOriginalEventsOnFailure() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 500, url: URL(string: "https://nom.telemetrydeck.com")!)
 
-        MockURLProtocol.setResponseHandler { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 500,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         let events = [
@@ -318,142 +179,87 @@ struct DefaultEventTransmitterTests {
         #expect(failed.count == events.count)
         #expect(failed[0].type == "event.one")
         #expect(failed[1].type == "event.two")
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func transmitReturnsOriginalEventsOn400BadRequest() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 400, url: URL(string: "https://nom.telemetrydeck.com")!)
 
-        MockURLProtocol.setResponseHandler { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 400,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         let events = [createTestEvent()]
         let failed = await transmitter.transmit(events)
 
         #expect(failed.count == events.count)
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func transmitReturnsOriginalEventsOnNetworkError() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
-
-        MockURLProtocol.setResponseHandler { request in
-            let error = NSError(
+        let stub = StubHTTPClient(
+            error: NSError(
                 domain: NSURLErrorDomain,
                 code: NSURLErrorNotConnectedToInternet,
                 userInfo: nil
             )
-            return (nil, error)
-        }
+        )
 
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         let events = [createTestEvent()]
         let failed = await transmitter.transmit(events)
 
         #expect(failed.count == events.count)
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func transmitSetsCorrectHTTPHeaders() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
 
-        let requestCapture = Locked<URLRequest?>(nil)
-        MockURLProtocol.setResponseHandler { request in
-            requestCapture.withLock { $0 = request }
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
-        let events = [createTestEvent()]
-        _ = await transmitter.transmit(events)
+        _ = await transmitter.transmit([createTestEvent()])
 
-        let capturedRequest = requestCapture.withLock { $0 }
+        let capturedRequest = stub.lastRequest
         #expect(capturedRequest?.httpMethod == "POST")
         #expect(capturedRequest?.value(forHTTPHeaderField: "Content-Type") == "application/json")
-        #expect(capturedRequest?.httpBodyStream != nil)
-
-        MockURLProtocol.reset()
+        #expect(capturedRequest?.httpBody != nil)
     }
 
     @Test
     func flushCallsTransmitForCachedEvents() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
-
         let transmitCallCount = Locked<Int>(0)
-        MockURLProtocol.setResponseHandler { request in
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!) {
             transmitCallCount.withLock { $0 += 1 }
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
         }
 
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         await cache.add(createTestEvent(type: "event.one"))
@@ -470,34 +276,19 @@ struct DefaultEventTransmitterTests {
 
         let callCount = transmitCallCount.withLock { $0 }
         #expect(callCount == 1)
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func flushReAddsFailedEventsToCache() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 503, url: URL(string: "https://nom.telemetrydeck.com")!)
 
-        MockURLProtocol.setResponseHandler { request in
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 503,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
-        }
-
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         await cache.add(createTestEvent(type: "event.one"))
@@ -510,44 +301,62 @@ struct DefaultEventTransmitterTests {
 
         let countAfter = await cache.count()
         #expect(countAfter == 2)
-
-        MockURLProtocol.reset()
     }
 
     @Test
     func flushWithEmptyCacheDoesNothing() async {
-        let config = TelemetryDeck.Config(
-            appID: "test-app",
-            namespace: "test"
-        )
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
-
         let transmitCallCount = Locked<Int>(0)
-        MockURLProtocol.setResponseHandler { request in
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!) {
             transmitCallCount.withLock { $0 += 1 }
-            let response = HTTPURLResponse(
-                url: request.url!,
-                statusCode: 200,
-                httpVersion: nil,
-                headerFields: nil
-            )
-            return (response, nil)
         }
 
-        let session = createMockURLSession()
         let transmitter = DefaultEventTransmitter(
             configuration: config,
             cache: cache,
             logger: DefaultLogger(),
-            urlSession: session
+            httpClient: stub
         )
 
         await transmitter.flush()
 
         let callCount = transmitCallCount.withLock { $0 }
         #expect(callCount == 0)
+    }
+}
 
-        MockURLProtocol.reset()
+private final class StubHTTPClient: HTTPDataLoader, @unchecked Sendable {
+    private let lock = NSLock()
+    private var _lastRequest: URLRequest?
+
+    private let result: Result<(Data, URLResponse), Error>
+    private let onRequest: (() -> Void)?
+
+    init(statusCode: Int, url: URL, onRequest: (() -> Void)? = nil) {
+        let response = HTTPURLResponse(
+            url: url,
+            statusCode: statusCode,
+            httpVersion: nil,
+            headerFields: nil
+        )!
+        self.result = .success((Data(), response))
+        self.onRequest = onRequest
+    }
+
+    init(error: Error, onRequest: (() -> Void)? = nil) {
+        self.result = .failure(error)
+        self.onRequest = onRequest
+    }
+
+    var lastRequest: URLRequest? {
+        lock.withLock { _lastRequest }
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        lock.withLock { _lastRequest = request }
+        onRequest?()
+        return try result.get()
     }
 }
 
@@ -560,8 +369,6 @@ private final class Locked<T>: @unchecked Sendable {
     }
 
     func withLock<R>(_ body: (inout T) -> R) -> R {
-        lock.lock()
-        defer { lock.unlock() }
-        return body(&value)
+        lock.withLock { body(&value) }
     }
 }

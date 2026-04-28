@@ -5,7 +5,7 @@ public actor DefaultEventTransmitter: EventTransmitting {
     private let configuration: TelemetryDeck.Config
     private let cache: any EventCaching
     private let logger: any Logging
-    private let urlSession: URLSession
+    private let httpClient: any HTTPDataLoader
     private var transmitTask: Task<Void, Never>?
     private let transmitInterval: TimeInterval = 10
 
@@ -16,10 +16,19 @@ public actor DefaultEventTransmitter: EventTransmitting {
         logger: any Logging,
         urlSession: URLSession = .shared
     ) {
+        self.init(configuration: configuration, cache: cache, logger: logger, httpClient: urlSession)
+    }
+
+    init(
+        configuration: TelemetryDeck.Config,
+        cache: any EventCaching,
+        logger: any Logging,
+        httpClient: any HTTPDataLoader
+    ) {
         self.configuration = configuration
         self.cache = cache
         self.logger = logger
-        self.urlSession = urlSession
+        self.httpClient = httpClient
     }
 
     /// Starts the repeating transmission timer.
@@ -56,7 +65,7 @@ public actor DefaultEventTransmitter: EventTransmitting {
         request.httpBody = body
 
         do {
-            let (_, response) = try await urlSession.data(for: request)
+            let (_, response) = try await httpClient.data(for: request)
             guard let http = response as? HTTPURLResponse,
                 (200...299).contains(http.statusCode)
             else {
