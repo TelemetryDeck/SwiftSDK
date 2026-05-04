@@ -23,9 +23,9 @@ public struct DefaultLogger: Logging {
             if #available(iOS 14, macCatalyst 14, *) {
                 let osLog = os.Logger(subsystem: "TelemetryDeck", category: "SDK")
                 switch level {
-                case .debug: osLog.debug("\(messageText)")
-                case .info: osLog.info("\(messageText)")
-                case .error: osLog.error("\(messageText)")
+                case .debug: osLog.debug("\(messageText, privacy: .public)")
+                case .info: osLog.info("\(messageText, privacy: .public)")
+                case .error: osLog.error("\(messageText, privacy: .public)")
                 }
             } else {
                 print("[TelemetryDeck] \(messageText)")

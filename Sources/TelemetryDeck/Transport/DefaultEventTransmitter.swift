@@ -66,13 +66,18 @@ public actor DefaultEventTransmitter: EventTransmitting {
 
         do {
             let (_, response) = try await httpClient.data(for: request)
-            guard let http = response as? HTTPURLResponse,
-                (200...299).contains(http.statusCode)
-            else {
+            guard let http = response as? HTTPURLResponse else {
+                logger.log(.error, "Transmit failed: response was not HTTP, retrying \(events.count) events")
                 return events
             }
+            guard (200...299).contains(http.statusCode) else {
+                logger.log(.error, "Transmit failed with HTTP \(http.statusCode), retrying \(events.count) events")
+                return events
+            }
+            logger.log(.debug, "Transmitted \(events.count) events (HTTP \(http.statusCode))")
             return []
         } catch {
+            logger.log(.error, "Transmit failed: \(error.localizedDescription), retrying \(events.count) events")
             return events
         }
     }
@@ -85,6 +90,8 @@ public actor DefaultEventTransmitter: EventTransmitting {
     private func transmitBatch() async {
         let events = await cache.pop()
         guard !events.isEmpty else { return }
+        let remainingCount = await cache.count()
+        logger.log(.info, "Sending \(events.count) events, \(remainingCount) remain in cache")
         let failed = await transmit(events)
         for event in failed {
             await cache.add(event)

@@ -25,6 +25,7 @@ private actor TelemetryDeckStorage {
         guard let client, !buffer.isEmpty else { return }
         let pending = buffer
         buffer = []
+        logger.log(.debug, "Draining buffer with \(pending.count) events")
         for input in pending {
             await client.send(input)
         }

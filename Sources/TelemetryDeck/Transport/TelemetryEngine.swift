@@ -41,7 +41,8 @@ actor TelemetryEngine: EventSending {
         self.durationTracker = DurationTracker()
         self.pipeline = ProcessorPipeline(
             processors: processors,
-            finalizer: EventFinalizer(configuration: configuration)
+            finalizer: EventFinalizer(configuration: configuration),
+            logger: logger
         )
     }
 
@@ -96,6 +97,7 @@ actor TelemetryEngine: EventSending {
 
     /// Stops all processors and the transmitter, persists the cache, and cancels lifecycle observers.
     func shutdown() async {
+        logger.log(.debug, "TelemetryEngine client is shutting down")
         for processor in processors {
             await processor.stop()
         }
@@ -114,6 +116,7 @@ actor TelemetryEngine: EventSending {
         do {
             let event = try await pipeline.process(input, context: context)
             await cache.add(event)
+            logger.log(.debug, "Accepted event '\(input.name)'")
         } catch let error as ProcessorError {
             switch error {
             case .eventFiltered:
@@ -138,6 +141,7 @@ actor TelemetryEngine: EventSending {
 
     /// Immediately transmits all cached events.
     func flush() async {
+        logger.log(.debug, "TelemetryEngine client flush")
         await transmitter.flush()
     }
 
@@ -152,6 +156,9 @@ actor TelemetryEngine: EventSending {
     }
 
     private func handleBackground() async {
+        logger.log(.debug, "App entering background, persisting cache")
+        let cachedCount = await cache.count()
+        defer { logger.log(.info, "Persisted \(cachedCount) events to disk") }
         #if canImport(UIKit) && !os(watchOS)
             if !Environment.isAppExtension {
                 let app = await MainActor.run { UIApplication.shared }
@@ -177,11 +184,15 @@ actor TelemetryEngine: EventSending {
     }
 
     private func handleForeground() async {
+        logger.log(.debug, "App entering foreground")
         await cache.restore()
+        let restoredCount = await cache.count()
+        logger.log(.info, "Restored cache: \(restoredCount) events")
         await transmitter.start()
     }
 
     private func handleTermination() async {
+        logger.log(.debug, "App terminating, persisting cache")
         await cache.persist()
         await transmitter.stop()
     }
