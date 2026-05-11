@@ -7,28 +7,43 @@ public actor DefaultEventTransmitter: EventTransmitting {
     private let logger: any Logging
     private let httpClient: any HTTPDataLoader
     private var transmitTask: Task<Void, Never>?
-    private let transmitInterval: TimeInterval = 10
+    private let transmitInterval: TimeInterval
+    private let maxBackoffInterval: TimeInterval
+    private var consecutiveFailures: Int = 0
 
     /// Creates a transmitter with the given configuration, cache, logger, and URL session.
     public init(
         configuration: TelemetryDeck.Config,
         cache: any EventCaching,
         logger: any Logging,
-        urlSession: URLSession = .shared
+        urlSession: URLSession = .shared,
+        transmitInterval: TimeInterval = 10,
+        maxBackoffInterval: TimeInterval = 300
     ) {
-        self.init(configuration: configuration, cache: cache, logger: logger, httpClient: urlSession)
+        self.init(
+            configuration: configuration,
+            cache: cache,
+            logger: logger,
+            httpClient: urlSession,
+            transmitInterval: transmitInterval,
+            maxBackoffInterval: maxBackoffInterval
+        )
     }
 
     init(
         configuration: TelemetryDeck.Config,
         cache: any EventCaching,
         logger: any Logging,
-        httpClient: any HTTPDataLoader
+        httpClient: any HTTPDataLoader,
+        transmitInterval: TimeInterval = 10,
+        maxBackoffInterval: TimeInterval = 300
     ) {
         self.configuration = configuration
         self.cache = cache
         self.logger = logger
         self.httpClient = httpClient
+        self.transmitInterval = transmitInterval
+        self.maxBackoffInterval = maxBackoffInterval
     }
 
     /// Starts the repeating transmission timer.
@@ -37,7 +52,7 @@ public actor DefaultEventTransmitter: EventTransmitting {
         transmitTask = Task { [weak self] in
             while !Task.isCancelled {
                 await self?.transmitBatch()
-                let interval = self?.transmitInterval ?? 10
+                let interval = await self?.nextInterval() ?? 10
                 try? await Task.sleep(nanoseconds: UInt64(interval * 1_000_000_000))
             }
         }
@@ -82,8 +97,9 @@ public actor DefaultEventTransmitter: EventTransmitting {
         }
     }
 
-    /// Immediately transmits all cached events without waiting for the next timer tick.
+    /// Immediately transmits all cached events without waiting for the next timer tick, resets the backoff counter to 0 before transmitting.
     public func flush() async {
+        consecutiveFailures = 0
         await transmitBatch()
     }
 
@@ -93,9 +109,26 @@ public actor DefaultEventTransmitter: EventTransmitting {
         let remainingCount = await cache.count()
         logger.log(.info, "Sending \(events.count) events, \(remainingCount) remain in cache")
         let failed = await transmit(events)
-        for event in failed {
-            await cache.add(event)
+        if failed.isEmpty {
+            consecutiveFailures = 0
+        } else {
+            consecutiveFailures += 1
+            for event in failed {
+                await cache.add(event)
+            }
         }
+    }
+
+    /// Returns the current consecutive failure count, used by tests to verify backoff state.
+    func currentBackoffFailures() -> Int {
+        consecutiveFailures
+    }
+
+    private func nextInterval() -> TimeInterval {
+        guard consecutiveFailures > 0 else { return transmitInterval }
+        // Clamp the exponent to 16 to guard against overflow in pow()
+        let multiplier = pow(2.0, Double(min(consecutiveFailures, 16)))
+        return min(transmitInterval * multiplier, maxBackoffInterval)
     }
 
     private var serviceURL: URL? {

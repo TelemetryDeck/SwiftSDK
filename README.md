@@ -304,6 +304,27 @@ try await TelemetryDeck.initialize(
 )
 ```
 
+### Cache configuration
+
+`DefaultEventCache` and `DefaultEventTransmitter` expose parameters to control how the SDK will retry sending events in case of a problem:
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `DefaultEventCache(cacheLimit:)` | `Int` | `10_000` | Maximum events held in memory; oldest events are dropped first when the limit is reached |
+| `DefaultEventTransmitter(transmitInterval:)` | `TimeInterval` | `10` | Seconds between transmission attempts |
+| `DefaultEventTransmitter(maxBackoffInterval:)` | `TimeInterval` | `300` | Upper bound for exponential backoff after consecutive failed batches |
+
+```swift
+let cache = DefaultEventCache(cacheLimit: 5_000)
+let transmitter = DefaultEventTransmitter(
+    configuration: config,
+    cache: cache,
+    logger: DefaultLogger(),
+    transmitInterval: 30,
+    maxBackoffInterval: 600
+)
+```
+
 You can also implement the `EventTransmitting` protocol for a fully custom transport layer.
 
 ### Custom Logging

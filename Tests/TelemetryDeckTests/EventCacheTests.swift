@@ -195,6 +195,60 @@ struct EventCacheTests {
         #expect(popped[1].type == "Signal.B")
     }
 
+    @Test
+    func defaultCacheLimitEvictsOldestEventsOnOverflow() async {
+        let cache = DefaultEventCache(cacheLimit: 5)
+
+        for i in 0..<7 {
+            await cache.add(createTestEvent(type: "Signal.\(i)"))
+        }
+
+        let count = await cache.count()
+        #expect(count == 5)
+
+        let popped = await cache.pop()
+        #expect(popped[0].type == "Signal.2")
+        #expect(popped[4].type == "Signal.6")
+    }
+
+    @Test
+    func restoreWithCapTrimsOldestPersistedEvents() async {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-restore-cap-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let writerCache = DefaultEventCache(fileURL: fileURL)
+        for i in 0..<10 {
+            await writerCache.add(createTestEvent(type: "Signal.\(i)"))
+        }
+        await writerCache.persist()
+
+        let cache = DefaultEventCache(fileURL: fileURL, cacheLimit: 5)
+        await cache.restore()
+
+        let count = await cache.count()
+        #expect(count == 5)
+
+        let popped = await cache.pop()
+        #expect(popped[0].type == "Signal.5")
+        #expect(popped[4].type == "Signal.9")
+    }
+
+    @Test
+    func inMemoryCacheLimitEvictsOldestEvents() async {
+        let cache = InMemoryEventCache(cacheLimit: 3)
+
+        for i in 0..<5 {
+            await cache.add(createTestEvent(type: "Signal.\(i)"))
+        }
+
+        let count = await cache.count()
+        #expect(count == 3)
+
+        let popped = await cache.pop()
+        #expect(popped[0].type == "Signal.2")
+        #expect(popped[2].type == "Signal.4")
+    }
+
     private func createTestEvent(type: String = "Test.signal") -> Event {
         Event(
             appID: "test-app",
