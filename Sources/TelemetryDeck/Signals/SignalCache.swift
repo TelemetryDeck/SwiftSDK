@@ -77,6 +77,25 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
         return cacheFolderURL.appendingPathComponent("telemetrysignalcache")
     }
 
+    /// Re-loads any signals previously persisted to disk and merges them with currently in-memory signals.
+    ///
+    /// Trims the merged result to `cacheLimit`. Removes the on-disk file after a successful read.
+    func reloadFromDisk() {
+        queue.sync(flags: .barrier) {
+            loadFromDiskLocked()
+        }
+    }
+
+    private func loadFromDiskLocked() {
+        logHandler?.log(message: "Loading Telemetry cache from: \(fileURL())")
+        guard let data = try? Data(contentsOf: fileURL()) else { return }
+        try? FileManager.default.removeItem(at: fileURL())
+        guard let signals = try? JSONDecoder().decode([T].self, from: data) else { return }
+        logHandler?.log(message: "Loaded \(signals.count) signals")
+        cachedSignals.append(contentsOf: signals)
+        trimToCacheLimitLocked()
+    }
+
     /// Save the entire signal cache to disk
     func backupCache() {
         queue.sync {
@@ -101,19 +120,8 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
         self.cacheLimit = cacheLimit
         self.cacheFileURL = fileURL
 
-        queue.sync {
-            logHandler?.log(message: "Loading Telemetry cache from: \(self.fileURL())")
-
-            if let data = try? Data(contentsOf: self.fileURL()) {
-                // Loaded cache file, now delete it to stop it being loaded multiple times
-                try? FileManager.default.removeItem(at: self.fileURL())
-
-                // Decode the data into a new cache
-                if let signals = try? JSONDecoder().decode([T].self, from: data) {
-                    logHandler?.log(message: "Loaded \(signals.count) signals")
-                    self.cachedSignals = Array(signals.suffix(cacheLimit))
-                }
-            }
+        queue.sync(flags: .barrier) {
+            loadFromDiskLocked()
         }
     }
 }

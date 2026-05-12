@@ -24,7 +24,7 @@ protocol SignalManageable {
 }
 
 final class SignalManager: SignalManageable, @unchecked Sendable {
-    private var signalCache: SignalCache<SignalPostBody>
+    private let signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
 
     private var sendTimerSource: DispatchSourceTimer?
@@ -45,6 +45,8 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
 
         /// Test-only accessor to push signals directly into the cache.
         var signalCacheForTesting: SignalCache<SignalPostBody> { signalCache }
+
+        var _shouldFailNextEncode: Bool = false
     #endif
 
     init(configuration: TelemetryManagerConfiguration) {
@@ -190,7 +192,16 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
 
         configuration.logHandler?.log(message: "Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
 
-        send(queuedSignals) { [weak self] data, response, error in
+        let body: Data
+        do {
+            body = try encodeBatch(queuedSignals)
+        } catch {
+            configuration.logHandler?.log(.error, message: "Failed to encode signal batch: \(error)")
+            handleSendFailure(requeue: queuedSignals)
+            return
+        }
+
+        send(body) { [weak self] data, response, error in
             guard let self else { return }
 
             if let error = error {
@@ -259,19 +270,10 @@ extension SignalManager {
         #endif
     }
 
-    /// WatchOS doesn't have a notification before it's killed, so we have to use background/foreground
-    /// This means our `init()` above doesn't always run when coming back to foreground, so we have to manually
-    /// reload the cache. This also means we miss any signals sent during watchDidEnterForeground
-    /// so we merge them into the new cache.
     #if os(watchOS) || os(tvOS) || os(iOS) || os(visionOS)
         @objc func didEnterForeground() {
             configuration.logHandler?.log(.debug, message: #function)
-
-            let currentCache = signalCache.pop()
-            configuration.logHandler?.log(.debug, message: "current cache is \(currentCache.count) signals")
-            signalCache = SignalCache(logHandler: configuration.logHandler, cacheLimit: configuration.cacheLimit)
-            signalCache.push(currentCache)
-
+            signalCache.reloadFromDisk()
             sendCachedSignalsRepeatedly()
         }
 
@@ -307,7 +309,24 @@ extension SignalManager {
 // MARK: - Comms
 
 extension SignalManager {
-    private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
+    #if DEBUG
+        internal var shouldFailNextEncodeForTesting: Bool {
+            get { _shouldFailNextEncode }
+            set { _shouldFailNextEncode = newValue }
+        }
+    #endif
+
+    internal func encodeBatch(_ bodies: [SignalPostBody]) throws -> Data {
+        #if DEBUG
+            if _shouldFailNextEncode {
+                _shouldFailNextEncode = false
+                throw TelemetryError.encodeFailed(TelemetryError.invalidEndpointUrl)
+            }
+        #endif
+        return try JSONEncoder.telemetryEncoder.encode(bodies)
+    }
+
+    private func send(_ body: Data, completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
             guard let url = SignalManager.getServiceUrl(baseURL: self.configuration.apiBaseURL, namespace: self.configuration.namespace) else {
                 self.configuration.logHandler?.log(
@@ -321,14 +340,9 @@ extension SignalManager {
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            guard let body = try? JSONEncoder.telemetryEncoder.encode(signalPostBodies) else {
-                return
-            }
-
             urlRequest.httpBody = body
 
-            if let data = urlRequest.httpBody, let messageString = String(data: data, encoding: .utf8) {
+            if let messageString = String(data: body, encoding: .utf8) {
                 self.configuration.logHandler?.log(.debug, message: messageString)
             }
 
@@ -428,6 +442,7 @@ private enum TelemetryError: Error {
     case payloadTooLarge
     case invalidStatusCode(statusCode: Int)
     case invalidEndpointUrl
+    case encodeFailed(Error)
 }
 
 extension TelemetryError: LocalizedError {
@@ -443,6 +458,8 @@ extension TelemetryError: LocalizedError {
             return "Payload is too large (413)"
         case .invalidEndpointUrl:
             return "Invalid endpoint URL"
+        case .encodeFailed(let error):
+            return "Failed to encode signal batch: \(error)"
         }
     }
 }
