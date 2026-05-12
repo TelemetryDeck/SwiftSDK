@@ -24,19 +24,34 @@ protocol SignalManageable {
 }
 
 final class SignalManager: SignalManageable, @unchecked Sendable {
-    static let minimumSecondsToPassBetweenRequests: Double = 10
-
     private var signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
 
     private var sendTimerSource: DispatchSourceTimer?
     private let timerQueue = DispatchQueue(label: "com.telemetrydeck.SignalTimer", qos: .utility)
 
+    /// Number of consecutive transmission failures.
+    ///
+    /// Read and written only on `timerQueue`.
+    private var consecutiveFailures: Int = 0
+
+    #if DEBUG
+        /// Test-only accessor for `consecutiveFailures`.
+        ///
+        /// Uses a synchronous hop onto `timerQueue` for safe reads.
+        var consecutiveFailuresForTesting: Int {
+            timerQueue.sync { consecutiveFailures }
+        }
+
+        /// Test-only accessor to push signals directly into the cache.
+        var signalCacheForTesting: SignalCache<SignalPostBody> { signalCache }
+    #endif
+
     init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
 
         // We automatically load any old signals from disk on initialisation
-        signalCache = SignalCache(logHandler: configuration.swiftUIPreviewMode ? nil : configuration.logHandler)
+        signalCache = SignalCache(logHandler: configuration.swiftUIPreviewMode ? nil : configuration.logHandler, cacheLimit: configuration.cacheLimit)
 
         // Before the app terminates, we want to save any pending signals to disk
         // We need to monitor different notifications for different devices.
@@ -93,16 +108,26 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         sendCachedSignalsRepeatedly()
     }
 
-    /// Send any cached Signals from previous sessions now and setup a timer to repeatedly send Signals from cache in regular time intervals.
+    /// Fires an immediate send attempt and then starts the self-rescheduling timer.
     private func sendCachedSignalsRepeatedly() {
         attemptToSendNextBatchOfCachedSignals()
+        timerQueue.async {
+            self.consecutiveFailures = 0
+            self.scheduleNextTransmission()
+        }
+    }
 
+    /// Cancels any pending timer and schedules the next one-shot transmission with exponential backoff.
+    ///
+    /// Must only be called from `timerQueue`.
+    private func scheduleNextTransmission() {
         sendTimerSource?.cancel()
+
+        let exponent = Double(consecutiveFailures)
+        let delay = min(configuration.transmitInterval * pow(2, exponent), configuration.maxBackoffInterval)
+
         let source = DispatchSource.makeTimerSource(queue: timerQueue)
-        source.schedule(
-            deadline: .now() + Self.minimumSecondsToPassBetweenRequests,
-            repeating: Self.minimumSecondsToPassBetweenRequests
-        )
+        source.schedule(deadline: .now() + delay)
         source.setEventHandler { [weak self] in
             self?.attemptToSendNextBatchOfCachedSignals()
         }
@@ -158,32 +183,51 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 
         let queuedSignals: [SignalPostBody] = signalCache.pop()
-        if !queuedSignals.isEmpty {
-            configuration.logHandler?.log(message: "Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
+        guard !queuedSignals.isEmpty else {
+            handleSendSuccess()
+            return
+        }
 
-            send(queuedSignals) { [configuration, signalCache] data, response, error in
+        configuration.logHandler?.log(message: "Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
 
-                if let error = error {
-                    configuration.logHandler?.log(.error, message: "\(error)")
+        send(queuedSignals) { [weak self] data, response, error in
+            guard let self else { return }
 
-                    // The send failed, put the signal back into the queue
-                    signalCache.push(queuedSignals)
-                    return
-                }
-
-                // Check for valid status code response
-                guard response?.statusCodeError() == nil else {
-                    let statusError = response!.statusCodeError()!
-                    configuration.logHandler?.log(.error, message: "\(statusError)")
-                    // The send failed, put the signal back into the queue
-                    signalCache.push(queuedSignals)
-                    return
-                }
-
-                if let data = data, let messageString = String(data: data, encoding: .utf8) {
-                    configuration.logHandler?.log(.debug, message: messageString)
-                }
+            if let error = error {
+                self.configuration.logHandler?.log(.error, message: "\(error)")
+                self.handleSendFailure(requeue: queuedSignals)
+                return
             }
+
+            guard response?.statusCodeError() == nil else {
+                let statusError = response!.statusCodeError()!
+                self.configuration.logHandler?.log(.error, message: "\(statusError)")
+                self.handleSendFailure(requeue: queuedSignals)
+                return
+            }
+
+            if let data = data, let messageString = String(data: data, encoding: .utf8) {
+                self.configuration.logHandler?.log(.debug, message: messageString)
+            }
+
+            self.handleSendSuccess()
+        }
+    }
+
+    private func handleSendFailure(requeue: [SignalPostBody]) {
+        signalCache.push(requeue)
+        timerQueue.async { [weak self] in
+            guard let self else { return }
+            self.consecutiveFailures += 1
+            self.scheduleNextTransmission()
+        }
+    }
+
+    private func handleSendSuccess() {
+        timerQueue.async { [weak self] in
+            guard let self else { return }
+            self.consecutiveFailures = 0
+            self.scheduleNextTransmission()
         }
     }
 }
@@ -225,7 +269,7 @@ extension SignalManager {
 
             let currentCache = signalCache.pop()
             configuration.logHandler?.log(.debug, message: "current cache is \(currentCache.count) signals")
-            signalCache = SignalCache(logHandler: configuration.logHandler)
+            signalCache = SignalCache(logHandler: configuration.logHandler, cacheLimit: configuration.cacheLimit)
             signalCache.push(currentCache)
 
             sendCachedSignalsRepeatedly()

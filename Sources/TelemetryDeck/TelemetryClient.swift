@@ -90,6 +90,19 @@ public final class TelemetryManagerConfiguration: @unchecked Sendable {
     /// or debugging). If not set, the `URLSession.shared` instance will be used.
     public var urlSession: URLSession = URLSession.shared
 
+    /// Maximum number of signals retained in the local cache.
+    ///
+    /// When exceeded, oldest signals are dropped. Also applied when restoring signals from disk.
+    public var cacheLimit: Int = 10_000
+
+    /// Base interval in seconds between batched transmission attempts.
+    ///
+    /// Acts as the floor used as the base for exponential backoff on repeated failures.
+    public var transmitInterval: TimeInterval = 10
+
+    /// Upper bound in seconds for the exponential backoff delay between transmission attempts.
+    public var maxBackoffInterval: TimeInterval = 300
+
     @available(*, deprecated, message: "Please use the testMode property instead")
     public var sendSignalsInDebugConfiguration: Bool = false
 
