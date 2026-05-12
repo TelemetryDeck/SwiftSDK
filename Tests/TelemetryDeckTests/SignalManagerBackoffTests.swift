@@ -59,19 +59,30 @@ struct SignalManagerBackoffTests {
         )
     }
 
+    private func waitForConsecutiveFailures(
+        _ manager: SignalManager,
+        toEqual expected: Int,
+        timeout: TimeInterval = 5
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while manager.consecutiveFailuresForTesting != expected, Date() < deadline {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
     @Test
     func consecutiveFailures_incrementsOnErrorResponse() async throws {
         let manager = Self.makeManager(statusCode: 500)
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await Task.sleep(nanoseconds: 300_000_000)
+        try await waitForConsecutiveFailures(manager, toEqual: 1)
 
         #expect(manager.consecutiveFailuresForTesting == 1)
 
         manager.signalCacheForTesting.push(Self.makeSignal())
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await Task.sleep(nanoseconds: 300_000_000)
+        try await waitForConsecutiveFailures(manager, toEqual: 2)
 
         #expect(manager.consecutiveFailuresForTesting == 2)
     }
@@ -82,14 +93,14 @@ struct SignalManagerBackoffTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await Task.sleep(nanoseconds: 300_000_000)
+        try await waitForConsecutiveFailures(manager, toEqual: 1)
 
         #expect(manager.consecutiveFailuresForTesting == 1)
 
         StubURLProtocol.statusCode = 200
         manager.signalCacheForTesting.push(Self.makeSignal())
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await Task.sleep(nanoseconds: 300_000_000)
+        try await waitForConsecutiveFailures(manager, toEqual: 0)
 
         #expect(manager.consecutiveFailuresForTesting == 0)
     }
