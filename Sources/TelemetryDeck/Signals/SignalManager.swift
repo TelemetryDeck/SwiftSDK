@@ -35,12 +35,24 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
     /// Read and written only on `timerQueue`.
     private var consecutiveFailures: Int = 0
 
+    /// Number of completed send attempts (success + failure paths).
+    ///
+    /// Read and written only on `timerQueue`.
+    private var sendCompletions: Int = 0
+
     #if DEBUG
         /// Test-only accessor for `consecutiveFailures`.
         ///
         /// Uses a synchronous hop onto `timerQueue` for safe reads.
         var consecutiveFailuresForTesting: Int {
             timerQueue.sync { consecutiveFailures }
+        }
+
+        /// Test-only accessor for `sendCompletions`.
+        ///
+        /// Uses a synchronous hop onto `timerQueue` for safe reads.
+        var sendCompletionsForTesting: Int {
+            timerQueue.sync { sendCompletions }
         }
 
         /// Test-only accessor to push signals directly into the cache.
@@ -235,6 +247,7 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         signalCache.push(requeue)
         timerQueue.async { [weak self] in
             guard let self else { return }
+            self.sendCompletions += 1
             self.consecutiveFailures += 1
             self.scheduleNextTransmission()
         }
@@ -243,6 +256,7 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
     private func handleSendSuccess() {
         timerQueue.async { [weak self] in
             guard let self else { return }
+            self.sendCompletions += 1
             self.consecutiveFailures = 0
             self.scheduleNextTransmission()
         }

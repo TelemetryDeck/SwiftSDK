@@ -3,6 +3,10 @@ import Testing
 
 @testable import TelemetryDeck
 
+// URLSessionConfiguration.protocolClasses is not honored on watchOS, so these tests
+// cannot intercept HTTP responses. Run on every other platform.
+#if !os(watchOS)
+
 // MARK: - URLProtocol stub
 
 private final class DispositionStubURLProtocol: URLProtocol, @unchecked Sendable {
@@ -70,6 +74,17 @@ struct SignalManagerDispositionTests {
         }
     }
 
+    private func waitForSendCompletion(
+        _ manager: SignalManager,
+        toReach expected: Int,
+        timeout: TimeInterval = 5
+    ) async throws {
+        let deadline = Date().addingTimeInterval(timeout)
+        while manager.sendCompletionsForTesting < expected, Date() < deadline {
+            try await Task.sleep(nanoseconds: 50_000_000)
+        }
+    }
+
     // MARK: Success
 
     @Test
@@ -78,7 +93,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -92,7 +107,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -104,7 +119,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -116,7 +131,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -128,7 +143,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -140,7 +155,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -152,7 +167,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -164,7 +179,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -176,7 +191,7 @@ struct SignalManagerDispositionTests {
         manager.signalCacheForTesting.push(Self.makeSignal())
 
         manager.attemptToSendNextBatchOfCachedSignals()
-        try await waitForConsecutiveFailures(manager, toEqual: 0)
+        try await waitForSendCompletion(manager, toReach: 1)
 
         #expect(manager.signalCacheForTesting.count() == 0)
         #expect(manager.consecutiveFailuresForTesting == 0)
@@ -277,3 +292,5 @@ struct SignalManagerDispositionTests {
         #expect(manager.consecutiveFailuresForTesting == 0)
     }
 }
+
+#endif // !os(watchOS)

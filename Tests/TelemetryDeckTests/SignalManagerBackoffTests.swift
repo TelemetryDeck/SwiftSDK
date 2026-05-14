@@ -3,6 +3,10 @@ import Testing
 
 @testable import TelemetryDeck
 
+// URLSessionConfiguration.protocolClasses is not honored on watchOS, so these tests
+// cannot intercept HTTP responses. Run on every other platform.
+#if !os(watchOS)
+
 // MARK: - URLProtocol stub
 
 private final class StubURLProtocol: URLProtocol, @unchecked Sendable {
@@ -105,3 +109,5 @@ struct SignalManagerBackoffTests {
         #expect(manager.consecutiveFailuresForTesting == 0)
     }
 }
+
+#endif // !os(watchOS)
