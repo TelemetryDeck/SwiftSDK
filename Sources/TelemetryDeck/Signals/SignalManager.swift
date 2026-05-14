@@ -210,18 +210,24 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
                 return
             }
 
-            guard response?.statusCodeError() == nil else {
-                let statusError = response!.statusCodeError()!
-                self.configuration.logHandler?.log(.error, message: "\(statusError)")
+            let disposition = response?.disposition() ?? .retry
+            switch disposition {
+            case .success:
+                if let data = data, let messageString = String(data: data, encoding: .utf8) {
+                    self.configuration.logHandler?.log(.debug, message: messageString)
+                }
+                self.handleSendSuccess()
+            case .drop(let reason):
+                self.configuration.logHandler?.log(
+                    .error,
+                    message: "Dropping \(queuedSignals.count) signal(s): rejected by server \(reason)"
+                )
+                self.handleSendSuccess()
+            case .retry:
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                self.configuration.logHandler?.log(.debug, message: "Failed to send events (status \(code)), will try again later")
                 self.handleSendFailure(requeue: queuedSignals)
-                return
             }
-
-            if let data = data, let messageString = String(data: data, encoding: .utf8) {
-                self.configuration.logHandler?.log(.debug, message: messageString)
-            }
-
-            self.handleSendSuccess()
         }
     }
 
@@ -407,40 +413,38 @@ extension SignalManager {
     }
 }
 
-extension URLResponse {
-    /// Returns the HTTP status code
-    fileprivate func statusCode() -> Int? {
-        if let httpResponse = self as? HTTPURLResponse {
-            return httpResponse.statusCode
-        }
-        return nil
-    }
+fileprivate enum ResponseDisposition {
+    case success
+    case drop(reason: String)
+    case retry
+}
 
-    /// Returns an `Error` if not a valid statusCode
-    fileprivate func statusCodeError() -> Error? {
-        // Check for valid response in the 200-299 range
-        guard (200...299).contains(statusCode() ?? 0) else {
-            if statusCode() == 401 {
-                return TelemetryError.unauthorised
-            } else if statusCode() == 403 {
-                return TelemetryError.forbidden
-            } else if statusCode() == 413 {
-                return TelemetryError.payloadTooLarge
-            } else {
-                return TelemetryError.invalidStatusCode(statusCode: statusCode() ?? 0)
-            }
+extension URLResponse {
+    fileprivate func disposition() -> ResponseDisposition {
+        guard let httpResponse = self as? HTTPURLResponse else {
+            return .retry
         }
-        return nil
+        let code = httpResponse.statusCode
+        if (200...299).contains(code) {
+            return .success
+        }
+        switch code {
+        case 400: return .drop(reason: "Bad Request (400)")
+        case 401: return .drop(reason: "Unauthorized (401)")
+        case 403: return .drop(reason: "Forbidden (403)")
+        case 404: return .drop(reason: "Not Found (404)")
+        case 413: return .drop(reason: "Payload Too Large (413)")
+        case 422: return .drop(reason: "Unprocessable Entity (422)")
+        case 501: return .drop(reason: "Not Implemented (501)")
+        case 505: return .drop(reason: "HTTP Version Not Supported (505)")
+        default: return .retry
+        }
     }
 }
 
 // MARK: - Errors
 
 private enum TelemetryError: Error {
-    case unauthorised
-    case forbidden
-    case payloadTooLarge
-    case invalidStatusCode(statusCode: Int)
     case invalidEndpointUrl
     case encodeFailed(Error)
 }
@@ -448,14 +452,6 @@ private enum TelemetryError: Error {
 extension TelemetryError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .invalidStatusCode(let statusCode):
-            return "Invalid status code \(statusCode)"
-        case .unauthorised:
-            return "Unauthorized (401)"
-        case .forbidden:
-            return "Forbidden (403)"
-        case .payloadTooLarge:
-            return "Payload is too large (413)"
         case .invalidEndpointUrl:
             return "Invalid endpoint URL"
         case .encodeFailed(let error):
