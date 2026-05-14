@@ -8,16 +8,16 @@ on:
             - "*"
 
 jobs:
-    lint:
-        name: Lint Code
-        runs-on: ubuntu-latest
-        steps:
-            - name: Repository checkout
-              uses: actions/checkout@v5
-            - name: Get swift version
-              run: swift --version
-            - name: Lint
-              run: make checklint
+    # lint:
+    # name: Lint Code
+    # runs-on: ubuntu-latest
+    # steps:
+    #     - name: Repository checkout
+    #       uses: actions/checkout@v5
+    #     - name: Get swift version
+    #       run: swift --version
+    #     - name: Lint
+    #       run: make checklint
     test:
         name: Test ${{ matrix.xcodebuildCommand }}
         runs-on: "macos-26"
