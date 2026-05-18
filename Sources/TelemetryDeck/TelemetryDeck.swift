@@ -222,7 +222,7 @@ public enum TelemetryDeck {
         let manager = TelemetryManager.shared
 
         // this check ensures that the number of requests can only double in the worst case where a developer calls this after each `send`
-        if Date().timeIntervalSince(manager.lastTimeImmediateSyncRequested) > SignalManager.minimumSecondsToPassBetweenRequests {
+        if Date().timeIntervalSince(manager.lastTimeImmediateSyncRequested) > manager.configuration.transmitInterval {
             manager.lastTimeImmediateSyncRequested = Date()
 
             // give the signal manager some short amount of time to process the signal that was sent right before calling sync

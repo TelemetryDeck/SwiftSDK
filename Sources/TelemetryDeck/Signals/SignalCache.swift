@@ -6,12 +6,15 @@ import Foundation
 /// since all Signals automatically get a `receivedAt` property with a date, allowing the server to reorder them
 /// correctly.
 ///
-/// Currently the cache is only in-memory. This will probably change in the near future.
+/// The cache persists signals to disk via `backupCache()` and automatically restores them in `init`.
+/// Signals in excess of `cacheLimit` are dropped from the front (oldest first) to keep memory and disk usage bounded.
 internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     internal var logHandler: LogHandler?
 
     private var cachedSignals: [T] = []
     private let maximumNumberOfSignalsToPopAtOnce = 100
+    private let cacheLimit: Int
+    private let cacheFileURL: URL?
 
     let queue = DispatchQueue(label: "com.telemetrydeck.SignalCache", attributes: .concurrent)
 
@@ -26,6 +29,7 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     func push(_ signal: T) {
         queue.sync(flags: .barrier) {
             self.cachedSignals.append(signal)
+            self.trimToCacheLimitLocked()
         }
     }
 
@@ -33,6 +37,13 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     func push(_ signals: [T]) {
         queue.sync(flags: .barrier) {
             self.cachedSignals.append(contentsOf: signals)
+            self.trimToCacheLimitLocked()
+        }
+    }
+
+    private func trimToCacheLimitLocked() {
+        if cachedSignals.count > cacheLimit {
+            cachedSignals.removeFirst(cachedSignals.count - cacheLimit)
         }
     }
 
@@ -50,6 +61,10 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     }
 
     private func fileURL() -> URL {
+        if let cacheFileURL {
+            return cacheFileURL
+        }
+
         // swiftlint:disable force_try
         let cacheFolderURL = try! FileManager.default.url(
             for: .cachesDirectory,
@@ -60,6 +75,25 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
         // swiftlint:enable force_try
 
         return cacheFolderURL.appendingPathComponent("telemetrysignalcache")
+    }
+
+    /// Re-loads any signals previously persisted to disk and merges them with currently in-memory signals.
+    ///
+    /// Trims the merged result to `cacheLimit`. Removes the on-disk file after a successful read.
+    func reloadFromDisk() {
+        queue.sync(flags: .barrier) {
+            loadFromDiskLocked()
+        }
+    }
+
+    private func loadFromDiskLocked() {
+        logHandler?.log(message: "Loading Telemetry cache from: \(fileURL())")
+        guard let data = try? Data(contentsOf: fileURL()) else { return }
+        try? FileManager.default.removeItem(at: fileURL())
+        guard let signals = try? JSONDecoder().decode([T].self, from: data) else { return }
+        logHandler?.log(message: "Loaded \(signals.count) signals")
+        cachedSignals.append(contentsOf: signals)
+        trimToCacheLimitLocked()
     }
 
     /// Save the entire signal cache to disk
@@ -81,22 +115,13 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     }
 
     /// Loads any previous signal cache from disk
-    init(logHandler: LogHandler?) {
+    init(logHandler: LogHandler?, cacheLimit: Int = 10_000, fileURL: URL? = nil) {
         self.logHandler = logHandler
+        self.cacheLimit = cacheLimit
+        self.cacheFileURL = fileURL
 
-        queue.sync {
-            logHandler?.log(message: "Loading Telemetry cache from: \(fileURL())")
-
-            if let data = try? Data(contentsOf: fileURL()) {
-                // Loaded cache file, now delete it to stop it being loaded multiple times
-                try? FileManager.default.removeItem(at: fileURL())
-
-                // Decode the data into a new cache
-                if let signals = try? JSONDecoder().decode([T].self, from: data) {
-                    logHandler?.log(message: "Loaded \(signals.count) signals")
-                    self.cachedSignals = signals
-                }
-            }
+        queue.sync(flags: .barrier) {
+            loadFromDiskLocked()
         }
     }
 }

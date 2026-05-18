@@ -24,19 +24,48 @@ protocol SignalManageable {
 }
 
 final class SignalManager: SignalManageable, @unchecked Sendable {
-    static let minimumSecondsToPassBetweenRequests: Double = 10
-
-    private var signalCache: SignalCache<SignalPostBody>
+    private let signalCache: SignalCache<SignalPostBody>
     let configuration: TelemetryManagerConfiguration
 
     private var sendTimerSource: DispatchSourceTimer?
     private let timerQueue = DispatchQueue(label: "com.telemetrydeck.SignalTimer", qos: .utility)
 
+    /// Number of consecutive transmission failures.
+    ///
+    /// Read and written only on `timerQueue`.
+    private var consecutiveFailures: Int = 0
+
+    /// Number of completed send attempts (success + failure paths).
+    ///
+    /// Read and written only on `timerQueue`.
+    private var sendCompletions: Int = 0
+
+    #if DEBUG
+        /// Test-only accessor for `consecutiveFailures`.
+        ///
+        /// Uses a synchronous hop onto `timerQueue` for safe reads.
+        var consecutiveFailuresForTesting: Int {
+            timerQueue.sync { consecutiveFailures }
+        }
+
+        /// Test-only accessor for `sendCompletions`.
+        ///
+        /// Uses a synchronous hop onto `timerQueue` for safe reads.
+        var sendCompletionsForTesting: Int {
+            timerQueue.sync { sendCompletions }
+        }
+
+        /// Test-only accessor to push signals directly into the cache.
+        var signalCacheForTesting: SignalCache<SignalPostBody> { signalCache }
+
+        var _shouldFailNextEncode: Bool = false
+    #endif
+
     init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
 
         // We automatically load any old signals from disk on initialisation
-        signalCache = SignalCache(logHandler: configuration.swiftUIPreviewMode ? nil : configuration.logHandler)
+        signalCache = SignalCache(logHandler: configuration.swiftUIPreviewMode ? nil : configuration.logHandler, cacheLimit: configuration.cacheLimit)
 
         // Before the app terminates, we want to save any pending signals to disk
         // We need to monitor different notifications for different devices.
@@ -93,16 +122,26 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         sendCachedSignalsRepeatedly()
     }
 
-    /// Send any cached Signals from previous sessions now and setup a timer to repeatedly send Signals from cache in regular time intervals.
+    /// Fires an immediate send attempt and then starts the self-rescheduling timer.
     private func sendCachedSignalsRepeatedly() {
         attemptToSendNextBatchOfCachedSignals()
+        timerQueue.async {
+            self.consecutiveFailures = 0
+            self.scheduleNextTransmission()
+        }
+    }
 
+    /// Cancels any pending timer and schedules the next one-shot transmission with exponential backoff.
+    ///
+    /// Must only be called from `timerQueue`.
+    private func scheduleNextTransmission() {
         sendTimerSource?.cancel()
+
+        let exponent = Double(consecutiveFailures)
+        let delay = min(configuration.transmitInterval * pow(2, exponent), configuration.maxBackoffInterval)
+
         let source = DispatchSource.makeTimerSource(queue: timerQueue)
-        source.schedule(
-            deadline: .now() + Self.minimumSecondsToPassBetweenRequests,
-            repeating: Self.minimumSecondsToPassBetweenRequests
-        )
+        source.schedule(deadline: .now() + delay)
         source.setEventHandler { [weak self] in
             self?.attemptToSendNextBatchOfCachedSignals()
         }
@@ -158,32 +197,68 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
         configuration.logHandler?.log(.debug, message: "Current signal cache count: \(signalCache.count())")
 
         let queuedSignals: [SignalPostBody] = signalCache.pop()
-        if !queuedSignals.isEmpty {
-            configuration.logHandler?.log(message: "Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
+        guard !queuedSignals.isEmpty else {
+            handleSendSuccess()
+            return
+        }
 
-            send(queuedSignals) { [configuration, signalCache] data, response, error in
+        configuration.logHandler?.log(message: "Sending \(queuedSignals.count) signals leaving a cache of \(signalCache.count()) signals")
 
-                if let error = error {
-                    configuration.logHandler?.log(.error, message: "\(error)")
+        let body: Data
+        do {
+            body = try encodeBatch(queuedSignals)
+        } catch {
+            configuration.logHandler?.log(.error, message: "Failed to encode signal batch: \(error)")
+            handleSendFailure(requeue: queuedSignals)
+            return
+        }
 
-                    // The send failed, put the signal back into the queue
-                    signalCache.push(queuedSignals)
-                    return
-                }
+        send(body) { [weak self] data, response, error in
+            guard let self else { return }
 
-                // Check for valid status code response
-                guard response?.statusCodeError() == nil else {
-                    let statusError = response!.statusCodeError()!
-                    configuration.logHandler?.log(.error, message: "\(statusError)")
-                    // The send failed, put the signal back into the queue
-                    signalCache.push(queuedSignals)
-                    return
-                }
-
-                if let data = data, let messageString = String(data: data, encoding: .utf8) {
-                    configuration.logHandler?.log(.debug, message: messageString)
-                }
+            if let error = error {
+                self.configuration.logHandler?.log(.error, message: "\(error)")
+                self.handleSendFailure(requeue: queuedSignals)
+                return
             }
+
+            let disposition = response?.disposition() ?? .retry
+            switch disposition {
+            case .success:
+                if let data = data, let messageString = String(data: data, encoding: .utf8) {
+                    self.configuration.logHandler?.log(.debug, message: messageString)
+                }
+                self.handleSendSuccess()
+            case .drop(let reason):
+                self.configuration.logHandler?.log(
+                    .error,
+                    message: "Dropping \(queuedSignals.count) signal(s): rejected by server \(reason)"
+                )
+                self.handleSendSuccess()
+            case .retry:
+                let code = (response as? HTTPURLResponse)?.statusCode ?? 0
+                self.configuration.logHandler?.log(.debug, message: "Failed to send events (status \(code)), will try again later")
+                self.handleSendFailure(requeue: queuedSignals)
+            }
+        }
+    }
+
+    private func handleSendFailure(requeue: [SignalPostBody]) {
+        signalCache.push(requeue)
+        timerQueue.async { [weak self] in
+            guard let self else { return }
+            self.sendCompletions += 1
+            self.consecutiveFailures += 1
+            self.scheduleNextTransmission()
+        }
+    }
+
+    private func handleSendSuccess() {
+        timerQueue.async { [weak self] in
+            guard let self else { return }
+            self.sendCompletions += 1
+            self.consecutiveFailures = 0
+            self.scheduleNextTransmission()
         }
     }
 }
@@ -215,19 +290,10 @@ extension SignalManager {
         #endif
     }
 
-    /// WatchOS doesn't have a notification before it's killed, so we have to use background/foreground
-    /// This means our `init()` above doesn't always run when coming back to foreground, so we have to manually
-    /// reload the cache. This also means we miss any signals sent during watchDidEnterForeground
-    /// so we merge them into the new cache.
     #if os(watchOS) || os(tvOS) || os(iOS) || os(visionOS)
         @objc func didEnterForeground() {
             configuration.logHandler?.log(.debug, message: #function)
-
-            let currentCache = signalCache.pop()
-            configuration.logHandler?.log(.debug, message: "current cache is \(currentCache.count) signals")
-            signalCache = SignalCache(logHandler: configuration.logHandler)
-            signalCache.push(currentCache)
-
+            signalCache.reloadFromDisk()
             sendCachedSignalsRepeatedly()
         }
 
@@ -263,7 +329,24 @@ extension SignalManager {
 // MARK: - Comms
 
 extension SignalManager {
-    private func send(_ signalPostBodies: [SignalPostBody], completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
+    #if DEBUG
+        internal var shouldFailNextEncodeForTesting: Bool {
+            get { _shouldFailNextEncode }
+            set { _shouldFailNextEncode = newValue }
+        }
+    #endif
+
+    internal func encodeBatch(_ bodies: [SignalPostBody]) throws -> Data {
+        #if DEBUG
+            if _shouldFailNextEncode {
+                _shouldFailNextEncode = false
+                throw TelemetryError.encodeFailed(TelemetryError.invalidEndpointUrl)
+            }
+        #endif
+        return try JSONEncoder.telemetryEncoder.encode(bodies)
+    }
+
+    private func send(_ body: Data, completionHandler: @escaping @Sendable (Data?, URLResponse?, Error?) -> Void) {
         DispatchQueue.global(qos: .utility).async {
             guard let url = SignalManager.getServiceUrl(baseURL: self.configuration.apiBaseURL, namespace: self.configuration.namespace) else {
                 self.configuration.logHandler?.log(
@@ -277,14 +360,9 @@ extension SignalManager {
             var urlRequest = URLRequest(url: url)
             urlRequest.httpMethod = "POST"
             urlRequest.addValue("application/json", forHTTPHeaderField: "Content-Type")
-
-            guard let body = try? JSONEncoder.telemetryEncoder.encode(signalPostBodies) else {
-                return
-            }
-
             urlRequest.httpBody = body
 
-            if let data = urlRequest.httpBody, let messageString = String(data: data, encoding: .utf8) {
+            if let messageString = String(data: body, encoding: .utf8) {
                 self.configuration.logHandler?.log(.debug, message: messageString)
             }
 
@@ -349,56 +427,49 @@ extension SignalManager {
     }
 }
 
-extension URLResponse {
-    /// Returns the HTTP status code
-    fileprivate func statusCode() -> Int? {
-        if let httpResponse = self as? HTTPURLResponse {
-            return httpResponse.statusCode
-        }
-        return nil
-    }
+fileprivate enum ResponseDisposition {
+    case success
+    case drop(reason: String)
+    case retry
+}
 
-    /// Returns an `Error` if not a valid statusCode
-    fileprivate func statusCodeError() -> Error? {
-        // Check for valid response in the 200-299 range
-        guard (200...299).contains(statusCode() ?? 0) else {
-            if statusCode() == 401 {
-                return TelemetryError.unauthorised
-            } else if statusCode() == 403 {
-                return TelemetryError.forbidden
-            } else if statusCode() == 413 {
-                return TelemetryError.payloadTooLarge
-            } else {
-                return TelemetryError.invalidStatusCode(statusCode: statusCode() ?? 0)
-            }
+extension URLResponse {
+    fileprivate func disposition() -> ResponseDisposition {
+        guard let httpResponse = self as? HTTPURLResponse else {
+            return .retry
         }
-        return nil
+        let code = httpResponse.statusCode
+        if (200...299).contains(code) {
+            return .success
+        }
+        switch code {
+        case 400: return .drop(reason: "Bad Request (400)")
+        case 401: return .drop(reason: "Unauthorized (401)")
+        case 403: return .drop(reason: "Forbidden (403)")
+        case 404: return .drop(reason: "Not Found (404)")
+        case 413: return .drop(reason: "Payload Too Large (413)")
+        case 422: return .drop(reason: "Unprocessable Entity (422)")
+        case 501: return .drop(reason: "Not Implemented (501)")
+        case 505: return .drop(reason: "HTTP Version Not Supported (505)")
+        default: return .retry
+        }
     }
 }
 
 // MARK: - Errors
 
 private enum TelemetryError: Error {
-    case unauthorised
-    case forbidden
-    case payloadTooLarge
-    case invalidStatusCode(statusCode: Int)
     case invalidEndpointUrl
+    case encodeFailed(Error)
 }
 
 extension TelemetryError: LocalizedError {
     public var errorDescription: String? {
         switch self {
-        case .invalidStatusCode(let statusCode):
-            return "Invalid status code \(statusCode)"
-        case .unauthorised:
-            return "Unauthorized (401)"
-        case .forbidden:
-            return "Forbidden (403)"
-        case .payloadTooLarge:
-            return "Payload is too large (413)"
         case .invalidEndpointUrl:
             return "Invalid endpoint URL"
+        case .encodeFailed(let error):
+            return "Failed to encode signal batch: \(error)"
         }
     }
 }
