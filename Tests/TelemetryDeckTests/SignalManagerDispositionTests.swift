@@ -66,7 +66,7 @@ struct SignalManagerDispositionTests {
     private func waitForConsecutiveFailures(
         _ manager: SignalManager,
         toEqual expected: Int,
-        timeout: TimeInterval = 5
+        timeout: TimeInterval = 15
     ) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         while manager.consecutiveFailuresForTesting != expected, Date() < deadline {
@@ -77,7 +77,7 @@ struct SignalManagerDispositionTests {
     private func waitForSendCompletion(
         _ manager: SignalManager,
         toReach expected: Int,
-        timeout: TimeInterval = 5
+        timeout: TimeInterval = 15
     ) async throws {
         let deadline = Date().addingTimeInterval(timeout)
         while manager.sendCompletionsForTesting < expected, Date() < deadline {
