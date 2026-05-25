@@ -85,12 +85,17 @@ public actor DefaultEventTransmitter: EventTransmitting {
                 logger.log(.error, "Transmit failed: response was not HTTP, retrying \(events.count) events")
                 return events
             }
-            guard (200...299).contains(http.statusCode) else {
+            switch http.disposition {
+            case .success:
+                logger.log(.debug, "Transmitted \(events.count) events (HTTP \(http.statusCode))")
+                return []
+            case .drop(let reason):
+                logger.log(.error, "Dropping \(events.count) events: rejected by server — \(reason)")
+                return []
+            case .retry:
                 logger.log(.error, "Transmit failed with HTTP \(http.statusCode), retrying \(events.count) events")
                 return events
             }
-            logger.log(.debug, "Transmitted \(events.count) events (HTTP \(http.statusCode))")
-            return []
         } catch {
             logger.log(.error, "Transmit failed: \(error.localizedDescription), retrying \(events.count) events")
             return events
@@ -139,5 +144,30 @@ public actor DefaultEventTransmitter: EventTransmitting {
         let url = URL(string: base + "v2/namespace/\(configuration.namespace)/")
         assert(url != nil, "Failed to construct service URL from base: \(configuration.apiBaseURL)")
         return url
+    }
+}
+
+private enum ResponseDisposition {
+    case success
+    case drop(reason: String)
+    case retry
+}
+
+extension HTTPURLResponse {
+    fileprivate var disposition: ResponseDisposition {
+        if (200...299).contains(statusCode) {
+            return .success
+        }
+        switch statusCode {
+        case 400: return .drop(reason: "Bad Request (400)")
+        case 401: return .drop(reason: "Unauthorized (401)")
+        case 403: return .drop(reason: "Forbidden (403)")
+        case 404: return .drop(reason: "Not Found (404)")
+        case 413: return .drop(reason: "Payload Too Large (413)")
+        case 422: return .drop(reason: "Unprocessable Entity (422)")
+        case 501: return .drop(reason: "Not Implemented (501)")
+        case 505: return .drop(reason: "HTTP Version Not Supported (505)")
+        default: return .retry
+        }
     }
 }
