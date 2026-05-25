@@ -1,36 +1,47 @@
-// swift-tools-version: 5.9
+// swift-tools-version: 6.2
 import PackageDescription
 
 let package = Package(
     name: "TelemetryDeck",
     platforms: [
-        .macOS(.v10_13),
-        .iOS(.v12),
-        .watchOS(.v5),
-        .tvOS(.v13),
+        .macOS(.v12),
+        .macCatalyst(.v13),
+        .iOS(.v15),
+        .watchOS(.v8),
+        .tvOS(.v15),
         .visionOS(.v1),
     ],
     products: [
-        .library(name: "TelemetryDeck", targets: ["TelemetryDeck"]),  // new name
-        .library(name: "TelemetryClient", targets: ["TelemetryClient"]),  // old name
+        .library(name: "TelemetryDeck", targets: ["TelemetryDeck"])
     ],
     dependencies: [],
     targets: [
         .target(
             name: "TelemetryDeck",
             resources: [.copy("PrivacyInfo.xcprivacy")],
-            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
-        ),
-        .target(
-            name: "TelemetryClient",
-            dependencies: ["TelemetryDeck"],
-            resources: [.copy("PrivacyInfo.xcprivacy")],
-            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+                .enableUpcomingFeature("InferIsolatedConformances"),
+                .defaultIsolation(nil),
+            ]
         ),
         .testTarget(
             name: "TelemetryDeckTests",
             dependencies: ["TelemetryDeck"],
-            swiftSettings: [.enableExperimentalFeature("StrictConcurrency")]
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+                .enableUpcomingFeature("InferIsolatedConformances"),
+                .defaultIsolation(nil),
+            ]
+        ),
+        .testTarget(
+            name: "TelemetryDeckApproachableConcurrencyTests",
+            dependencies: ["TelemetryDeck"],
+            swiftSettings: [
+                .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+                .enableUpcomingFeature("InferIsolatedConformances"),
+                .defaultIsolation(nil),
+            ]
         ),
     ]
 )

@@ -1,268 +1,341 @@
 import Foundation
 
-/// A namespace for TelemetryDeck related functionalities.
+private actor TelemetryDeckStorage {
+    var client: TelemetryEngine?
+    var logger: any Logging = DefaultLogger()
+    private var buffer: [EventInput] = []
+
+    func setClient(_ client: TelemetryEngine?) {
+        self.client = client
+    }
+
+    func setLogger(_ logger: any Logging) {
+        self.logger = logger
+    }
+
+    func send(_ input: EventInput) async {
+        if let client {
+            await client.send(input)
+        } else {
+            buffer.append(input)
+        }
+    }
+
+    func drainBuffer() async {
+        guard let client, !buffer.isEmpty else { return }
+        let pending = buffer
+        buffer = []
+        logger.log(.debug, "Draining buffer with \(pending.count) events")
+        for input in pending {
+            await client.send(input)
+        }
+    }
+
+    func clearBuffer() {
+        buffer = []
+    }
+}
+
+private let storage = TelemetryDeckStorage()
+
+/// The primary namespace for the TelemetryDeck SDK, providing static methods for initialisation, event sending, and session management.
 public enum TelemetryDeck {
-    /// This alias makes it easier to migrate the configuration type into the TelemetryDeck namespace in future versions when deprecated code is fully removed.
-    public typealias Config = TelemetryManagerConfiguration
 
-    static let reservedKeysLowercased: Set<String> = Set(
-        [
-            "type", "clientUser", "appID", "sessionID", "floatValue",
-            "newSessionBegan", "platform", "systemVersion", "majorSystemVersion", "majorMinorSystemVersion", "appVersion", "buildNumber",
-            "isSimulator", "isDebug", "isTestFlight", "isAppStore", "modelName", "architecture", "operatingSystem", "targetEnvironment",
-            "locale", "region", "appLanguage", "preferredLanguage", "telemetryClientVersion",
-        ].map { $0.lowercased() }
-    )
-
-    /// Initializes TelemetryDeck with a customizable configuration.
-    ///
-    /// - Parameter configuration: An instance of `Configuration` which includes all the settings required to configure TelemetryDeck.
-    ///
-    /// This function sets up the telemetry system with the specified configuration. It is necessary to call this method before sending any telemetry signals.
-    /// For example, you might want to call this in your `init` method of your app's `@main` entry point.
-    public static func initialize(config: Config) {
-        TelemetryManager.initializedTelemetryManager = TelemetryManager(configuration: config)
+    /// Returns the default set of event processors used when initialising without a custom processor list.
+    public static func defaultProcessors(
+        defaultUser: String? = nil,
+        testMode: Bool? = nil,
+        eventPrefix: String? = nil,
+        parameterPrefix: String? = nil,
+        sendSessionStartedEvent: Bool = true,
+        defaultParameters: EventParameters = [:]
+    ) -> [any EventProcessor] {
+        var processors: [any EventProcessor] = [
+            PreviewFilterProcessor(),
+            DefaultParametersProcessor(parameters: defaultParameters),
+            DefaultPrefixProcessor(eventPrefix: eventPrefix, parameterPrefix: parameterPrefix),
+            ValidationProcessor(),
+            TestModeProcessor(override: testMode),
+            UserIdentifierProcessor(defaultUser: defaultUser),
+            SessionTrackingProcessor(sendSessionStartedEvent: sendSessionStartedEvent),
+            DeviceProcessor(),
+            AppInfoProcessor(),
+            LocaleProcessor(),
+            CalendarProcessor(),
+            AccessibilityProcessor(),
+        ]
+        #if canImport(StoreKit)
+            if #available(iOS 15, macCatalyst 15, *) {
+                processors.append(TrialConversionProcessor())
+            }
+        #endif
+        return processors
     }
 
-    /// Sends a telemetry signal with optional parameters to TelemetryDeck.
-    ///
-    /// - Parameters:
-    ///   - signalName: The name of the signal to be sent. This is a string that identifies the type of event or action being reported.
-    ///   - parameters: A dictionary of additional string key-value pairs that provide further context about the signal. Default is empty.
-    ///   - floatValue: An optional floating-point number that can be used to provide numerical data about the signal. Default is `nil`.
-    ///   - customUserID: An optional string specifying a custom user identifier. If provided, it will override the default user identifier from the configuration. Default is `nil`.
-    ///
-    /// This function wraps the `TelemetryManager.send` method, providing a streamlined way to send signals from anywhere in the app.
-    public static func signal(
-        _ signalName: String,
-        parameters: [String: String] = [:],
-        floatValue: Double? = nil,
-        customUserID: String? = nil
-    ) {
-        let manager = TelemetryManager.shared
-        let configuration = manager.configuration
+    /// Initialises the SDK with the given app identity and processor-level options.
+    public static func initialize(
+        appID: String,
+        namespace: String,
+        salt: String = "",
+        defaultUser: String? = nil,
+        testMode: Bool? = nil,
+        eventPrefix: String? = nil,
+        parameterPrefix: String? = nil,
+        sendSessionStartedEvent: Bool = true,
+        defaultParameters: EventParameters = [:]
+    ) async throws(TelemetryDeckError) {
+        let configuration = Config(appID: appID, namespace: namespace, salt: salt)
+        try await initialize(
+            configuration: configuration,
+            processors: defaultProcessors(
+                defaultUser: defaultUser,
+                testMode: testMode,
+                eventPrefix: eventPrefix,
+                parameterPrefix: parameterPrefix,
+                sendSessionStartedEvent: sendSessionStartedEvent,
+                defaultParameters: defaultParameters
+            )
+        )
+    }
 
-        // make sure to not send any signals when run by Xcode via SwiftUI previews
-        guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
+    /// Initialises the SDK with the given configuration, optionally overriding processors and dependencies.
+    public static func initialize(
+        configuration: Config,
+        processors: [any EventProcessor] = TelemetryDeck.defaultProcessors(),
+        cache: (any EventCaching)? = nil,
+        transmitter: (any EventTransmitting)? = nil,
+        logger: (any Logging)? = nil,
+        storage processorStorage: (any ProcessorStorage)? = nil
+    ) async throws(TelemetryDeckError) {
+        try configuration.validate()
 
-        let combinedSignalName = (configuration.defaultSignalPrefix ?? "") + signalName
-        let prefixedParameters = parameters.mapKeys { parameter in
-            guard !parameter.hasPrefix("TelemetryDeck.") else { return parameter }
-            return (configuration.defaultParameterPrefix ?? "") + parameter
+        guard await storage.client == nil else {
+            await log(.error, "TelemetryDeck.initialize() called more than once. Ignoring subsequent call. Remove the duplicate initialization.")
+            return
         }
 
-        if configuration.reservedParameterWarningsEnabled {
-            // warn users about reserved keys to avoid unexpected behavior
-            if combinedSignalName.lowercased().hasPrefix("telemetrydeck.") {
-                configuration.logHandler?.log(
-                    .error,
-                    message: "Sending signal with reserved prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
-                )
-            } else if Self.reservedKeysLowercased.contains(combinedSignalName.lowercased()) {
-                configuration.logHandler?.log(
-                    .error,
-                    message:
-                        "Sending signal with reserved name '\(combinedSignalName)' will cause unexpected behavior. Please use another name instead."
-                )
-            }
+        let resolvedLogger = logger ?? DefaultLogger()
+        await storage.setLogger(resolvedLogger)
 
-            // only check parameters (not default ones)
-            for parameterKey in prefixedParameters.keys {
-                if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
-                    configuration.logHandler?.log(
-                        .error,
-                        message:
-                            "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
-                    )
-                } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
-                    configuration.logHandler?.log(
-                        .error,
-                        message:
-                            "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
-                    )
-                }
-            }
-        }
-
-        self.internalSignal(combinedSignalName, parameters: prefixedParameters, floatValue: floatValue, customUserID: customUserID)
+        let client = await TelemetryEngine.create(
+            configuration: configuration,
+            processors: processors,
+            cache: cache,
+            transmitter: transmitter,
+            logger: resolvedLogger,
+            storage: processorStorage
+        )
+        await storage.setClient(client)
+        await storage.drainBuffer()
     }
 
-    /// Starts tracking the duration of a signal without sending it yet.
-    ///
-    /// - Parameters:
-    ///   - signalName: The name of the signal to track. This will be used to identify and stop the duration tracking later.
-    ///   - parameters: A dictionary of additional string key-value pairs that will be included when the duration signal is eventually sent. Default is empty.
-    ///   - includeBackgroundTime: An optional Bool where you can specify to actually include (and not exclude) the time when your app is in the background.
-    ///
-    /// This function only starts tracking time – it does not send a signal. You must call `stopAndSendDurationSignal(_:parameters:)`
-    /// with the same signal name to finalize and actually send the signal with the tracked duration.
-    ///
-    /// The timer only counts time while the app is in the foreground.
-    ///
-    /// If a new duration signal ist started while an existing duration signal with the same name was not stopped yet, the old one is replaced with the new one.
-    @MainActor
-    @available(watchOS 7.0, *)
-    public static func startDurationSignal(
-        _ signalName: String,
-        parameters: [String: String] = [:],
-        includeBackgroundTime: Bool = false
-    ) {
-        DurationSignalTracker.shared.startTracking(signalName, parameters: parameters, includeBackgroundTime: includeBackgroundTime)
+    static func client() async -> TelemetryEngine? {
+        await storage.client
     }
 
-    /// Cancels tracking of a duration signal without sending it.
-    ///
-    /// - Parameter signalName: The name of the signal that was previously started with ``startDurationSignal(_:parameters:includeBackgroundTime:)``.
-    ///
-    /// Call this function when you want to discard a duration signal entirely without transmitting it.
-    /// This is useful in cases such as when a user disables telemetry mid-session and any active timers should be cancelled without sending data.
-    ///
-    /// If no matching signal was started, this function does nothing.
-    @MainActor
-    @available(watchOS 7.0, *)
-    public static func cancelDurationSignal(_ signalName: String) {
-        DurationSignalTracker.shared.stopTracking(signalName)
+    static func log(_ level: LogLevel, _ message: @autoclosure () -> String) async {
+        let logger = await storage.logger
+        logger.log(level, message())
     }
 
-    /// Stops tracking the duration of a signal and sends it with the total duration.
-    ///
-    /// - Parameters:
-    ///   - signalName: The name of the signal that was previously started with `startDurationSignal(_:parameters:)`.
-    ///   - parameters: Additional parameters to include with the signal. These will be merged with the parameters provided at the start. Default is empty.
-    ///   - floatValue: An optional floating-point number that can be used to provide numerical data about the signal. Default is `nil`.
-    ///   - customUserID: An optional string specifying a custom user identifier. If provided, it will override the default user identifier from the configuration. Default is `nil`.
-    ///
-    /// This function finalizes the duration tracking by:
-    /// 1. Stopping the timer for the given signal name
-    /// 2. Calculating the duration in seconds (excluding background time by default)
-    /// 3. Sending a signal that includes the start parameters, stop parameters, and calculated duration
-    ///
-    /// The duration is included in the `TelemetryDeck.Signal.durationInSeconds` parameter.
-    ///
-    /// If no matching signal was started, this function does nothing.
-    @MainActor
-    @available(watchOS 7.0, *)
-    public static func stopAndSendDurationSignal(
-        _ signalName: String,
-        parameters: [String: String] = [:],
+    /// Sends an event whose name is provided as a raw-representable value.
+    public static func event<S: RawRepresentable>(
+        _ name: S,
+        parameters: EventParameters = [:],
         floatValue: Double? = nil,
         customUserID: String? = nil
-    ) {
-        guard let (exactDuration, startParameters) = DurationSignalTracker.shared.stopTracking(signalName) else { return }
-        let roundedDuration = (exactDuration * 1_000).rounded(.down) / 1_000  // rounds down to 3 fraction digits
+    ) async where S.RawValue == String {
+        await event(name.rawValue, parameters: parameters, floatValue: floatValue, customUserID: customUserID)
+    }
 
-        var durationParameters = ["TelemetryDeck.Signal.durationInSeconds": String(roundedDuration)]
-        durationParameters.merge(startParameters) { $1 }
-
-        self.internalSignal(
-            signalName,
-            parameters: durationParameters.merging(parameters) { $1 },
+    /// Sends an event with the given name, parameters, optional float value, and optional user ID override.
+    public static func event(
+        _ name: String,
+        parameters: EventParameters = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) async {
+        let input = EventInput(
+            name,
+            parameters: parameters,
             floatValue: floatValue,
             customUserID: customUserID
         )
+        await storage.send(input)
     }
 
-    /// A signal being sent without enriching the signal name with a prefix. Also, any reserved signal name checks are skipped. Only for internal use.
-    static func internalSignal(
-        _ signalName: String,
-        parameters: [String: String] = [:],
+    static func sdkEvent<S: RawRepresentable>(
+        _ name: S,
+        parameters: EventParameters = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) async where S.RawValue == String {
+        await sdkEvent(name.rawValue, parameters: parameters, floatValue: floatValue, customUserID: customUserID)
+    }
+
+    static func sdkEvent(
+        _ name: String,
+        parameters: EventParameters = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) async {
+        let input = EventInput(
+            name,
+            parameters: parameters,
+            floatValue: floatValue,
+            customUserID: customUserID,
+            skipsReservedPrefixValidation: true
+        )
+        await storage.send(input)
+    }
+
+    /// Sends an event without awaiting completion; suitable for fire-and-forget usage.
+    public static func event(
+        _ name: String,
+        parameters: EventParameters = [:],
         floatValue: Double? = nil,
         customUserID: String? = nil
     ) {
-        let manager = TelemetryManager.shared
-        let configuration = manager.configuration
+        Task { await event(name, parameters: parameters, floatValue: floatValue, customUserID: customUserID) }
+    }
 
-        // make sure to not send any signals when run by Xcode via SwiftUI previews
-        guard !configuration.swiftUIPreviewMode, !configuration.analyticsDisabled else { return }
+    /// Sends an event whose name is a raw-representable value without awaiting completion.
+    public static func event<S: RawRepresentable>(
+        _ name: S,
+        parameters: EventParameters = [:],
+        floatValue: Double? = nil,
+        customUserID: String? = nil
+    ) where S.RawValue == String {
+        let rawName = name.rawValue
+        event(rawName, parameters: parameters, floatValue: floatValue, customUserID: customUserID)
+    }
 
-        let prefixedDefaultParameters = configuration.defaultParameters().mapKeys { parameter in
-            guard !parameter.hasPrefix("TelemetryDeck.") else { return parameter }
-            return (configuration.defaultParameterPrefix ?? "") + parameter
+    /// Immediately transmits all queued events without waiting for the next scheduled interval.
+    public static func flush() async {
+        guard let client = await storage.client else { return }
+        await client.flush()
+    }
+
+    /// Flushes pending events, shuts down the engine, and clears the shared instance.
+    public static func terminate() async {
+        if let client = await storage.client {
+            await client.flush()
+            await client.shutdown()
         }
-        let combinedParameters = prefixedDefaultParameters.merging(parameters) { $1 }
+        await storage.setClient(nil)
+        await storage.clearBuffer()
+    }
 
-        // check only default parameters
-        for parameterKey in prefixedDefaultParameters.keys {
-            if parameterKey.lowercased().hasPrefix("telemetrydeck.") {
-                configuration.logHandler?.log(
-                    .error,
-                    message:
-                        "Sending parameter with reserved key prefix 'TelemetryDeck.' will cause unexpected behavior. Please use another prefix instead."
-                )
-            } else if Self.reservedKeysLowercased.contains(parameterKey.lowercased()) {
-                configuration.logHandler?.log(
-                    .error,
-                    message: "Sending parameter with reserved key '\(parameterKey)' will cause unexpected behavior. Please use another key instead."
-                )
+    // MARK: - Analytics Disabled
+
+    /// Enables or disables analytics collection; while disabled, events are silently dropped.
+    public static func setAnalyticsDisabled(_ disabled: Bool) async {
+        guard let client = await storage.client else { return }
+        await client.setAnalyticsDisabled(disabled)
+    }
+
+    /// Whether analytics collection is currently disabled.
+    public static var isAnalyticsDisabled: Bool {
+        get async {
+            guard let client = await storage.client else { return false }
+            return await client.isAnalyticsDisabled
+        }
+    }
+
+    // MARK: - User Identifier
+
+    /// Sets the user identifier applied to all subsequent events; pass `nil` to revert to the default.
+    public static func setUserIdentifier(_ value: String?) async {
+        guard let client = await storage.client else {
+            await log(.error, "TelemetryDeck not initialized")
+            return
+        }
+        if let processor = await client.processor(conformingTo: (any UserIdentifierManaging).self) {
+            await processor.setUserIdentifier(value)
+        } else {
+            await log(.error, "No UserIdentifierManaging processor in pipeline")
+        }
+    }
+
+    // MARK: - Session
+
+    /// The identifier of the current session, or `nil` if the SDK has not been initialised.
+    public static var sessionID: UUID? {
+        get async {
+            guard let client = await storage.client else { return nil }
+            guard let processor = await client.processor(conformingTo: (any SessionManaging).self) else {
+                return nil
             }
+            return await processor.currentSessionID()
         }
+    }
 
-        manager.signalManager.processSignal(
-            signalName,
-            parameters: combinedParameters,
-            floatValue: floatValue,
-            customUserID: customUserID,
-            configuration: configuration
+    /// Starts a new session and returns its identifier, or `nil` if the SDK is not initialised.
+    @discardableResult
+    public static func newSession() async -> UUID? {
+        guard let client = await storage.client else {
+            await log(.error, "TelemetryDeck not initialized")
+            return nil
+        }
+        guard let sessionProcessor = await client.processor(conformingTo: (any SessionManaging).self) else {
+            await log(.error, "No SessionManaging processor in pipeline")
+            return nil
+        }
+        return await sessionProcessor.startNewSession()
+    }
+
+    // MARK: - Test Mode
+
+    /// Returns whether the SDK is currently operating in test mode.
+    public static func isTestMode() async -> Bool {
+        guard let client = await storage.client else { return false }
+        guard let processor = await client.processor(conformingTo: (any TestModeProviding).self) else {
+            return false
+        }
+        return await processor.isTestMode()
+    }
+
+    // MARK: - Duration Tracking
+
+    /// Begins measuring elapsed time for the named event, optionally including time spent in the background.
+    public static func startDurationEvent(
+        _ eventName: String,
+        parameters: EventParameters = [:],
+        includeBackgroundTime: Bool = false
+    ) async {
+        guard let client = await storage.client else {
+            await log(.error, "TelemetryDeck not initialized")
+            return
+        }
+        await client.durationTracker.startDuration(
+            eventName,
+            parameters: parameters,
+            includeBackgroundTime: includeBackgroundTime
         )
     }
 
-    /// Do not call this method unless you really know what you're doing. The signals will automatically sync with
-    /// the server at appropriate times, there's no need to call this.
-    ///
-    /// Use this sparingly and only to indicate a time in your app where a signal was just sent but the user is likely
-    /// to leave your app and not return again for a long time.
-    ///
-    /// This function does not guarantee that the signal cache will be sent right away. Calling this after every
-    /// ``signal(_:parameters:floatValue:customUserID:)`` will not make data reach our servers faster, so avoid
-    /// doing that.
-    ///
-    /// But if called at the right time (sparingly), it can help ensure the server doesn't miss important churn
-    /// data because a user closes your app and doesn't reopen it anytime soon (if at all).
-    public static func requestImmediateSync() {
-        let manager = TelemetryManager.shared
-
-        // this check ensures that the number of requests can only double in the worst case where a developer calls this after each `send`
-        if Date().timeIntervalSince(manager.lastTimeImmediateSyncRequested) > manager.configuration.transmitInterval {
-            manager.lastTimeImmediateSyncRequested = Date()
-
-            // give the signal manager some short amount of time to process the signal that was sent right before calling sync
-            DispatchQueue.global(qos: .utility).asyncAfter(deadline: .now() + .milliseconds(50)) { [weak manager] in
-                manager?.signalManager.attemptToSendNextBatchOfCachedSignals()
-            }
+    /// Stops the duration measurement for the named event and sends the event with the elapsed time as a parameter and float value.
+    public static func stopAndSendDurationEvent(
+        _ eventName: String,
+        parameters: EventParameters = [:]
+    ) async {
+        guard let client = await storage.client else {
+            await log(.error, "TelemetryDeck not initialized")
+            return
         }
+        guard let result = await client.durationTracker.stopDuration(eventName) else { return }
+        let roundedDuration = (result.durationInSeconds * 1_000).rounded(.down) / 1_000
+
+        var mergedParams: EventParameters = [DefaultParams.Event.durationInSeconds.rawValue: roundedDuration]
+        mergedParams.merge(result.startParameters)
+        mergedParams.merge(parameters)
+
+        await event(eventName, parameters: mergedParams, floatValue: roundedDuration)
     }
 
-    /// Shuts down the SDK and deinitializes the current `TelemetryManager`.
-    ///
-    /// Once called, you must call `TelemetryManager.initialize(with:)` again before using the manager.
-    public static func terminate() {
-        TelemetryManager.initializedTelemetryManager = nil
-    }
-
-    /// Change the default user identifier sent with each signal.
-    ///
-    /// Instead of specifying a user identifier with each `signal` call, you can set your user's name/email/identifier here and
-    /// it will be sent with every signal from now on. If you still specify a user in the `signal` call, that takes precedence.
-    ///
-    /// Set to `nil` to disable this behavior.
-    ///
-    /// Note that just as with specifying the user identifier with the `signal` call, the identifier will never leave the device.
-    /// Instead it is used to create a hash, which is included in your signal to allow you to count distinct users.
-    public static func updateDefaultUserID(to customUserID: String?) {
-        TelemetryManager.shared.configuration.defaultUser = customUserID
-    }
-
-    /// Generate a new Session ID for all new Signals, in order to begin a new session instead of continuing the old one.
-    public static func generateNewSession() {
-        TelemetryManager.shared.configuration.sessionID = UUID()
-    }
-
-    // MARK: - Internals
-    /// A custom ``UserDefaults`` instance specific to TelemetryDeck and the current application.
-    static var customDefaults: UserDefaults? {
-        guard let configuration = TelemetryManager.initializedTelemetryManager?.configuration else { return nil }
-
-        let appIdHash = CryptoHashing.sha256(string: configuration.telemetryAppID, salt: "")
-        return UserDefaults(suiteName: "com.telemetrydeck.\(appIdHash.suffix(12))")
+    /// Cancels an in-progress duration measurement without sending an event.
+    public static func cancelDurationEvent(_ eventName: String) async {
+        guard let client = await storage.client else { return }
+        await client.durationTracker.cancelDuration(eventName)
     }
 }
