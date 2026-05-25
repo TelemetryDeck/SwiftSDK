@@ -5,20 +5,29 @@ public actor DefaultEventCache: EventCaching {
     private var events: [Event] = []
     private let maxBatchSize = 100
     private let fileURL: URL
+    private let cacheLimit: Int
 
     /// Creates a cache that stores events in the default caches directory.
-    public init() {
+    public init(cacheLimit: Int = 10_000) {
+        assert(cacheLimit > 0, "cacheLimit must be greater than zero")
         let cachesURL = FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first!
         self.fileURL = cachesURL.appendingPathComponent("telemetrysignalcache.json")
+        self.cacheLimit = cacheLimit
     }
 
     /// Creates a cache that stores events at the given file URL.
-    public init(fileURL: URL) {
+    public init(fileURL: URL, cacheLimit: Int = 10_000) {
+        assert(cacheLimit > 0, "cacheLimit must be greater than zero")
         self.fileURL = fileURL
+        self.cacheLimit = cacheLimit
     }
 
-    /// Appends an event to the in-memory store.
+    /// Appends an event to the in-memory store, evicting the oldest events when the cache limit is reached.
     public func add(_ event: Event) {
+        if events.count >= cacheLimit {
+            let overflow = events.count - cacheLimit + 1
+            events.removeFirst(overflow)
+        }
         events.append(event)
     }
 
@@ -41,11 +50,21 @@ public actor DefaultEventCache: EventCaching {
     }
 
     /// Reads previously persisted events from disk and prepends them to the in-memory queue.
+    ///
+    /// Loaded events are older than in-memory events and occupy the front of the queue under FIFO.
+    /// If the combined count exceeds `cacheLimit`, the oldest loaded events are trimmed first.
     public func restore() async {
         guard let data = try? Data(contentsOf: fileURL),
             let loaded = try? JSONDecoder.telemetryDecoder.decode([Event].self, from: data)
         else { return }
         try? FileManager.default.removeItem(at: fileURL)
-        events = loaded + events
+        let combined = loaded.count + events.count
+        if combined > cacheLimit {
+            let excess = combined - cacheLimit
+            let trimmedLoaded = Array(loaded.dropFirst(min(excess, loaded.count)))
+            events = trimmedLoaded + events
+        } else {
+            events = loaded + events
+        }
     }
 }

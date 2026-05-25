@@ -181,11 +181,11 @@ struct DefaultEventTransmitterTests {
         #expect(failed[1].type == "event.two")
     }
 
-    @Test
-    func transmitReturnsOriginalEventsOn400BadRequest() async {
+    @Test(arguments: [400, 401, 403, 404, 413, 422, 501, 505])
+    func transmitDropsEventsForNonRetryableStatusCode(statusCode: Int) async {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
-        let stub = StubHTTPClient(statusCode: 400, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let stub = StubHTTPClient(statusCode: statusCode, url: URL(string: "https://nom.telemetrydeck.com")!)
 
         let transmitter = DefaultEventTransmitter(
             configuration: config,
@@ -197,7 +197,75 @@ struct DefaultEventTransmitterTests {
         let events = [createTestEvent()]
         let failed = await transmitter.transmit(events)
 
-        #expect(failed.count == events.count)
+        #expect(failed.isEmpty, "Status \(statusCode) should drop events, not retry")
+    }
+
+    @Test(arguments: [408, 429, 500, 502, 503, 504])
+    func transmitRetriesEventsForRetryableStatusCode(statusCode: Int) async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: statusCode, url: URL(string: "https://nom.telemetrydeck.com")!)
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        let events = [createTestEvent()]
+        let failed = await transmitter.transmit(events)
+
+        #expect(failed.count == events.count, "Status \(statusCode) should retry events")
+    }
+
+    @Test
+    func dropStatusCodeResetsBackoffCounter() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let switchableStub = SwitchableHTTPClient(initialStatusCode: 500, url: URL(string: "https://nom.telemetrydeck.com")!)
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: switchableStub
+        )
+
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+        let failuresAfterRetry = await transmitter.currentBackoffFailures()
+        #expect(failuresAfterRetry == 1)
+
+        switchableStub.statusCode = 403
+        await transmitter.flush()
+        let failuresAfterDrop = await transmitter.currentBackoffFailures()
+        #expect(failuresAfterDrop == 0)
+
+        let remaining = await cache.count()
+        #expect(remaining == 0)
+    }
+
+    @Test
+    func flushDropsEventsOnNonRetryableStatus() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 401, url: URL(string: "https://nom.telemetrydeck.com")!)
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        await cache.add(createTestEvent(type: "event.one"))
+        await cache.add(createTestEvent(type: "event.two"))
+
+        await transmitter.flush()
+
+        let countAfter = await cache.count()
+        #expect(countAfter == 0)
     }
 
     @Test
@@ -304,6 +372,91 @@ struct DefaultEventTransmitterTests {
     }
 
     @Test
+    func consecutiveFailuresIncrementOnFailedBatch() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(statusCode: 500, url: URL(string: "https://nom.telemetrydeck.com")!)
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        // Each flush() resets consecutiveFailures before transmitting, so a single failed flush leaves it at 1.
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+
+        let failuresAfterOne = await transmitter.currentBackoffFailures()
+        #expect(failuresAfterOne == 1)
+
+        // The re-queued failed event is still in the cache; flush resets then the batch fails again → 1.
+        await transmitter.flush()
+
+        let failuresAfterTwo = await transmitter.currentBackoffFailures()
+        #expect(failuresAfterTwo == 1)
+    }
+
+    @Test
+    func consecutiveFailuresResetOnSuccess() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let switchableStub = SwitchableHTTPClient(initialStatusCode: 500, url: URL(string: "https://nom.telemetrydeck.com")!)
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: switchableStub
+        )
+
+        // Flush with failure: reset to 0, then fail → 1.
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+
+        let failuresBefore = await transmitter.currentBackoffFailures()
+        #expect(failuresBefore == 1)
+
+        // Switch to success: flush resets to 0, then batch succeeds → stays 0.
+        switchableStub.statusCode = 200
+        await transmitter.flush()
+
+        let failuresAfter = await transmitter.currentBackoffFailures()
+        #expect(failuresAfter == 0)
+    }
+
+    @Test
+    func flushResetsConsecutiveFailures() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let failingStub = StubHTTPClient(statusCode: 503, url: URL(string: "https://nom.telemetrydeck.com")!)
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: failingStub
+        )
+
+        // Flush with failure leaves consecutiveFailures at 1.
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+
+        let failuresBefore = await transmitter.currentBackoffFailures()
+        #expect(failuresBefore == 1)
+
+        // Flush with an empty cache: the reset fires, transmitBatch exits early (no events),
+        // so consecutiveFailures ends at 0.
+        _ = await cache.pop()
+
+        await transmitter.flush()
+
+        let failuresAfter = await transmitter.currentBackoffFailures()
+        #expect(failuresAfter == 0)
+    }
+
+    @Test
     func flushWithEmptyCacheDoesNothing() async {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
@@ -357,6 +510,28 @@ private final class StubHTTPClient: HTTPDataLoader, @unchecked Sendable {
         lock.withLock { _lastRequest = request }
         onRequest?()
         return try result.get()
+    }
+}
+
+private final class SwitchableHTTPClient: HTTPDataLoader, @unchecked Sendable {
+    private let url: URL
+    private let lock = NSLock()
+    private var _statusCode: Int
+
+    var statusCode: Int {
+        get { lock.withLock { _statusCode } }
+        set { lock.withLock { _statusCode = newValue } }
+    }
+
+    init(initialStatusCode: Int, url: URL) {
+        self._statusCode = initialStatusCode
+        self.url = url
+    }
+
+    func data(for _: URLRequest) async throws -> (Data, URLResponse) {
+        let code = statusCode
+        let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: nil)!
+        return (Data(), response)
     }
 }
 
