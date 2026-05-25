@@ -25,15 +25,16 @@ jobs:
             fail-fast: true
             matrix:
                 xcodebuildCommand:
-                    - "-sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17'"
+                    - "-sdk iphonesimulator -destination 'platform=iOS Simulator,OS=26.5,name=iPhone 17'"
                     - "-sdk macosx -destination 'platform=macOS'"
-                    - "-sdk xrsimulator -destination 'platform=visionOS Simulator,name=Apple Vision Pro'"
-                    - "-sdk appletvsimulator -destination 'platform=tvOS Simulator,name=Apple TV 4K (3rd generation)'"
-                    - "-sdk watchsimulator -destination 'platform=watchOS Simulator,name=Apple Watch Series 11 (46mm)'"
+                    - "-sdk xrsimulator -destination 'platform=visionOS Simulator,OS=26.5,name=Apple Vision Pro'"
+                    - "-sdk appletvsimulator -destination 'platform=tvOS Simulator,OS=26.5,name=Apple TV 4K (3rd generation)'"
+                    - "-sdk watchsimulator -destination 'platform=watchOS Simulator,OS=26.5,name=Apple Watch Series 11 (46mm)'"
+                    - "build -destination 'platform=macOS,variant=Mac Catalyst'"
         steps:
             - name: Repository checkout
               uses: actions/checkout@v6
             - name: Select Xcode version
-              run: sudo xcode-select -s '/Applications/Xcode_26.4.1.app/Contents/Developer'
+              run: sudo xcode-select -s '/Applications/Xcode_26.5.0.app/Contents/Developer'
             - name: Build and Test
               run: xcodebuild test -scheme TelemetryDeck-Package ${{ matrix.xcodebuildCommand }}
