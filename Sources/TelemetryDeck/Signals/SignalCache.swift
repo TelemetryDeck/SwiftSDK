@@ -60,19 +60,17 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
         }
     }
 
-    private func fileURL() -> URL {
+    private func fileURL() throws -> URL {
         if let cacheFileURL {
             return cacheFileURL
         }
 
-        // swiftlint:disable force_try
-        let cacheFolderURL = try! FileManager.default.url(
+        let cacheFolderURL = try FileManager.default.url(
             for: .cachesDirectory,
             in: .userDomainMask,
             appropriateFor: nil,
             create: false
         )
-        // swiftlint:enable force_try
 
         return cacheFolderURL.appendingPathComponent("telemetrysignalcache")
     }
@@ -87,9 +85,16 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     }
 
     private func loadFromDiskLocked() {
-        logHandler?.log(message: "Loading Telemetry cache from: \(fileURL())")
-        guard let data = try? Data(contentsOf: fileURL()) else { return }
-        try? FileManager.default.removeItem(at: fileURL())
+        guard let fileURL = try? fileURL() else {
+            logHandler?.log(
+                    .error,
+                    message: "Failed to get disk cache url from FileManager."
+                )
+            return
+         }
+        logHandler?.log(message: "Loading Telemetry cache from: \(fileURL)")
+        guard let data = try? Data(contentsOf: fileURL) else { return }
+        try? FileManager.default.removeItem(at: fileURL)
         guard let signals = try? JSONDecoder().decode([T].self, from: data) else { return }
         logHandler?.log(message: "Loaded \(signals.count) signals")
         cachedSignals.append(contentsOf: signals)
