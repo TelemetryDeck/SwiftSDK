@@ -85,7 +85,13 @@ internal class SignalCache<T>: @unchecked Sendable where T: Codable {
     }
 
     private func loadFromDiskLocked() {
-        guard let fileURL = try? fileURL() else { return }
+        guard let fileURL = try? fileURL() else {
+            logHandler?.log(
+                    .error,
+                    message: "Failed to get disk cache url from FileManager."
+                )
+            return
+         }
         logHandler?.log(message: "Loading Telemetry cache from: \(fileURL)")
         guard let data = try? Data(contentsOf: fileURL) else { return }
         try? FileManager.default.removeItem(at: fileURL)
