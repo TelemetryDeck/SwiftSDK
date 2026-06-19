@@ -7,17 +7,11 @@ import Foundation
 #endif
 
 enum UserIdentifier {
-    static func resolveDefaultUserIdentifier(storage: any ProcessorStorage) async -> String {
+    static func resolveDefaultUserIdentifier(storage: any ProcessorStorage) async -> String? {
         #if os(iOS) || os(tvOS) || os(visionOS)
-            if let vendorID = await MainActor.run(body: { UIDevice.current.identifierForVendor?.uuidString }) {
-                return vendorID
-            }
-            return fallbackIdentifier
+            return await MainActor.run { UIDevice.current.identifierForVendor?.uuidString }
         #elseif os(watchOS)
-            if let vendorID = await MainActor.run(body: { WKInterfaceDevice.current().identifierForVendor?.uuidString }) {
-                return vendorID
-            }
-            return fallbackIdentifier
+            return await MainActor.run { WKInterfaceDevice.current().identifierForVendor?.uuidString }
         #elseif os(macOS)
             if let stored = await storage.string(forKey: "defaultUserIdentifier") {
                 return stored
@@ -30,7 +24,7 @@ enum UserIdentifier {
         #endif
     }
 
-    private static var fallbackIdentifier: String {
+    static var fallbackIdentifier: String {
         let version = ProcessInfo.processInfo.operatingSystemVersion
         let buildNumber = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "0"
         #if os(macOS)

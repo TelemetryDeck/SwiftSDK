@@ -117,6 +117,102 @@ struct UserIdentifierProcessorTests {
         let revertedID = await processor.currentUserIdentifier()
         #expect(revertedID == defaultID)
     }
+
+    @Test
+    func recoversAfterTransientNil() async throws {
+        let counter = InvocationCounter()
+        let fixedUUID = UUID().uuidString
+        let resolver: @Sendable (any ProcessorStorage) async -> String? = { _ in
+            let count = await counter.increment()
+            return count == 1 ? nil : fixedUUID
+        }
+        let processor = UserIdentifierProcessor(defaultUser: nil, resolve: resolver)
+        let storage = InMemoryProcessorStorage()
+        let configuration = TelemetryDeck.Config(appID: "test-app-id", namespace: "test")
+        await processor.start(storage: storage, logger: NoOpLogger(), emitter: MockEventSender())
+
+        let capturer1 = ContextCapturingProcessor()
+        let pipeline1 = ProcessorPipeline(
+            processors: [processor, capturer1],
+            finalizer: EventFinalizer(configuration: configuration)
+        )
+        _ = try await pipeline1.process(EventInput("test.event"), context: EventContext())
+        let firstIdentifier = await capturer1.capturedUserIdentifier
+        #expect(firstIdentifier == UserIdentifier.fallbackIdentifier)
+
+        let capturer2 = ContextCapturingProcessor()
+        let pipeline2 = ProcessorPipeline(
+            processors: [processor, capturer2],
+            finalizer: EventFinalizer(configuration: configuration)
+        )
+        _ = try await pipeline2.process(EventInput("test.event"), context: EventContext())
+        let secondIdentifier = await capturer2.capturedUserIdentifier
+        #expect(secondIdentifier == fixedUUID)
+    }
+
+    @Test
+    func memoizesAfterSuccess() async throws {
+        let counter = InvocationCounter()
+        let fixedUUID = UUID().uuidString
+        let resolver: @Sendable (any ProcessorStorage) async -> String? = { _ in
+            await counter.increment()
+            return fixedUUID
+        }
+        let processor = UserIdentifierProcessor(defaultUser: nil, resolve: resolver)
+        let storage = InMemoryProcessorStorage()
+        let configuration = TelemetryDeck.Config(appID: "test-app-id", namespace: "test")
+        await processor.start(storage: storage, logger: NoOpLogger(), emitter: MockEventSender())
+
+        for _ in 0..<5 {
+            let capturer = ContextCapturingProcessor()
+            let pipeline = ProcessorPipeline(
+                processors: [processor, capturer],
+                finalizer: EventFinalizer(configuration: configuration)
+            )
+            _ = try await pipeline.process(EventInput("test.event"), context: EventContext())
+            let identifier = await capturer.capturedUserIdentifier
+            #expect(identifier == fixedUUID)
+        }
+
+        let invocationCount = await counter.count
+        #expect(invocationCount == 1)
+    }
+
+    @Test
+    func singleFlightUnderConcurrency() async throws {
+        let counter = InvocationCounter()
+        let fixedUUID = UUID().uuidString
+        let resolver: @Sendable (any ProcessorStorage) async -> String? = { _ in
+            await counter.increment()
+            try? await Task.sleep(nanoseconds: 10_000_000)
+            return fixedUUID
+        }
+        let processor = UserIdentifierProcessor(defaultUser: nil, resolve: resolver)
+        let storage = InMemoryProcessorStorage()
+        let configuration = TelemetryDeck.Config(appID: "test-app-id", namespace: "test")
+        await processor.start(storage: storage, logger: NoOpLogger(), emitter: MockEventSender())
+
+        let capturers = (0..<20).map { _ in ContextCapturingProcessor() }
+        await withTaskGroup(of: Void.self) { group in
+            for capturer in capturers {
+                group.addTask {
+                    let pipeline = ProcessorPipeline(
+                        processors: [processor, capturer],
+                        finalizer: EventFinalizer(configuration: configuration)
+                    )
+                    _ = try? await pipeline.process(EventInput("test.event"), context: EventContext())
+                }
+            }
+        }
+
+        let invocationCount = await counter.count
+        #expect(invocationCount == 1)
+
+        for capturer in capturers {
+            let identifier = await capturer.capturedUserIdentifier
+            #expect(identifier == fixedUUID)
+        }
+    }
 }
 
 private actor ContextCapturingProcessor: EventProcessor {
@@ -129,5 +225,15 @@ private actor ContextCapturingProcessor: EventProcessor {
     ) async throws -> Event {
         capturedUserIdentifier = context.userIdentifier
         return try await next(input, context)
+    }
+}
+
+private actor InvocationCounter {
+    private(set) var count: Int = 0
+
+    @discardableResult
+    func increment() -> Int {
+        count += 1
+        return count
     }
 }
