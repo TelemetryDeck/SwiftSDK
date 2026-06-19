@@ -21,6 +21,8 @@ final class TrialConversionTracker: @unchecked Sendable {
         let originalTransactionID: UInt64
     }
 
+    private enum TrialOutcome { case convertedToPaid, cancelledOrExpired, stillOnTrial }
+
     static let shared = TrialConversionTracker()
 
     private static let lastTrialKey = "lastTrial"
@@ -50,11 +52,11 @@ final class TrialConversionTracker: @unchecked Sendable {
         }
     }
 
-    private init() {
-        // Start observing transactions if there's an active trial
-        if currentTrial != nil {
-            self.startObservingTransactions()
-        }
+    private init() {}
+
+    func start() {
+        guard currentTrial != nil else { return }
+        reconcilePersistedTrial()
     }
 
     /// Call this function only after having validated that the passed transaction is a free trial.
@@ -64,42 +66,69 @@ final class TrialConversionTracker: @unchecked Sendable {
         self.startObservingTransactions()
     }
 
+    private static func classify(_ transaction: Transaction, against trial: StoredTrial) -> TrialOutcome? {
+        guard transaction.productID == trial.productID,
+            transaction.originalID == trial.originalTransactionID
+        else { return nil }
+        if transaction.revocationDate != nil
+            || transaction.expirationDate?.isInThePast == true
+            || transaction.isUpgraded
+        {
+            return .cancelledOrExpired
+        }
+        return transaction.isFreeTrial ? .stillOnTrial : .convertedToPaid
+    }
+
+    private func reconcilePersistedTrial() {
+        guard let trial = currentTrial else { return }
+        Task {
+            guard case .verified(let transaction)? = await Transaction.latest(for: trial.productID) else {
+                self.startObservingTransactions()
+                return
+            }
+            switch Self.classify(transaction, against: trial) {
+            case .convertedToPaid:
+                TelemetryDeck.internalSignal(
+                    "TelemetryDeck.Purchase.convertedFromTrial",
+                    parameters: transaction.purchaseParameters(),
+                    floatValue: transaction.priceInUSD()
+                )
+                self.clearCurrentTrial()
+            case .cancelledOrExpired:
+                self.clearCurrentTrial()
+            case .stillOnTrial, nil:
+                self.startObservingTransactions()
+            }
+        }
+    }
+
     private func clearCurrentTrial() {
-        self.currentTrial = nil
-        self.stopObservingTransactions()
+        persistenceQueue.sync {
+            TelemetryDeck.customDefaults?.removeObject(forKey: Self.lastTrialKey)
+        }
+        stopObservingTransactions()
     }
 
     private func startObservingTransactions() {
-        // Cancel any existing observation
         self.stopObservingTransactions()
 
-        // Start new observation
         self.transactionUpdateTask = Task {
             for await verificationResult in Transaction.updates {
-                // Check if transaction is verified
                 guard case .verified(let transaction) = verificationResult else { continue }
 
-                // Check if this transaction matches our trial product
-                if let currentTrial = self.currentTrial,
-                    transaction.productID == currentTrial.productID,
-                    transaction.originalID == currentTrial.originalTransactionID
-                {
-                    if transaction.revocationDate != nil
-                        || transaction.expirationDate?.isInThePast == true
-                        || transaction.isUpgraded
-                    {
-                        // Trial was canceled, has expired, or was upgraded – let's clean up & stop observing
-                        self.clearCurrentTrial()
-                    } else if !transaction.isFreeTrial {
-                        // Trial converted to paid subscription
-                        TelemetryDeck.internalSignal(
-                            "TelemetryDeck.Purchase.convertedFromTrial",
-                            parameters: transaction.purchaseParameters(),
-                            floatValue: transaction.priceInUSD()
-                        )
-
-                        self.clearCurrentTrial()
-                    }
+                guard let currentTrial = self.currentTrial else { continue }
+                switch Self.classify(transaction, against: currentTrial) {
+                case .convertedToPaid:
+                    TelemetryDeck.internalSignal(
+                        "TelemetryDeck.Purchase.convertedFromTrial",
+                        parameters: transaction.purchaseParameters(),
+                        floatValue: transaction.priceInUSD()
+                    )
+                    self.clearCurrentTrial()
+                case .cancelledOrExpired:
+                    self.clearCurrentTrial()
+                case .stillOnTrial, nil:
+                    break
                 }
             }
         }
