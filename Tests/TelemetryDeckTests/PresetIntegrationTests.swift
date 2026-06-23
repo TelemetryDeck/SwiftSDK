@@ -515,4 +515,129 @@ struct PresetIntegrationTests {
 
         await TelemetryDeck.terminate()
     }
+
+    // MARK: - Purchases
+
+    @Test
+    func purchaseCompletedEmitsCorrectEventAndPayload() async throws {
+        await TelemetryDeck.terminate()
+
+        let cache = InMemoryEventCache()
+        let config = TelemetryDeck.Config(appID: "purchase-test", namespace: "test")
+        try await TelemetryDeck.initialize(
+            configuration: config,
+            processors: [],
+            cache: cache,
+            transmitter: SpyEventTransmitter()
+        )
+
+        await TelemetryDeck.purchaseCompleted(
+            productID: "com.example.monthly",
+            type: .subscription,
+            price: Decimal(9.99),
+            currencyCode: "USD",
+            countryCode: "US"
+        )
+
+        let events = await cache.pop()
+        #expect(events.count == 1)
+        #expect(events[0].type == "TelemetryDeck.Purchase.completed")
+        #expect(events[0].payload["TelemetryDeck.Purchase.productID"] == "com.example.monthly")
+        #expect(events[0].payload["TelemetryDeck.Purchase.type"] == "subscription")
+        #expect(events[0].payload["TelemetryDeck.Purchase.currencyCode"] == "USD")
+        #expect(events[0].payload["TelemetryDeck.Purchase.countryCode"] == "US")
+        #expect(events[0].floatValue != nil)
+        #expect(abs((events[0].floatValue ?? 0) - 9.99) < 0.001)
+
+        await TelemetryDeck.terminate()
+    }
+
+    @Test
+    func purchaseCompletedMergesCallerParameters() async throws {
+        await TelemetryDeck.terminate()
+
+        let cache = InMemoryEventCache()
+        let config = TelemetryDeck.Config(appID: "purchase-test", namespace: "test")
+        try await TelemetryDeck.initialize(
+            configuration: config,
+            processors: [],
+            cache: cache,
+            transmitter: SpyEventTransmitter()
+        )
+
+        await TelemetryDeck.purchaseCompleted(
+            productID: "com.example.pro",
+            type: .oneTimePurchase,
+            price: Decimal(4.99),
+            currencyCode: "USD",
+            parameters: ["custom.key": "custom.value"]
+        )
+
+        let events = await cache.pop()
+        #expect(events.count == 1)
+        #expect(events[0].payload["custom.key"] == "custom.value")
+        #expect(events[0].payload["TelemetryDeck.Purchase.type"] == "one-time-purchase")
+
+        await TelemetryDeck.terminate()
+    }
+
+    @Test
+    func convertedFromTrialEmitsCorrectEventWithFloatValue() async throws {
+        await TelemetryDeck.terminate()
+
+        let cache = InMemoryEventCache()
+        let config = TelemetryDeck.Config(appID: "purchase-test", namespace: "test")
+        try await TelemetryDeck.initialize(
+            configuration: config,
+            processors: [],
+            cache: cache,
+            transmitter: SpyEventTransmitter()
+        )
+
+        await TelemetryDeck.convertedFromTrial(
+            productID: "com.example.annual",
+            type: .subscription,
+            price: Decimal(49.99),
+            currencyCode: "EUR"
+        )
+
+        let events = await cache.pop()
+        #expect(events.count == 1)
+        #expect(events[0].type == "TelemetryDeck.Purchase.convertedFromTrial")
+        #expect(events[0].payload["TelemetryDeck.Purchase.productID"] == "com.example.annual")
+        #expect(events[0].payload["TelemetryDeck.Purchase.currencyCode"] == "EUR")
+        #expect(events[0].floatValue != nil)
+
+        await TelemetryDeck.terminate()
+    }
+
+    @Test
+    func freeTrialStartedEmitsCorrectEventWithNoFloatValue() async throws {
+        await TelemetryDeck.terminate()
+
+        let cache = InMemoryEventCache()
+        let config = TelemetryDeck.Config(appID: "purchase-test", namespace: "test")
+        try await TelemetryDeck.initialize(
+            configuration: config,
+            processors: [],
+            cache: cache,
+            transmitter: SpyEventTransmitter()
+        )
+
+        await TelemetryDeck.freeTrialStarted(
+            productID: "com.example.monthly",
+            type: .subscription,
+            currencyCode: "USD",
+            countryCode: "US"
+        )
+
+        let events = await cache.pop()
+        #expect(events.count == 1)
+        #expect(events[0].type == "TelemetryDeck.Purchase.freeTrialStarted")
+        #expect(events[0].payload["TelemetryDeck.Purchase.productID"] == "com.example.monthly")
+        #expect(events[0].payload["TelemetryDeck.Purchase.currencyCode"] == "USD")
+        #expect(events[0].floatValue == nil)
+
+        await TelemetryDeck.terminate()
+    }
 }
