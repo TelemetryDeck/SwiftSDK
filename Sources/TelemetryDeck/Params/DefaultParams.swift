@@ -138,7 +138,7 @@ public enum DefaultParams {
         case durationInSeconds = "TelemetryDeck.Signal.durationInSeconds"
     }
 
-    /// Physical-pixel display dimensions for connected screens.
+    /// Display dimensions for connected screens.
     public enum Screens: String {
         case primaryWidth = "TelemetryDeck.Device.Screens.Primary.width"
         case primaryHeight = "TelemetryDeck.Device.Screens.Primary.height"

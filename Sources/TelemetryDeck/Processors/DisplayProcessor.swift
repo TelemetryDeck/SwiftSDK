@@ -8,7 +8,7 @@ import Foundation
     import WatchKit
 #endif
 
-/// Enriches events with physical-pixel screen dimensions for all connected displays.
+/// Enriches events with screen dimensions for connected displays.
 public actor DisplayProcessor: EventProcessor {
     private static let cacheLifetime: TimeInterval = 3600
 
@@ -25,7 +25,7 @@ public actor DisplayProcessor: EventProcessor {
         self.dateProvider = dateProvider
     }
 
-    /// Adds screen count, per-screen pixel dimensions, and deprecated point-based screen size to the context.
+    /// Add screen information to the event.
     public func process(
         _ input: EventInput,
         context: EventContext,
@@ -60,17 +60,19 @@ public actor DisplayProcessor: EventProcessor {
                 var result = EventParameters()
 
                 let allScreens = UIScreen.screens
-                let primary = UIScreen.main
+                let primary = resolvedPrimaryScreen()
 
-                let primaryPixels = pixelSize(bounds: primary.bounds, scale: primary.nativeScale)
-                result[DefaultParams.Screens.primaryWidth] = primaryPixels.widthPx
-                result[DefaultParams.Screens.primaryHeight] = primaryPixels.heightPx
-                result[DefaultParams.Screens.primaryResolution] = resolutionString(primaryPixels.widthPx, primaryPixels.heightPx)
+                let primaryWidth = Int(primary.nativeBounds.width.rounded())
+                let primaryHeight = Int(primary.nativeBounds.height.rounded())
+                result[DefaultParams.Screens.primaryWidth] = primaryWidth
+                result[DefaultParams.Screens.primaryHeight] = primaryHeight
+                result[DefaultParams.Screens.primaryResolution] = resolutionString(primaryWidth, primaryHeight)
 
-                let allPixels = allScreens.map { pixelSize(bounds: $0.bounds, scale: $0.nativeScale) }
-                result[DefaultParams.Screens.allWidth] = allPixels.map(\.widthPx)
-                result[DefaultParams.Screens.allHeight] = allPixels.map(\.heightPx)
-                result[DefaultParams.Screens.allResolution] = allPixels.map { resolutionString($0.widthPx, $0.heightPx) }
+                let allWidths = allScreens.map { Int($0.nativeBounds.width.rounded()) }
+                let allHeights = allScreens.map { Int($0.nativeBounds.height.rounded()) }
+                result[DefaultParams.Screens.allWidth] = allWidths
+                result[DefaultParams.Screens.allHeight] = allHeights
+                result[DefaultParams.Screens.allResolution] = zip(allWidths, allHeights).map { resolutionString($0, $1) }
                 result[DefaultParams.Screens.allCount] = allScreens.count
 
                 result[DefaultParams.Device.screenResolutionWidth] = "\(primary.bounds.width)"
@@ -133,8 +135,15 @@ public actor DisplayProcessor: EventProcessor {
 
     #if os(iOS) || os(tvOS)
         @MainActor
-        private func pixelSize(bounds: CGRect, scale: CGFloat) -> (widthPx: Int, heightPx: Int) {
-            (Int(round(bounds.width * scale)), Int(round(bounds.height * scale)))
+        private func resolvedPrimaryScreen() -> UIScreen {
+            if !Environment.isAppExtension {
+                let windowScenes = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }
+                let activeScene = windowScenes.first { $0.activationState == .foregroundActive } ?? windowScenes.first
+                if let screen = activeScene?.screen {
+                    return screen
+                }
+            }
+            return UIScreen.main
         }
     #elseif os(macOS)
         @MainActor
