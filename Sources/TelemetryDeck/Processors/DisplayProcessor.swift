@@ -15,6 +15,7 @@ public actor DisplayProcessor: EventProcessor {
     private var cachedParams: EventParameters?
     private var cacheTimestamp: Date?
     private let dateProvider: DateProvider
+    private var screenChangeTask: Task<Void, Never>?
 
     /// Creates a display processor.
     public init() {
@@ -23,6 +24,28 @@ public actor DisplayProcessor: EventProcessor {
 
     init(dateProvider: DateProvider) {
         self.dateProvider = dateProvider
+    }
+
+    var hasCachedParamsForTesting: Bool { cachedParams != nil }
+
+    /// Registers a screen-change observer so the cache is invalidated when displays are connected, disconnected, or reconfigured.
+    public func start(storage: any ProcessorStorage, logger: any Logging, emitter: any EventSending) async {
+        screenChangeTask = Task { [weak self] in
+            for await _ in ScreenChangeNotifier.events() {
+                await self?.invalidateCache()
+            }
+        }
+    }
+
+    /// Cancels the screen-change observer registered by ``start(storage:logger:emitter:)``.
+    public func stop() async {
+        screenChangeTask?.cancel()
+        screenChangeTask = nil
+    }
+
+    private func invalidateCache() {
+        cachedParams = nil
+        cacheTimestamp = nil
     }
 
     /// Add screen information to the event.

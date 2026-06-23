@@ -3,6 +3,10 @@ import Testing
 
 @testable import TelemetryDeck
 
+#if os(macOS)
+    import AppKit
+#endif
+
 struct DisplayProcessorTests {
     private let config = TelemetryDeck.Config(appID: "test-app", namespace: "test-ns")
 
@@ -224,6 +228,61 @@ struct DisplayProcessorCachingTests {
 
             #expect(first.payload[DefaultParams.Screens.primaryWidth.rawValue] != nil)
             #expect(second.payload[DefaultParams.Screens.primaryWidth.rawValue] != nil)
+        }
+    #endif
+}
+
+struct DisplayProcessorCacheInvalidationTests {
+    private let config = TelemetryDeck.Config(appID: "test-app", namespace: "test-ns")
+
+    #if os(macOS)
+        @Test
+        func screenParameterNotificationInvalidatesCache() async throws {
+            let clock = MutableClock()
+            let processor = DisplayProcessor(dateProvider: clock.dateProvider)
+            await processor.start(storage: InMemoryProcessorStorage(), logger: NoOpLogger(), emitter: MockEventSender())
+
+            let pipeline = ProcessorPipeline(
+                processors: [processor],
+                finalizer: EventFinalizer(configuration: config)
+            )
+            _ = try await pipeline.process(EventInput("Display.test"), context: EventContext())
+            let populated = await processor.hasCachedParamsForTesting
+            #expect(populated)
+
+            NotificationCenter.default.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+
+            var cleared = false
+            for _ in 0..<200 {
+                await Task.yield()
+                if await !processor.hasCachedParamsForTesting {
+                    cleared = true
+                    break
+                }
+            }
+            #expect(cleared)
+
+            await processor.stop()
+        }
+
+        @Test
+        func stopRemovesObserverSoCacheIsNotInvalidated() async throws {
+            let clock = MutableClock()
+            let processor = DisplayProcessor(dateProvider: clock.dateProvider)
+            await processor.start(storage: InMemoryProcessorStorage(), logger: NoOpLogger(), emitter: MockEventSender())
+            await processor.stop()
+
+            let pipeline = ProcessorPipeline(
+                processors: [processor],
+                finalizer: EventFinalizer(configuration: config)
+            )
+            _ = try await pipeline.process(EventInput("Display.test"), context: EventContext())
+            #expect(await processor.hasCachedParamsForTesting)
+
+            NotificationCenter.default.post(name: NSApplication.didChangeScreenParametersNotification, object: nil)
+
+            for _ in 0..<20 { await Task.yield() }
+            #expect(await processor.hasCachedParamsForTesting)
         }
     #endif
 }

@@ -32,6 +32,7 @@ public actor AccessibilityProcessor: EventProcessor {
     private var cachedParams: EventParameters?
     private var cacheTimestamp: Date?
     private let dateProvider: DateProvider
+    private var screenChangeTask: Task<Void, Never>?
 
     /// Creates an accessibility processor.
     public init() {
@@ -40,6 +41,28 @@ public actor AccessibilityProcessor: EventProcessor {
 
     init(dateProvider: DateProvider) {
         self.dateProvider = dateProvider
+    }
+
+    var hasCachedParamsForTesting: Bool { cachedParams != nil }
+
+    /// Registers a screen-change observer so the cache is invalidated when displays are connected, disconnected, or reconfigured.
+    public func start(storage: any ProcessorStorage, logger: any Logging, emitter: any EventSending) async {
+        screenChangeTask = Task { [weak self] in
+            for await _ in ScreenChangeNotifier.events() {
+                await self?.invalidateCache()
+            }
+        }
+    }
+
+    /// Cancels the screen-change observer registered by ``start(storage:logger:emitter:)``.
+    public func stop() async {
+        screenChangeTask?.cancel()
+        screenChangeTask = nil
+    }
+
+    private func invalidateCache() {
+        cachedParams = nil
+        cacheTimestamp = nil
     }
 
     /// Adds accessibility flags, screen dimensions, colour scheme, and layout direction to the context.
@@ -145,7 +168,7 @@ public actor AccessibilityProcessor: EventProcessor {
                     result[DefaultParams.UserPreference.layoutDirection] = Self.directionString(from: layoutDirection)
                 }
 
-                if let screen = NSScreen.main {
+                if let screen = NSScreen.screens.first {
                     result[DefaultParams.Device.screenScaleFactor] = "\(screen.backingScaleFactor)"
                 }
 
