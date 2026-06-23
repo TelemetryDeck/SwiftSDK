@@ -6,6 +6,7 @@ public enum PayloadValue: Sendable, Codable, Equatable, Hashable {
     case int(Int64)
     case double(Double)
     case bool(Bool)
+    case array([PayloadValue])
 
     /// Decodes from a single JSON value, preserving integer and double distinctions.
     public init(from decoder: any Decoder) throws {
@@ -18,6 +19,8 @@ public enum PayloadValue: Sendable, Codable, Equatable, Hashable {
             self = .double(doubleValue)
         } else if let stringValue = try? container.decode(String.self) {
             self = .string(stringValue)
+        } else if let arrayValue = try? container.decode([PayloadValue].self) {
+            self = .array(arrayValue)
         } else {
             throw DecodingError.dataCorruptedError(in: container, debugDescription: "Cannot decode PayloadValue")
         }
@@ -35,6 +38,8 @@ public enum PayloadValue: Sendable, Codable, Equatable, Hashable {
             try container.encode(value)
         case .bool(let value):
             try container.encode(value)
+        case .array(let value):
+            try container.encode(value)
         }
     }
 }
@@ -47,6 +52,7 @@ extension PayloadValue: CustomStringConvertible {
         case .int(let value): String(value)
         case .double(let value): String(value)
         case .bool(let value): value ? "true" : "false"
+        case .array(let value): "[" + value.map(\.description).joined(separator: ", ") + "]"
         }
     }
 }

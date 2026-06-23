@@ -63,6 +63,7 @@ public enum TelemetryDeck {
             LocaleProcessor(),
             CalendarProcessor(),
             AccessibilityProcessor(),
+            DisplayProcessor(),
         ]
         #if canImport(StoreKit)
             if #available(iOS 15, macCatalyst 15, *) {

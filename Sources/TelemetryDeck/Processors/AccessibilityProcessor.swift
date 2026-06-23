@@ -103,8 +103,6 @@ public actor AccessibilityProcessor: EventProcessor {
 
                 #if !os(visionOS)
                     let screen = UIScreen.main
-                    result[DefaultParams.Device.screenResolutionWidth] = "\(screen.bounds.width)"
-                    result[DefaultParams.Device.screenResolutionHeight] = "\(screen.bounds.height)"
                     result[DefaultParams.Device.screenScaleFactor] = "\(screen.scale)"
 
                     let colorScheme: String
@@ -148,8 +146,6 @@ public actor AccessibilityProcessor: EventProcessor {
                 }
 
                 if let screen = NSScreen.main {
-                    result[DefaultParams.Device.screenResolutionWidth] = "\(screen.frame.width)"
-                    result[DefaultParams.Device.screenResolutionHeight] = "\(screen.frame.height)"
                     result[DefaultParams.Device.screenScaleFactor] = "\(screen.backingScaleFactor)"
                 }
 
@@ -157,11 +153,7 @@ public actor AccessibilityProcessor: EventProcessor {
             }
 
         #elseif os(watchOS)
-            let device = WKInterfaceDevice.current()
-            var result = EventParameters()
-            result[DefaultParams.Device.screenResolutionWidth] = Double(device.screenBounds.width)
-            result[DefaultParams.Device.screenResolutionHeight] = Double(device.screenBounds.height)
-            return result
+            return EventParameters()
 
         #else
             return EventParameters()
