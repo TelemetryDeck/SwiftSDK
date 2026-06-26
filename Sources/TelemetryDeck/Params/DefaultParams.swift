@@ -137,4 +137,15 @@ public enum DefaultParams {
     public enum Event: String {
         case durationInSeconds = "TelemetryDeck.Signal.durationInSeconds"
     }
+
+    /// Display dimensions for connected screens.
+    public enum Screens: String {
+        case primaryWidth = "TelemetryDeck.Device.Screens.Primary.width"
+        case primaryHeight = "TelemetryDeck.Device.Screens.Primary.height"
+        case primaryResolution = "TelemetryDeck.Device.Screens.Primary.resolution"
+        case allWidth = "TelemetryDeck.Device.Screens.All.width"
+        case allHeight = "TelemetryDeck.Device.Screens.All.height"
+        case allResolution = "TelemetryDeck.Device.Screens.All.resolution"
+        case allCount = "TelemetryDeck.Device.Screens.All.count"
+    }
 }

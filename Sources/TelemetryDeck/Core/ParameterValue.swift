@@ -65,3 +65,8 @@ extension PayloadValue: ParameterValue {
     /// Returns itself as the payload value.
     public var payloadValue: PayloadValue { self }
 }
+
+extension Array: ParameterValue where Element: ParameterValue {
+    /// Returns an array payload value containing each element's payload representation.
+    public var payloadValue: PayloadValue { .array(map(\.payloadValue)) }
+}
