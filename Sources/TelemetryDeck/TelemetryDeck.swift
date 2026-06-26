@@ -50,7 +50,7 @@ public enum TelemetryDeck {
         sendSessionStartedEvent: Bool = true,
         defaultParameters: EventParameters = [:]
     ) -> [any EventProcessor] {
-        var processors: [any EventProcessor] = [
+        let processors: [any EventProcessor] = [
             PreviewFilterProcessor(),
             DefaultParametersProcessor(parameters: defaultParameters),
             DefaultPrefixProcessor(eventPrefix: eventPrefix, parameterPrefix: parameterPrefix),
@@ -64,11 +64,6 @@ public enum TelemetryDeck {
             CalendarProcessor(),
             AccessibilityProcessor(),
         ]
-        #if canImport(StoreKit)
-            if #available(iOS 15, macCatalyst 15, *) {
-                processors.append(TrialConversionProcessor())
-            }
-        #endif
         return processors
     }
 

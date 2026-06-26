@@ -293,28 +293,3 @@ extension TelemetryDeck {
         }
     }
 }
-
-// MARK: - Purchases
-
-#if canImport(StoreKit)
-    import StoreKit
-
-    @available(iOS 15, macOS 12, tvOS 15, watchOS 8, *)
-    extension TelemetryDeck {
-        /// Sends a purchase event for the given StoreKit transaction, automatically handling free trials.
-        @available(*, deprecated, message: "Use 'await TelemetryDeck.purchaseCompleted(transaction:parameters:customUserID:)' instead")
-        public static func purchaseCompleted(
-            transaction: StoreKit.Transaction,
-            parameters: [String: String] = [:],
-            customUserID: String? = nil
-        ) {
-            Task {
-                await purchaseCompleted(
-                    transaction: transaction,
-                    parameters: EventParameters(parameters),
-                    customUserID: customUserID
-                )
-            }
-        }
-    }
-#endif

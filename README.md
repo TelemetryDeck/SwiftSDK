@@ -237,13 +237,19 @@ Use `includeBackgroundTime: false` (the default) to only count foreground time. 
 
 ### Purchase Tracking
 
-Track StoreKit transactions:
+The SDK offers a shorthand for sending events related to a purcahse:
 
 ```swift
-await TelemetryDeck.purchaseCompleted(transaction: transaction)
+await TelemetryDeck.purchaseCompleted(
+    productID: "pro.yearly",
+    type: .subscription,
+    price: 49.99,
+    currencyCode: "USD",
+    countryCode: "US"
+)
 ```
 
-Free trials are automatically detected and reported separately. Please note that we do not keep track of transactions - repeatedly calling this method will result in multiple events.
+The price is converted to USD for revenue analytics. Use `freeTrialStarted(...)` when a free trial begins and `convertedFromTrial(...)` when a trial converts to a paid purchase. The SDK does not keep track of transactions — repeatedly calling these methods results in multiple events.
 
 ### Pirate Metrics (AARRR)
 
@@ -357,7 +363,6 @@ Events pass through a pipeline of `EventProcessor` middleware before transmissio
 | 10 | `LocaleProcessor` | Adds locale, language, and region |
 | 11 | `CalendarProcessor` | Adds calendar context (day of week, hour, month, quarter, etc.) |
 | 12 | `AccessibilityProcessor` | Adds accessibility settings (bold text, reduce motion, etc.) and screen metrics |
-| 13 | `TrialConversionProcessor` | Detects free trial → paid subscription conversions via StoreKit |
 
 To exclude a specific processor, remove it from the default list before initializing:
 
