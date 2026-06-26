@@ -80,6 +80,8 @@ TelemetryDeck.event("Database.updated", parameters: [
 ])
 ```
 
+Values are sent as native JSON types, with a few normalizations: `Float` is widened to a JSON number, `UUID` is sent as its `uuidString`, and `Date` is sent as an ISO 8601 string.
+
 ### Float Values
 
 Attach a numeric measurement to any event:
@@ -386,7 +388,7 @@ struct MyProcessor: EventProcessor {
         next: @Sendable (EventInput, EventContext) async throws -> Event
     ) async throws -> Event {
         var ctx = context
-        ctx.addMetadata(key: "MyApp.subscriptionTier", value: "premium")
+        ctx.addParameter("MyApp.subscriptionTier", value: "premium")
         return try await next(input, ctx)
     }
 }
@@ -410,7 +412,7 @@ struct DynamicParametersProcessor: EventProcessor {
         next: @Sendable (EventInput, EventContext) async throws -> Event
     ) async throws -> Event {
         var ctx = context
-        ctx.addMetadata(key: "MyApp.itemCount", value: String(ItemStore.shared.count))
+        ctx.addParameter("MyApp.itemCount", value: ItemStore.shared.count)
         return try await next(input, ctx)
     }
 }
@@ -448,7 +450,7 @@ try await TelemetryDeck.initialize(
 | `config.defaultParameterPrefix` | `parameterPrefix` parameter on `initialize()` | Moved from config to initializer |
 | `config.sendNewSessionBeganSignal` | `sendSessionStartedEvent` parameter on `initialize()` | Moved from config to initializer |
 | `config.defaultParameters` (closure) | `defaultParameters` parameter on `initialize()` | Now `EventParameters`, not `() -> [String: String]` |
-| `[String: String]` parameters | `EventParameters` | Typed values: `String`, `Bool`, `Int`, `Double`, etc. |
+| `[String: String]` parameters | `EventParameters` | Typed values: `String`, `Bool`, `Int`, `Double`, `Float`, `UUID`, `Date` |
 | `TelemetryManager.shared` | Removed | Use `TelemetryDeck.*` static API |
 | `requestImmediateSync()` | `await TelemetryDeck.flush()` | |
 | `generateNewSession()` | `await TelemetryDeck.newSession()` | Now returns `UUID?` |
