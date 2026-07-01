@@ -312,6 +312,22 @@ try await TelemetryDeck.initialize(
 )
 ```
 
+### In-memory-only mode (no local storage)
+
+For situations where writing to disk is undesirable (sandboxed processes, privacy-sensitive deployments, etc), pass `inMemoryOnly: true` to the convenience initializer:
+
+```swift
+try await TelemetryDeck.initialize(
+    appID: "<YOUR-APP-ID>",
+    namespace: "<YOUR-NAMESPACE>",
+    inMemoryOnly: true
+)
+```
+
+This tells the SDK to turn off features that require persistent storage and switches to in-memory operation only. For example, this activates `InMemoryEventCache` and `InMemoryProcessorStorage`.
+
+Features that become unavailable in this mode include: new-install detection and retention metrics (distinct days used, average session length, etc.). We are also unable to cache events for later transmission - any unsent events are discarded when the app is terminated.
+
 ### Cache configuration
 
 `DefaultEventCache` and `DefaultEventTransmitter` expose parameters to control how the SDK will retry sending events in case of a problem:

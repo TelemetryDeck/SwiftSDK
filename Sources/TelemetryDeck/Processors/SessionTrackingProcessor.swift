@@ -12,8 +12,6 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         }
     }
 
-    private static let backgroundThreshold: TimeInterval = 5 * 60
-
     private let sendSessionStartedEvent: Bool
     private let dateProvider: DateProvider
 
@@ -234,7 +232,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
 
     func handleForeground() async {
         let didRotate: Bool
-        if let bgDate = backgroundDate, dateProvider.now().timeIntervalSince(bgDate) > Self.backgroundThreshold {
+        if let bgDate = backgroundDate, dateProvider.now().timeIntervalSince(bgDate) > SessionConstants.backgroundThreshold {
             backgroundDate = nil
             if var lastSession = recentSessions.last, currentSessionAccumulatedSeconds > 0 {
                 lastSession.durationInSeconds = currentSessionAccumulatedSeconds

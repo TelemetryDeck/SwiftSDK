@@ -1,6 +1,6 @@
 import Foundation
 
-/// A non-persistent event cache that stores events only in memory; suitable for testing.
+/// A non-persistent event cache that stores events only in memory; suitable for in-memory-only production use and testing.
 public actor InMemoryEventCache: EventCaching {
     private var events: [Event] = []
     private let cacheLimit: Int
