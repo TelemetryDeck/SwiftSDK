@@ -11,7 +11,7 @@ struct ScreenChangeNotifier: Sendable {
 
     static func events() -> AsyncStream<Void> {
         AsyncStream { continuation in
-            #if canImport(AppKit)
+            #if canImport(AppKit) && !targetEnvironment(macCatalyst)
                 let box = ObserverBox()
                 box.observers.append(
                     NotificationCenter.default.addObserver(
