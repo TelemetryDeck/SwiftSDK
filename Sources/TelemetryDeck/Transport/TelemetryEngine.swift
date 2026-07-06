@@ -198,17 +198,10 @@ actor TelemetryEngine: EventSending {
     }
 
     private func setupLifecycleObservers() {
-        lifecycleTask = Task {
-            for await event in LifecycleNotifier.events() {
-                switch event {
-                case .background:
-                    await handleBackground()
-                case .foreground:
-                    await handleForeground()
-                case .termination:
-                    await handleTermination()
-                }
-            }
-        }
+        lifecycleTask = LifecycleSubscription.start(
+            onBackground: { await self.handleBackground() },
+            onForeground: { await self.handleForeground() },
+            onTermination: { await self.handleTermination() }
+        )
     }
 }

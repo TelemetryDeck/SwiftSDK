@@ -44,18 +44,10 @@ public actor InMemorySessionProcessor: EventProcessor, SessionManaging {
     public func start(storage: any ProcessorStorage, logger: any Logging, emitter: any EventSending) async {
         self.emitter = emitter
 
-        lifecycleTask = Task {
-            for await event in LifecycleNotifier.events() {
-                switch event {
-                case .background:
-                    handleBackground()
-                case .foreground:
-                    await handleForeground()
-                case .termination:
-                    break
-                }
-            }
-        }
+        lifecycleTask = LifecycleSubscription.start(
+            onBackground: { await self.handleBackground() },
+            onForeground: { await self.handleForeground() }
+        )
 
         if sendSessionStartedEvent {
             await emitSessionStarted()

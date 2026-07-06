@@ -359,7 +359,7 @@ try await TelemetryDeck.initialize(
 
 This tells the SDK to turn off features that require persistent storage and switches to in-memory operation only. For example, this activates `InMemoryEventCache` and `InMemoryProcessorStorage`.
 
-Features that become unavailable in this mode include: new-install detection and retention metrics (distinct days used, average session length, etc.). We are also unable to cache events for later transmission - any unsent events are discarded when the app is terminated.
+Features that become unavailable in this mode include: new-install detection and retention metrics (distinct days used, average session length, etc.). We are also unable to cache events for later transmission - any unsent events are discarded when the app is terminated. Duration signals are also not persisted across launches - a duration started in one app launch cannot be resumed or stopped in a later one.
 
 ### Cache configuration
 

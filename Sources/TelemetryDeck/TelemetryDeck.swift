@@ -60,7 +60,7 @@ public enum TelemetryDeck {
         )
     }
 
-    /// Returns the default event processors for in-memory-only mode
+    /// Returns the default event processors for in-memory-only mode.
     public static func defaultInMemoryProcessors(
         defaultUser: String? = nil,
         testMode: Bool? = nil,
