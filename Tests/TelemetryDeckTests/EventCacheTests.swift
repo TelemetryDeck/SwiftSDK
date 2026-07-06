@@ -56,17 +56,23 @@ struct EventCacheTests {
     }
 
     @Test
-    func inMemoryCacheReturnsAllEventsInOnePop() async {
+    func inMemoryCachePopReturnsBatchesUpToLimit() async {
         let cache = InMemoryEventCache()
         for _ in 0..<150 {
             await cache.add(createTestEvent())
         }
 
-        let all = await cache.pop()
-        #expect(all.count == 150)
+        let batch1 = await cache.pop()
+        #expect(batch1.count == 100)
 
-        let afterCount = await cache.count()
-        #expect(afterCount == 0)
+        let remainingCount = await cache.count()
+        #expect(remainingCount == 50)
+
+        let batch2 = await cache.pop()
+        #expect(batch2.count == 50)
+
+        let finalCount = await cache.count()
+        #expect(finalCount == 0)
     }
 
     @Test

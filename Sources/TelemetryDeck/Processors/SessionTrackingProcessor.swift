@@ -12,8 +12,6 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         }
     }
 
-    private static let backgroundThreshold: TimeInterval = 5 * 60
-
     private let sendSessionStartedEvent: Bool
     private let dateProvider: DateProvider
 
@@ -98,18 +96,10 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
             isNewInstall = true
         }
 
-        lifecycleTask = Task {
-            for await event in LifecycleNotifier.events() {
-                switch event {
-                case .background:
-                    handleBackground()
-                case .foreground:
-                    await handleForeground()
-                case .termination:
-                    break
-                }
-            }
-        }
+        lifecycleTask = LifecycleSubscription.start(
+            onBackground: { await self.handleBackground() },
+            onForeground: { await self.handleForeground() }
+        )
 
         recordSessionStart()
 
@@ -234,7 +224,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
 
     func handleForeground() async {
         let didRotate: Bool
-        if let bgDate = backgroundDate, dateProvider.now().timeIntervalSince(bgDate) > Self.backgroundThreshold {
+        if let bgDate = backgroundDate, dateProvider.now().timeIntervalSince(bgDate) > SessionConstants.backgroundThreshold {
             backgroundDate = nil
             if var lastSession = recentSessions.last, currentSessionAccumulatedSeconds > 0 {
                 lastSession.durationInSeconds = currentSessionAccumulatedSeconds

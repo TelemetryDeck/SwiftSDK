@@ -2,6 +2,39 @@
 
 Privacy-first analytics for Apple platforms. Send events to [TelemetryDeck](https://telemetrydeck.com) from your Swift code.
 
+* [Requirements](#requirements)
+* [Installation](#installation)
+* [Quick Start](#quick-start)
+* [Sending Events](#sending-events)
+    * [Parameters](#parameters)
+    * [Float Values](#float-values)
+* [User Identifiers](#user-identifiers)
+* [Sessions](#sessions)
+* [Test Mode](#test-mode)
+* [Disabling Analytics](#disabling-analytics)
+* [Shutting Down](#shutting-down)
+* [Presets](#presets)
+    * [Navigation Tracking](#navigation-tracking)
+    * [Error Reporting](#error-reporting)
+    * [Duration Tracking](#duration-tracking)
+    * [Purchase Tracking](#purchase-tracking)
+    * [Pirate Metrics (AARRR)](#pirate-metrics-aarrr)
+* [Advanced](#advanced)
+    * [Custom Salt](#custom-salt)
+    * [Custom Server](#custom-server)
+    * [Custom Event Transmitter](#custom-event-transmitter)
+    * [In-memory-only mode (no local storage)](#in-memory-only-mode-no-local-storage)
+    * [Cache configuration](#cache-configuration)
+    * [Custom Logging](#custom-logging)
+    * [Default Event Processors](#default-event-processors)
+    * [Custom Event Processors](#custom-event-processors)
+    * [Default Parameters and Prefixes](#default-parameters-and-prefixes)
+* [Migrating from v2](#migrating-from-v2)
+    * [Breaking Changes](#breaking-changes)
+    * [Before and After](#before-and-after)
+    * [Step-by-Step Migration](#step-by-step-migration)
+* [Developing this SDK](#developing-this-sdk)
+
 ## Requirements
 
 - iOS 15+ / macOS 12+ / watchOS 8+ / tvOS 15+ / visionOS 1+
@@ -135,7 +168,7 @@ Pass `nil` to revert to the default identifier.
 
 ## Sessions
 
-A session ID is automatically generated at initialization. On iOS, tvOS, and watchOS, the session updates whenever your app returns from the background. On other platforms, a new session starts each time the app launches.
+A session ID is automatically generated at initialization. On Apple platforms with an app lifecycle (iOS, tvOS, watchOS, visionOS, and macOS), the session updates whenever your app returns from the background. On platforms without an app lifecycle, such as Linux and other server-side Swift environments, a new session starts each time the app launches.
 
 For manual session control:
 
@@ -312,9 +345,25 @@ try await TelemetryDeck.initialize(
 )
 ```
 
+### In-memory-only mode (no local storage)
+
+For situations where writing to disk is undesirable (sandboxed processes, privacy-sensitive deployments, etc), pass `inMemoryOnly: true` to the convenience initializer:
+
+```swift
+try await TelemetryDeck.initialize(
+    appID: "<YOUR-APP-ID>",
+    namespace: "<YOUR-NAMESPACE>",
+    inMemoryOnly: true
+)
+```
+
+This tells the SDK to turn off features that require persistent storage and switches to in-memory operation only. For example, this activates `InMemoryEventCache` and `InMemoryProcessorStorage`.
+
+Features that become unavailable in this mode include: new-install detection and retention metrics (distinct days used, average session length, etc.). We are also unable to cache events for later transmission - any unsent events are discarded when the app is terminated. Duration signals are also not persisted across launches - a duration started in one app launch cannot be resumed or stopped in a later one.
+
 ### Cache configuration
 
-`DefaultEventCache` and `DefaultEventTransmitter` expose parameters to control how the SDK will retry sending events in case of a problem:
+`DefaultEventCache` and `DefaultEventTransmitter` expose parameters to control how many events are buffered in memory and how the SDK retries sending events in case of a problem:
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
@@ -364,7 +413,8 @@ Events pass through a pipeline of `EventProcessor` middleware before transmissio
 | 9 | `AppInfoProcessor` | Adds app version, build number, and SDK version |
 | 10 | `LocaleProcessor` | Adds locale, language, and region |
 | 11 | `CalendarProcessor` | Adds calendar context (day of week, hour, month, quarter, etc.) |
-| 12 | `AccessibilityProcessor` | Adds accessibility settings (bold text, reduce motion, etc.) and screen metrics |
+| 12 | `AccessibilityProcessor` | Adds accessibility settings (bold text, reduce motion, etc.) |
+| 13 | `DisplayProcessor` | Adds screen resolution, size, and multi-display metadata |
 
 To exclude a specific processor, remove it from the default list before initializing:
 

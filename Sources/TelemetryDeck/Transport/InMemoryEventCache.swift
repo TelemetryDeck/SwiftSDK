@@ -1,8 +1,9 @@
 import Foundation
 
-/// A non-persistent event cache that stores events only in memory; suitable for testing.
+/// A non-persistent event cache that stores events only in memory; suitable for in-memory-only production use and testing.
 public actor InMemoryEventCache: EventCaching {
     private var events: [Event] = []
+    private let maxBatchSize = 100
     private let cacheLimit: Int
 
     /// Creates an empty in-memory event cache with an optional FIFO cap.
@@ -20,11 +21,11 @@ public actor InMemoryEventCache: EventCaching {
         events.append(event)
     }
 
-    /// Removes and returns all cached events.
+    /// Removes and returns up to `maxBatchSize` events from the front of the queue.
     public func pop() -> [Event] {
-        let all = events
-        events.removeAll()
-        return all
+        let batch = Array(events.prefix(maxBatchSize))
+        events.removeFirst(min(maxBatchSize, events.count))
+        return batch
     }
 
     /// Returns the number of events currently in the cache.

@@ -1,6 +1,6 @@
 import Foundation
 
-let sdkVersion = "3.0.0-beta.2"
+let sdkVersion = "3.0.1"
 
 /// Enriches events with app version, build number, and SDK version metadata.
 public struct AppInfoProcessor: EventProcessor {

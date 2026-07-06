@@ -50,14 +50,51 @@ public enum TelemetryDeck {
         sendSessionStartedEvent: Bool = true,
         defaultParameters: EventParameters = [:]
     ) -> [any EventProcessor] {
-        let processors: [any EventProcessor] = [
+        buildProcessorList(
+            sessionProcessor: SessionTrackingProcessor(sendSessionStartedEvent: sendSessionStartedEvent),
+            defaultUser: defaultUser,
+            testMode: testMode,
+            eventPrefix: eventPrefix,
+            parameterPrefix: parameterPrefix,
+            defaultParameters: defaultParameters
+        )
+    }
+
+    /// Returns the default event processors for in-memory-only mode.
+    public static func defaultInMemoryProcessors(
+        defaultUser: String? = nil,
+        testMode: Bool? = nil,
+        eventPrefix: String? = nil,
+        parameterPrefix: String? = nil,
+        sendSessionStartedEvent: Bool = true,
+        defaultParameters: EventParameters = [:]
+    ) -> [any EventProcessor] {
+        buildProcessorList(
+            sessionProcessor: InMemorySessionProcessor(sendSessionStartedEvent: sendSessionStartedEvent),
+            defaultUser: defaultUser,
+            testMode: testMode,
+            eventPrefix: eventPrefix,
+            parameterPrefix: parameterPrefix,
+            defaultParameters: defaultParameters
+        )
+    }
+
+    private static func buildProcessorList(
+        sessionProcessor: any EventProcessor,
+        defaultUser: String?,
+        testMode: Bool?,
+        eventPrefix: String?,
+        parameterPrefix: String?,
+        defaultParameters: EventParameters
+    ) -> [any EventProcessor] {
+        [
             PreviewFilterProcessor(),
             DefaultParametersProcessor(parameters: defaultParameters),
             DefaultPrefixProcessor(eventPrefix: eventPrefix, parameterPrefix: parameterPrefix),
             ValidationProcessor(),
             TestModeProcessor(override: testMode),
             UserIdentifierProcessor(defaultUser: defaultUser),
-            SessionTrackingProcessor(sendSessionStartedEvent: sendSessionStartedEvent),
+            sessionProcessor,
             DeviceProcessor(),
             AppInfoProcessor(),
             LocaleProcessor(),
@@ -65,10 +102,11 @@ public enum TelemetryDeck {
             AccessibilityProcessor(),
             DisplayProcessor(),
         ]
-        return processors
     }
 
     /// Initialises the SDK with the given app identity and processor-level options.
+    ///
+    /// When `inMemoryOnly` is `true`, the SDK uses in-memory storage only. Features that require persistent storage are disabled.
     public static func initialize(
         appID: String,
         namespace: String,
@@ -78,20 +116,37 @@ public enum TelemetryDeck {
         eventPrefix: String? = nil,
         parameterPrefix: String? = nil,
         sendSessionStartedEvent: Bool = true,
-        defaultParameters: EventParameters = [:]
+        defaultParameters: EventParameters = [:],
+        inMemoryOnly: Bool = false
     ) async throws(TelemetryDeckError) {
         let configuration = Config(appID: appID, namespace: namespace, salt: salt)
-        try await initialize(
-            configuration: configuration,
-            processors: defaultProcessors(
-                defaultUser: defaultUser,
-                testMode: testMode,
-                eventPrefix: eventPrefix,
-                parameterPrefix: parameterPrefix,
-                sendSessionStartedEvent: sendSessionStartedEvent,
-                defaultParameters: defaultParameters
+        if inMemoryOnly {
+            try await initialize(
+                configuration: configuration,
+                processors: defaultInMemoryProcessors(
+                    defaultUser: defaultUser,
+                    testMode: testMode,
+                    eventPrefix: eventPrefix,
+                    parameterPrefix: parameterPrefix,
+                    sendSessionStartedEvent: sendSessionStartedEvent,
+                    defaultParameters: defaultParameters
+                ),
+                cache: InMemoryEventCache(),
+                storage: InMemoryProcessorStorage()
             )
-        )
+        } else {
+            try await initialize(
+                configuration: configuration,
+                processors: defaultProcessors(
+                    defaultUser: defaultUser,
+                    testMode: testMode,
+                    eventPrefix: eventPrefix,
+                    parameterPrefix: parameterPrefix,
+                    sendSessionStartedEvent: sendSessionStartedEvent,
+                    defaultParameters: defaultParameters
+                )
+            )
+        }
     }
 
     /// Initialises the SDK with the given configuration, optionally overriding processors and dependencies.

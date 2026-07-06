@@ -22,18 +22,10 @@ actor DurationTracker: DurationTracking {
     func start(storage: any ProcessorStorage) async {
         self.storage = storage
         await restoreState()
-        lifecycleTask = Task {
-            for await event in LifecycleNotifier.events() {
-                switch event {
-                case .background:
-                    handleBackground()
-                case .foreground:
-                    handleForeground()
-                case .termination:
-                    break
-                }
-            }
-        }
+        lifecycleTask = LifecycleSubscription.start(
+            onBackground: { await self.handleBackground() },
+            onForeground: { await self.handleForeground() }
+        )
     }
 
     func stop() async {
