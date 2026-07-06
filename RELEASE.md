@@ -32,7 +32,7 @@ gh release create 3.0.0 --generate-notes
 A beta can be cut from a branch instead of `main`. Run the script on that branch with a pre-release version, push the tag, then mark the GitHub Release as a pre-release:
 
 ```bash
-./tag-release.sh 3.0.1
+./tag-release.sh 3.0.0-beta.3
 git push --follow-tags
-gh release create 3.0.1 --prerelease --target feat/processors --generate-notes
+gh release create 3.0.0-beta.3 --prerelease --target feat/processors --generate-notes
 ```
