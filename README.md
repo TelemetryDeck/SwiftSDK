@@ -111,6 +111,24 @@ With each Signal, the client sends a hash of your user ID as well as a _session 
 
 On iOS, tvOS, and watchOS, the session identifier will automatically update whenever your app returns from background, or if it is launched from cold storage. On other platforms, a new identifier will be generated each time your app launches. If you'd like more fine-grained session support, write a new random session identifier into the `TelemetryDeck.Config`'s `sessionID` property each time a new session begins.
 
+## Purchase Tracking
+
+The SDK offers a shorthand for sending events related to a purchase:
+
+```swift
+await TelemetryDeck.purchaseCompleted(
+    productID: "pro.yearly",
+    type: .subscription,
+    price: 49.99,
+    currencyCode: "USD",
+    countryCode: "US"
+)
+```
+
+The price is converted to USD for revenue analytics. Use `freeTrialStarted(...)` when a free trial begins and `convertedFromTrial(...)` when a trial converts to a paid purchase. The SDK does not keep track of purchases you have already reported — repeatedly calling these methods results in multiple events.
+
+The `purchaseCompleted(transaction:parameters:customUserID:)` overload taking a `StoreKit.Transaction` is deprecated. Automatic free trial and trial conversion detection is only available through that deprecated overload; the manual methods above require you to call `freeTrialStarted(...)` and `convertedFromTrial(...)` yourself.
+
 ## Custom Salt
 
 By default, user identifiers are hashed by the TelemetryDeck SDK, and then sent to the Ingestion API, where we'll add a salt to the received identifier and hash it again.
