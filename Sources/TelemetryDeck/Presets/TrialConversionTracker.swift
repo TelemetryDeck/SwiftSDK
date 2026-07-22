@@ -7,34 +7,50 @@ import StoreKit
 /// - Monitoring StoreKit transactions for trial conversions and cancellations
 /// - Sending telemetry signals when a trial converts to a paid subscription
 ///
-/// The API call needed to make outside it is this:
+/// Outside of this type, two calls are required to get correct trial-to-paid reporting:
 /// ```
 /// // When a free trial is started
 /// TrialConversionTracker.shared.freeTrialStarted(transaction: transaction)
+///
+/// // Once, at app launch (already done by TelemetryDeck.initialize)
+/// TrialConversionTracker.shared.start()
 /// ```
 ///
-/// This type automatically starts monitoring transactions during a free trial phase and stops doing so when no longer needed.
+/// `start()` reconciles any trials that were persisted from a previous launch against their current StoreKit state, which is what lets a trial that converted to paid (or lapsed) while the app was not running still get reported.
+/// Once a trial is active, this type automatically starts monitoring live transaction updates and stops doing so when no persisted trial remains.
 @available(iOS 15, macOS 12, tvOS 15, watchOS 8, *)
 final class TrialConversionTracker: @unchecked Sendable {
-    private struct StoredTrial: Codable {
+    struct StoredTrial: Codable {
         let productID: String
         let originalTransactionID: UInt64
     }
 
-    private enum TrialOutcome { case convertedToPaid, cancelledOrExpired, stillOnTrial }
+    enum TrialOutcome: Equatable { case convertedToPaid, cancelledOrExpired, stillOnTrial }
 
     static let shared = TrialConversionTracker()
 
-    private static let activeTrialsKey = "activeTrials"
-    private static let legacyTrialKey = "lastTrial"
+    static let activeTrialsKey = "activeTrials"
+    static let legacyTrialKey = "lastTrial"
 
     private let persistenceQueue = DispatchQueue(label: "com.telemetrydeck.trialtracker.persistence")
     private var transactionUpdateTask: Task<Void, Error>?
 
-    private init() {
+    /// Supplies the `UserDefaults` suite this tracker persists trials to.
+    ///
+    /// Defaults to the app's TelemetryDeck suite; injectable so tests can operate on an isolated suite
+    /// without going through `TelemetryDeck.initialize`.
+    private let userDefaults: () -> UserDefaults?
+
+    init(userDefaults: @escaping () -> UserDefaults? = { TelemetryDeck.customDefaults }) {
+        self.userDefaults = userDefaults
         migrateLegacyTrialIfNeeded()
     }
 
+    /// Reconciles trials persisted from a previous launch against their current StoreKit state.
+    ///
+    /// A trial that converted to paid, or lapsed, while the app was not running is only detected here, so this
+    /// must be called once per launch before any such conversion can be reported. `TelemetryDeck.initialize`
+    /// already calls this; nothing else needs to invoke it.
     func start() {
         let trials = currentTrials()
         guard !trials.isEmpty else { return }
@@ -56,13 +72,49 @@ final class TrialConversionTracker: @unchecked Sendable {
         guard transaction.productID == trial.productID,
             transaction.originalID == trial.originalTransactionID
         else { return nil }
-        if transaction.revocationDate != nil
-            || transaction.expirationDate?.isInThePast == true
-            || transaction.isUpgraded
-        {
+        return classify(
+            isRevoked: transaction.revocationDate != nil,
+            isUpgraded: transaction.isUpgraded,
+            isFreeTrial: transaction.isFreeTrial,
+            isExpired: transaction.expirationDate?.isInThePast == true
+        )
+    }
+
+    /// Determines what a trial's matching transaction means for that trial, from plain transaction attributes.
+    ///
+    /// Revocation and upgrades are checked before the free-trial status, because both mean the transaction no
+    /// longer represents an outcome we should report: a revoked/refunded purchase must never be counted as a
+    /// conversion, and a transaction superseded by an upgrade no longer reflects this product's own lifecycle.
+    /// Only once those are ruled out do we ask whether the transaction is still a free trial. If it is not,
+    /// the trial converted to paid, even if that paid period has since expired — expiration only cancels a
+    /// trial that never converted.
+    static func classify(isRevoked: Bool, isUpgraded: Bool, isFreeTrial: Bool, isExpired: Bool) -> TrialOutcome {
+        if isRevoked || isUpgraded {
             return .cancelledOrExpired
         }
-        return transaction.isFreeTrial ? .stillOnTrial : .convertedToPaid
+        if isFreeTrial {
+            return isExpired ? .cancelledOrExpired : .stillOnTrial
+        }
+        return .convertedToPaid
+    }
+
+    /// Claims and reports the outcome of a trial's matching `transaction`, if any.
+    ///
+    /// - Returns: `true` if the trial is still active and nothing was claimed, `false` once it has been resolved.
+    @discardableResult
+    private func handleOutcome(_ outcome: TrialOutcome?, for transaction: Transaction) -> Bool {
+        switch outcome {
+        case .convertedToPaid:
+            if claimTrial(productID: transaction.productID) != nil {
+                reportConversion(transaction)
+            }
+            return false
+        case .cancelledOrExpired:
+            claimTrial(productID: transaction.productID)
+            return false
+        case .stillOnTrial, nil:
+            return true
+        }
     }
 
     private func reconcilePersistedTrials(_ trials: [String: StoredTrial]) {
@@ -73,14 +125,7 @@ final class TrialConversionTracker: @unchecked Sendable {
                     anyStillActive = true
                     continue
                 }
-                switch Self.classify(transaction, against: trial) {
-                case .convertedToPaid:
-                    if self.claimTrial(productID: productID) != nil {
-                        self.reportConversion(transaction)
-                    }
-                case .cancelledOrExpired:
-                    self.claimTrial(productID: productID)
-                case .stillOnTrial, nil:
+                if self.handleOutcome(Self.classify(transaction, against: trial), for: transaction) {
                     anyStillActive = true
                 }
             }
@@ -106,16 +151,7 @@ final class TrialConversionTracker: @unchecked Sendable {
                     guard case .verified(let transaction) = verificationResult else { continue }
                     let trials = self.currentTrials()
                     guard let trial = trials[transaction.productID] else { continue }
-                    switch Self.classify(transaction, against: trial) {
-                    case .convertedToPaid:
-                        if self.claimTrial(productID: transaction.productID) != nil {
-                            self.reportConversion(transaction)
-                        }
-                    case .cancelledOrExpired:
-                        self.claimTrial(productID: transaction.productID)
-                    case .stillOnTrial, nil:
-                        break
-                    }
+                    self.handleOutcome(Self.classify(transaction, against: trial), for: transaction)
                 }
             }
         }
@@ -129,7 +165,7 @@ final class TrialConversionTracker: @unchecked Sendable {
     }
 
     @discardableResult
-    private func claimTrial(productID: String) -> StoredTrial? {
+    func claimTrial(productID: String) -> StoredTrial? {
         let claim: (trial: StoredTrial?, remaining: [String: StoredTrial]) = persistenceQueue.sync {
             var trials = loadTrials()
             let claimed = trials.removeValue(forKey: productID)
@@ -144,9 +180,9 @@ final class TrialConversionTracker: @unchecked Sendable {
         return claim.trial
     }
 
-    private func migrateLegacyTrialIfNeeded() {
+    func migrateLegacyTrialIfNeeded() {
         persistenceQueue.sync {
-            guard let data = TelemetryDeck.customDefaults?.data(forKey: Self.legacyTrialKey),
+            guard let data = userDefaults()?.data(forKey: Self.legacyTrialKey),
                 let trial = try? JSONDecoder().decode(StoredTrial.self, from: data)
             else { return }
             var trials = loadTrials()
@@ -154,7 +190,7 @@ final class TrialConversionTracker: @unchecked Sendable {
                 trials[trial.productID] = trial
                 saveTrials(trials)
             }
-            TelemetryDeck.customDefaults?.removeObject(forKey: Self.legacyTrialKey)
+            userDefaults()?.removeObject(forKey: Self.legacyTrialKey)
         }
     }
 
@@ -162,18 +198,18 @@ final class TrialConversionTracker: @unchecked Sendable {
         persistenceQueue.sync { loadTrials() }
     }
 
-    private func loadTrials() -> [String: StoredTrial] {
-        guard let data = TelemetryDeck.customDefaults?.data(forKey: Self.activeTrialsKey),
+    func loadTrials() -> [String: StoredTrial] {
+        guard let data = userDefaults()?.data(forKey: Self.activeTrialsKey),
             let trials = try? JSONDecoder().decode([String: StoredTrial].self, from: data)
         else { return [:] }
         return trials
     }
 
-    private func saveTrials(_ trials: [String: StoredTrial]) {
+    func saveTrials(_ trials: [String: StoredTrial]) {
         if trials.isEmpty {
-            TelemetryDeck.customDefaults?.removeObject(forKey: Self.activeTrialsKey)
+            userDefaults()?.removeObject(forKey: Self.activeTrialsKey)
         } else if let data = try? JSONEncoder().encode(trials) {
-            TelemetryDeck.customDefaults?.set(data, forKey: Self.activeTrialsKey)
+            userDefaults()?.set(data, forKey: Self.activeTrialsKey)
         }
     }
 }
