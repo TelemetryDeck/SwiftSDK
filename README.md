@@ -168,7 +168,7 @@ Pass `nil` to revert to the default identifier.
 
 ## Sessions
 
-A session ID is automatically generated at initialization. On Apple platforms with an app lifecycle (iOS, tvOS, watchOS, visionOS, and macOS), the session updates whenever your app returns from the background. On platforms without an app lifecycle, such as Linux and other server-side Swift environments, a new session starts each time the app launches.
+A session ID is automatically generated at initialization. On Apple platforms with an app lifecycle (iOS, tvOS, watchOS, visionOS, and macOS), the session updates when your app returns from the background after being backgrounded for more than 5 minutes. On platforms without an app lifecycle, such as Linux and other server-side Swift environments, a new session starts each time the app launches.
 
 For manual session control:
 
@@ -272,7 +272,7 @@ Use `includeBackgroundTime: false` (the default) to only count foreground time. 
 
 ### Purchase Tracking
 
-The SDK offers a shorthand for sending events related to a purcahse:
+The SDK offers a shorthand for sending events related to a purchase:
 
 ```swift
 await TelemetryDeck.purchaseCompleted(
@@ -562,6 +562,7 @@ The project includes a Makefile at the root with some useful commands:
 
 - `build`: Build the library
 - `lint`:  Applies all auto-correctable lint issues and reformats all source files
+- `checklint`: Checks the project for linting errors without modifying files, used by CI
 - `test`:  Run unit tests
 
 Before finalising your PR, please run `make lint`.
