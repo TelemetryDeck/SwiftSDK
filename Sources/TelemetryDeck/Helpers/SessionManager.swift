@@ -50,7 +50,9 @@ final class SessionManager: @unchecked Sendable {
     /// `UserDefaults`, so a reader can never end up waiting behind that I/O.
     private let sessionsLock = NSLock()
 
-    /// Only ever touched while holding ``sessionsLock``. Read it through ``recentSessions``.
+    /// Only ever touched while holding ``sessionsLock``.
+    ///
+    /// Read it through ``recentSessions``.
     private var unsafeRecentSessions: [StoredSession]
 
     /// A snapshot of the recorded sessions, safe to read from any thread.
@@ -60,11 +62,21 @@ final class SessionManager: @unchecked Sendable {
         return self.unsafeRecentSessions
     }
 
+    /// Overrides `TelemetryDeck.customDefaults` when set.
+    ///
+    /// Only ever non-`nil` in tests, so they don't read from or write to the process-wide suite
+    /// shared with other test targets.
+    private let defaultsOverride: UserDefaults?
+
+    private var defaults: UserDefaults? {
+        self.defaultsOverride ?? TelemetryDeck.customDefaults
+    }
+
     private var deletedSessionsCount: Int {
-        get { TelemetryDeck.customDefaults?.integer(forKey: Self.deletedSessionsCountKey) ?? 0 }
+        get { self.defaults?.integer(forKey: Self.deletedSessionsCountKey) ?? 0 }
         set {
             self.persistenceQueue.async {
-                TelemetryDeck.customDefaults?.set(newValue, forKey: Self.deletedSessionsCountKey)
+                self.defaults?.set(newValue, forKey: Self.deletedSessionsCountKey)
             }
         }
     }
@@ -93,21 +105,21 @@ final class SessionManager: @unchecked Sendable {
 
     var firstSessionDate: String {
         get {
-            TelemetryDeck.customDefaults?.string(forKey: Self.firstSessionDateKey)
+            self.defaults?.string(forKey: Self.firstSessionDateKey)
                 ?? ISO8601DateFormatter.string(from: Date(), timeZone: .current, formatOptions: [.withFullDate])
         }
         set {
             self.persistenceQueue.async {
-                TelemetryDeck.customDefaults?.set(newValue, forKey: Self.firstSessionDateKey)
+                self.defaults?.set(newValue, forKey: Self.firstSessionDateKey)
             }
         }
     }
 
     var distinctDaysUsed: [String] {
-        get { TelemetryDeck.customDefaults?.stringArray(forKey: Self.distinctDaysUsedKey) ?? [] }
+        get { self.defaults?.stringArray(forKey: Self.distinctDaysUsedKey) ?? [] }
         set {
             self.persistenceQueue.async {
-                TelemetryDeck.customDefaults?.set(newValue, forKey: Self.distinctDaysUsedKey)
+                self.defaults?.set(newValue, forKey: Self.distinctDaysUsedKey)
             }
         }
     }
@@ -132,8 +144,13 @@ final class SessionManager: @unchecked Sendable {
     private let persistenceQueue = DispatchQueue(label: "com.telemetrydeck.sessionmanager.persistence")
 
     // Not `private` so tests can exercise an isolated instance instead of the shared singleton.
-    init() {
-        if let existingSessionData = TelemetryDeck.customDefaults?.data(forKey: Self.recentSessionsKey),
+    // `defaults` lets tests inject a dedicated `UserDefaults` suite instead of the process-wide
+    // `TelemetryDeck.customDefaults`; production call sites never pass it.
+    init(defaults: UserDefaults? = nil) {
+        self.defaultsOverride = defaults
+        let resolvedDefaults = defaults ?? TelemetryDeck.customDefaults
+
+        if let existingSessionData = resolvedDefaults?.data(forKey: Self.recentSessionsKey),
             let existingSessions = try? Self.decoder.decode([StoredSession].self, from: existingSessionData)
         {
             // upon app start, clean up any sessions older than 90 days to keep dict small
@@ -206,11 +223,12 @@ final class SessionManager: @unchecked Sendable {
         let startedAt = self.currentSessionStartedAt
         let durationInSeconds = Int(self.currentSessionDuration)
 
-        // Update *and* save on the queue, without blocking the Main thread. Doing the mutation here
-        // rather than at the call site is what keeps this once-per-second bookkeeping off the run
-        // loop: previously the caller mutated the array while a queued encode still referenced it,
-        // so every tick both raced that encode and had to copy the whole array before it could
-        // mutate — which ThreadSanitizer flags, and which can crash or stall in `Array.subscript`.
+        // Update *and* save on the queue, without blocking the Main thread. Both the mutation and the
+        // encode happen here, on the serial `persistenceQueue`, so no other thread ever touches
+        // `unsafeRecentSessions`. The lock is held only around the array access and is released
+        // before the encode and `UserDefaults` write, so a stat reader can never end up waiting
+        // behind that I/O (the hang shape from issue #265, where the Main thread blocked behind
+        // slow queued work).
         self.persistenceQueue.async {
             self.sessionsLock.lock()
 
@@ -228,9 +246,15 @@ final class SessionManager: @unchecked Sendable {
             // Encode outside the lock: the queue is serial, so this snapshot is released before the
             // next tick runs and that tick can mutate the array in place.
             if let updatedSessionData = try? Self.encoder.encode(updatedSessions) {
-                TelemetryDeck.customDefaults?.set(updatedSessionData, forKey: Self.recentSessionsKey)
+                self.defaults?.set(updatedSessionData, forKey: Self.recentSessionsKey)
             }
         }
+    }
+
+    // Not `private` so tests can wait for a tick's asynchronous `UserDefaults` write to land before
+    // tearing down an isolated suite.
+    func waitForPendingWrites() {
+        self.persistenceQueue.sync {}
     }
 
     @objc
