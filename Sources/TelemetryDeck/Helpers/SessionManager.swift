@@ -44,7 +44,21 @@ final class SessionManager: @unchecked Sendable {
         return encoder
     }()
 
-    private var recentSessions: [StoredSession]
+    /// Guards ``unsafeRecentSessions``.
+    ///
+    /// Only ever held around the array access itself, never while encoding or writing to
+    /// `UserDefaults`, so a reader can never end up waiting behind that I/O.
+    private let sessionsLock = NSLock()
+
+    /// Only ever touched while holding ``sessionsLock``. Read it through ``recentSessions``.
+    private var unsafeRecentSessions: [StoredSession]
+
+    /// A snapshot of the recorded sessions, safe to read from any thread.
+    private var recentSessions: [StoredSession] {
+        self.sessionsLock.lock()
+        defer { self.sessionsLock.unlock() }
+        return self.unsafeRecentSessions
+    }
 
     private var deletedSessionsCount: Int {
         get { TelemetryDeck.customDefaults?.integer(forKey: Self.deletedSessionsCountKey) ?? 0 }
@@ -60,11 +74,15 @@ final class SessionManager: @unchecked Sendable {
     }
 
     var averageSessionSeconds: Int {
-        guard self.recentSessions.count > 1 else {
-            return self.recentSessions.first?.durationInSeconds ?? -1
+        // Snapshot once: reading `recentSessions` repeatedly would take the lock each time and
+        // could observe a different array on every read.
+        let recentSessions = self.recentSessions
+
+        guard recentSessions.count > 1 else {
+            return recentSessions.first?.durationInSeconds ?? -1
         }
 
-        let completedSessions = self.recentSessions.dropLast()
+        let completedSessions = recentSessions.dropLast()
         let totalCompletedSessionSeconds = completedSessions.map(\.durationInSeconds).reduce(into: 0) { $0 += $1 }
         return totalCompletedSessionSeconds / completedSessions.count
     }
@@ -113,18 +131,19 @@ final class SessionManager: @unchecked Sendable {
 
     private let persistenceQueue = DispatchQueue(label: "com.telemetrydeck.sessionmanager.persistence")
 
-    private init() {
+    // Not `private` so tests can exercise an isolated instance instead of the shared singleton.
+    init() {
         if let existingSessionData = TelemetryDeck.customDefaults?.data(forKey: Self.recentSessionsKey),
             let existingSessions = try? Self.decoder.decode([StoredSession].self, from: existingSessionData)
         {
             // upon app start, clean up any sessions older than 90 days to keep dict small
             let cutoffDate = Date().addingTimeInterval(-(90 * 24 * 60 * 60))
-            self.recentSessions = existingSessions.filter { $0.startedAt > cutoffDate }
+            self.unsafeRecentSessions = existingSessions.filter { $0.startedAt > cutoffDate }
 
             // Update deleted sessions count
-            self.deletedSessionsCount += existingSessions.count - self.recentSessions.count
+            self.deletedSessionsCount += existingSessions.count - self.unsafeRecentSessions.count
         } else {
-            self.recentSessions = []
+            self.unsafeRecentSessions = []
         }
 
         self.updateDistinctDaysUsed()
@@ -169,8 +188,9 @@ final class SessionManager: @unchecked Sendable {
         self.sessionDurationLastUpdatedAt = nil
     }
 
+    // Not `private` so tests can drive a tick directly instead of waiting on the run-loop timer.
     @objc
-    private func updateSessionDuration() {
+    func updateSessionDuration() {
         if let sessionDurationLastUpdatedAt {
             self.currentSessionDuration += Date().timeIntervalSince(sessionDurationLastUpdatedAt)
         }
@@ -183,17 +203,31 @@ final class SessionManager: @unchecked Sendable {
         // Ignore sessions under 1 second
         guard self.currentSessionDuration >= 1.0 else { return }
 
-        // Add or update the current session
-        if let existingSessionIndex = self.recentSessions.lastIndex(where: { $0.startedAt == self.currentSessionStartedAt }) {
-            self.recentSessions[existingSessionIndex].durationInSeconds = Int(self.currentSessionDuration)
-        } else {
-            let newSession = StoredSession(startedAt: self.currentSessionStartedAt, durationInSeconds: Int(self.currentSessionDuration))
-            self.recentSessions.append(newSession)
-        }
+        let startedAt = self.currentSessionStartedAt
+        let durationInSeconds = Int(self.currentSessionDuration)
 
-        // Save changes to UserDefaults without blocking Main thread
+        // Update *and* save on the queue, without blocking the Main thread. Doing the mutation here
+        // rather than at the call site is what keeps this once-per-second bookkeeping off the run
+        // loop: previously the caller mutated the array while a queued encode still referenced it,
+        // so every tick both raced that encode and had to copy the whole array before it could
+        // mutate — which ThreadSanitizer flags, and which can crash or stall in `Array.subscript`.
         self.persistenceQueue.async {
-            if let updatedSessionData = try? Self.encoder.encode(self.recentSessions) {
+            self.sessionsLock.lock()
+
+            // Add or update the current session
+            if let existingSessionIndex = self.unsafeRecentSessions.lastIndex(where: { $0.startedAt == startedAt }) {
+                self.unsafeRecentSessions[existingSessionIndex].durationInSeconds = durationInSeconds
+            } else {
+                let newSession = StoredSession(startedAt: startedAt, durationInSeconds: durationInSeconds)
+                self.unsafeRecentSessions.append(newSession)
+            }
+
+            let updatedSessions = self.unsafeRecentSessions
+            self.sessionsLock.unlock()
+
+            // Encode outside the lock: the queue is serial, so this snapshot is released before the
+            // next tick runs and that tick can mutate the array in place.
+            if let updatedSessionData = try? Self.encoder.encode(updatedSessions) {
                 TelemetryDeck.customDefaults?.set(updatedSessionData, forKey: Self.recentSessionsKey)
             }
         }
