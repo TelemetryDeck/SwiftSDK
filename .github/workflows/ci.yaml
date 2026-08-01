@@ -38,3 +38,13 @@ jobs:
               run: sudo xcode-select -s '/Applications/Xcode_26.5.0.app/Contents/Developer'
             - name: Build and Test
               run: xcodebuild test -scheme TelemetryDeck-Package ${{ matrix.xcodebuildCommand }}
+    thread-sanitizer:
+        name: Thread Sanitizer
+        runs-on: "macos-26"
+        steps:
+            - name: Repository checkout
+              uses: actions/checkout@v6
+            - name: Select Xcode version
+              run: sudo xcode-select -s '/Applications/Xcode_26.5.0.app/Contents/Developer'
+            - name: Test with Thread Sanitizer
+              run: swift test --sanitize=thread --filter SessionManagerConcurrencyTests
