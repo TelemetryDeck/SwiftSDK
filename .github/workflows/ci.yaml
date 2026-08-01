@@ -8,18 +8,18 @@ on:
             - "*"
 
 jobs:
-    # lint:
-    # name: Lint Code
-    # runs-on: ubuntu-latest
-    # steps:
-    #     - name: Repository checkout
-    #       uses: actions/checkout@v5
-    #     - name: Get swift version
-    #       run: swift --version
-    #     - name: Lint
-    #       run: make checklint
+    lint:
+        name: Lint Code
+        runs-on: ubuntu-latest
+        steps:
+            - name: Repository checkout
+              uses: actions/checkout@v5
+            - name: Get swift version
+              run: swift --version
+            - name: Lint
+              run: make checklint
     test:
-        name: Test ${{ matrix.xcodebuildCommand }}
+        name: Test Xcode ${{ matrix.xcode }} - ${{ matrix.xcodebuildCommand }}
         runs-on: "macos-26"
         strategy:
             fail-fast: true
@@ -37,4 +37,4 @@ jobs:
             - name: Select Xcode version
               run: sudo xcode-select -s '/Applications/Xcode_26.5.0.app/Contents/Developer'
             - name: Build and Test
-              run: xcodebuild test -scheme TelemetryDeck-Package ${{ matrix.xcodebuildCommand }}
+              run: xcodebuild -scheme TelemetryDeck ${{ matrix.xcodebuildCommand }}
