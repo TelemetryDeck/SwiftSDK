@@ -22,6 +22,11 @@ public enum TelemetryDeck {
     /// For example, you might want to call this in your `init` method of your app's `@main` entry point.
     public static func initialize(config: Config) {
         TelemetryManager.initializedTelemetryManager = TelemetryManager(configuration: config)
+        #if canImport(StoreKit) && compiler(>=5.9.2)
+            if #available(iOS 15, macOS 12, tvOS 15, watchOS 8, *) {
+                TrialConversionTracker.shared.start()
+            }
+        #endif
     }
 
     /// Sends a telemetry signal with optional parameters to TelemetryDeck.
