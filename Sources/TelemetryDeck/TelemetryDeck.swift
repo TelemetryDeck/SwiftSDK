@@ -87,7 +87,7 @@ public enum TelemetryDeck {
         parameterPrefix: String?,
         defaultParameters: EventParameters
     ) -> [any EventProcessor] {
-        [
+        var processors: [any EventProcessor] = [
             PreviewFilterProcessor(),
             DefaultParametersProcessor(parameters: defaultParameters),
             DefaultPrefixProcessor(eventPrefix: eventPrefix, parameterPrefix: parameterPrefix),
@@ -102,6 +102,14 @@ public enum TelemetryDeck {
             AccessibilityProcessor(),
             DisplayProcessor(),
         ]
+
+        #if canImport(MetricKit) && !os(tvOS) && !os(watchOS) && !os(visionOS)
+            if #available(iOS 27, macOS 27, macCatalyst 27, *) {
+                processors.append(MetricKitProcessor())
+            }
+        #endif
+
+        return processors
     }
 
     /// Initialises the SDK with the given app identity and processor-level options.
