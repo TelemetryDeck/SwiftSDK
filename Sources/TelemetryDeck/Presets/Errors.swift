@@ -41,6 +41,7 @@ extension Error {
 
 extension TelemetryDeck {
     /// Sends an error event with the given identifier, optional category, message, and additional parameters.
+    @concurrent
     public static func errorOccurred(
         id: String,
         category: ErrorCategory? = nil,
@@ -70,6 +71,7 @@ extension TelemetryDeck {
     }
 
     /// Sends an error event for the given `IdentifiableError`, using its localised description as the message.
+    @concurrent
     public static func errorOccurred(
         identifiableError: IdentifiableError,
         category: ErrorCategory = .thrownException,
@@ -89,6 +91,7 @@ extension TelemetryDeck {
 
     /// Sends an error event for the given `IdentifiableError` with an explicit optional message override.
     @_disfavoredOverload
+    @concurrent
     public static func errorOccurred(
         identifiableError: IdentifiableError,
         category: ErrorCategory = .thrownException,

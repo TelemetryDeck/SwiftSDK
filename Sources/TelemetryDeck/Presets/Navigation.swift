@@ -13,6 +13,7 @@ private let navigationState = NavigationState()
 
 extension TelemetryDeck {
     /// Sends a navigation event recording a transition from `source` to `destination`.
+    @concurrent
     public static func navigationPathChanged(
         from source: String,
         to destination: String,
@@ -30,6 +31,7 @@ extension TelemetryDeck {
     }
 
     /// Sends a navigation event to `destination`, using the last recorded path as the source.
+    @concurrent
     public static func navigationPathChanged(
         to destination: String,
         customUserID: String? = nil
@@ -59,12 +61,12 @@ extension View {
     public func trackNavigation(path: String) -> some View {
         self
             .onAppear {
-                Task {
+                Task { @concurrent in
                     await TelemetryDeck.navigationPathChanged(to: path)
                 }
             }
             ._onChangeCompat(of: path) { newPath in
-                Task {
+                Task { @concurrent in
                     await TelemetryDeck.navigationPathChanged(to: newPath)
                 }
             }

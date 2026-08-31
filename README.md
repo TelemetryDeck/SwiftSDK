@@ -416,12 +416,16 @@ Events pass through a pipeline of `EventProcessor` middleware before transmissio
 | 12 | `AccessibilityProcessor` | Adds accessibility settings (bold text, reduce motion, etc.) |
 | 13 | `DisplayProcessor` | Adds screen resolution, size, and multi-display metadata |
 
-To exclude a specific processor, remove it from the default list before initializing:
+To exclude a specific processor, remove it from the default list before initializing. 
+
+Please note that calling `defaultProcessors()` is synchronous so ideally do this in a `@concurrent` context rather than the main actor:
 
 ```swift
-var processors = TelemetryDeck.defaultProcessors()
-processors.removeAll { $0 is AccessibilityProcessor }
-try await TelemetryDeck.initialize(configuration: config, processors: processors)
+Task { @concurrent in
+    var processors = TelemetryDeck.defaultProcessors()
+    processors.removeAll { $0 is AccessibilityProcessor }
+    try await TelemetryDeck.initialize(configuration: config, processors: processors)
+}
 ```
 
 You can also build a processor list from scratch for full control over which processors run.
@@ -444,12 +448,14 @@ struct MyProcessor: EventProcessor {
 }
 ```
 
-Pass a custom processor list at initialization:
+Pass a custom processor list at initialization, again building it inside a `@concurrent` context:
 
 ```swift
-var processors = TelemetryDeck.defaultProcessors()
-processors.append(MyProcessor())
-try await TelemetryDeck.initialize(configuration: config, processors: processors)
+Task { @concurrent in
+    var processors = TelemetryDeck.defaultProcessors()
+    processors.append(MyProcessor())
+    try await TelemetryDeck.initialize(configuration: config, processors: processors)
+}
 ```
 
 If you need parameters that are computed at runtime (e.g. values that depend on current app state), use a processor instead of `defaultParameters`:
@@ -467,6 +473,8 @@ struct DynamicParametersProcessor: EventProcessor {
     }
 }
 ```
+
+`process(_:context:next:)` starts on the global concurrent executor, but each processor's `next` runs the rest of the chain on that processor's own isolation — so a processor placed after an actor processor, as any processor appended to `defaultProcessors()` is, runs on that actor's executor and is serialised with it. Do not perform blocking work in a processor, and keep mutable state in an actor. In a module compiled with `MainActor` default isolation, a struct or class conforming to `EventProcessor` is still nonisolated because `EventProcessor` refines `Sendable`, which is why a class with mutable stored properties will not compile; use an actor instead. Spell the type of the `next` parameter exactly as in the protocol, otherwise your method does not satisfy the requirement.
 
 ### Default Parameters and Prefixes
 

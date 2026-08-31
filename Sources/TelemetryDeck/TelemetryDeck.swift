@@ -39,6 +39,7 @@ private actor TelemetryDeckStorage {
 private let storage = TelemetryDeckStorage()
 
 /// The primary namespace for the TelemetryDeck SDK, providing static methods for initialisation, event sending, and session management.
+///
 public enum TelemetryDeck {
 
     /// Returns the default set of event processors used when initialising without a custom processor list.
@@ -107,6 +108,7 @@ public enum TelemetryDeck {
     /// Initialises the SDK with the given app identity and processor-level options.
     ///
     /// When `inMemoryOnly` is `true`, the SDK uses in-memory storage only. Features that require persistent storage are disabled.
+    @concurrent
     public static func initialize(
         appID: String,
         namespace: String,
@@ -150,15 +152,19 @@ public enum TelemetryDeck {
     }
 
     /// Initialises the SDK with the given configuration, optionally overriding processors and dependencies.
+    ///
+    /// `processors` defaults to `defaultProcessors()` when `nil`.
+    @concurrent
     public static func initialize(
         configuration: Config,
-        processors: [any EventProcessor] = TelemetryDeck.defaultProcessors(),
+        processors: [any EventProcessor]? = nil,
         cache: (any EventCaching)? = nil,
         transmitter: (any EventTransmitting)? = nil,
         logger: (any Logging)? = nil,
         storage processorStorage: (any ProcessorStorage)? = nil
     ) async throws(TelemetryDeckError) {
         try configuration.validate()
+        let processors = processors ?? defaultProcessors()
 
         guard await storage.client == nil else {
             await log(.error, "TelemetryDeck.initialize() called more than once. Ignoring subsequent call. Remove the duplicate initialization.")
@@ -184,12 +190,14 @@ public enum TelemetryDeck {
         await storage.client
     }
 
+    // Not @concurrent: the @autoclosure message parameter is non-Sendable, so call sites may capture actor-isolated state.
     static func log(_ level: LogLevel, _ message: @autoclosure () -> String) async {
         let logger = await storage.logger
         logger.log(level, message())
     }
 
     /// Sends an event whose name is provided as a raw-representable value.
+    @concurrent
     public static func event<S: RawRepresentable>(
         _ name: S,
         parameters: EventParameters = [:],
@@ -200,6 +208,7 @@ public enum TelemetryDeck {
     }
 
     /// Sends an event with the given name, parameters, optional float value, and optional user ID override.
+    @concurrent
     public static func event(
         _ name: String,
         parameters: EventParameters = [:],
@@ -262,12 +271,14 @@ public enum TelemetryDeck {
     }
 
     /// Immediately transmits all queued events without waiting for the next scheduled interval.
+    @concurrent
     public static func flush() async {
         guard let client = await storage.client else { return }
         await client.flush()
     }
 
     /// Flushes pending events, shuts down the engine, and clears the shared instance.
+    @concurrent
     public static func terminate() async {
         if let client = await storage.client {
             await client.flush()
@@ -280,12 +291,14 @@ public enum TelemetryDeck {
     // MARK: - Analytics Disabled
 
     /// Enables or disables analytics collection; while disabled, events are silently dropped.
+    @concurrent
     public static func setAnalyticsDisabled(_ disabled: Bool) async {
         guard let client = await storage.client else { return }
         await client.setAnalyticsDisabled(disabled)
     }
 
     /// Whether analytics collection is currently disabled.
+    @concurrent
     public static var isAnalyticsDisabled: Bool {
         get async {
             guard let client = await storage.client else { return false }
@@ -296,6 +309,7 @@ public enum TelemetryDeck {
     // MARK: - User Identifier
 
     /// Sets the user identifier applied to all subsequent events; pass `nil` to revert to the default.
+    @concurrent
     public static func setUserIdentifier(_ value: String?) async {
         guard let client = await storage.client else {
             await log(.error, "TelemetryDeck not initialized")
@@ -311,6 +325,7 @@ public enum TelemetryDeck {
     // MARK: - Session
 
     /// The identifier of the current session, or `nil` if the SDK has not been initialised.
+    @concurrent
     public static var sessionID: UUID? {
         get async {
             guard let client = await storage.client else { return nil }
@@ -323,6 +338,7 @@ public enum TelemetryDeck {
 
     /// Starts a new session and returns its identifier, or `nil` if the SDK is not initialised.
     @discardableResult
+    @concurrent
     public static func newSession() async -> UUID? {
         guard let client = await storage.client else {
             await log(.error, "TelemetryDeck not initialized")
@@ -338,6 +354,7 @@ public enum TelemetryDeck {
     // MARK: - Test Mode
 
     /// Returns whether the SDK is currently operating in test mode.
+    @concurrent
     public static func isTestMode() async -> Bool {
         guard let client = await storage.client else { return false }
         guard let processor = await client.processor(conformingTo: (any TestModeProviding).self) else {
@@ -349,6 +366,7 @@ public enum TelemetryDeck {
     // MARK: - Duration Tracking
 
     /// Begins measuring elapsed time for the named event, optionally including time spent in the background.
+    @concurrent
     public static func startDurationEvent(
         _ eventName: String,
         parameters: EventParameters = [:],
@@ -366,6 +384,7 @@ public enum TelemetryDeck {
     }
 
     /// Stops the duration measurement for the named event and sends the event with the elapsed time as a parameter and float value.
+    @concurrent
     public static func stopAndSendDurationEvent(
         _ eventName: String,
         parameters: EventParameters = [:]
@@ -385,6 +404,7 @@ public enum TelemetryDeck {
     }
 
     /// Cancels an in-progress duration measurement without sending an event.
+    @concurrent
     public static func cancelDurationEvent(_ eventName: String) async {
         guard let client = await storage.client else { return }
         await client.durationTracker.cancelDuration(eventName)

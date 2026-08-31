@@ -8,6 +8,7 @@ extension TelemetryDeck {
     }
 
     /// Sends an event recording a completed purchase.
+    @concurrent
     public static func purchaseCompleted(
         productID: String,
         type: PurchaseType,
@@ -30,6 +31,7 @@ extension TelemetryDeck {
     }
 
     /// Sends an event recording when a user converts from a free trial to a paid subscription.
+    @concurrent
     public static func convertedFromTrial(
         productID: String,
         type: PurchaseType,
@@ -54,6 +56,7 @@ extension TelemetryDeck {
     /// Sends an event recording the start of a free trial.
     ///
     /// No price or `floatValue` is recorded because a free trial has no charge.
+    @concurrent
     public static func freeTrialStarted(
         productID: String,
         type: PurchaseType,

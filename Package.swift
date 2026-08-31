@@ -40,7 +40,7 @@ let package = Package(
             swiftSettings: [
                 .enableUpcomingFeature("NonisolatedNonsendingByDefault"),
                 .enableUpcomingFeature("InferIsolatedConformances"),
-                .defaultIsolation(nil),
+                .defaultIsolation(MainActor.self),
             ]
         ),
     ]

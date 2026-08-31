@@ -2,6 +2,9 @@ import Foundation
 
 /// A middleware component in the event processing pipeline that can enrich, filter, or transform events.
 public protocol EventProcessor: Sendable {
+    /// Processes an event and forwards it down the chain by calling `next`.
+    ///
+    /// `next` runs on the isolation of the processor that calls it
     func process(
         _ input: EventInput,
         context: EventContext,

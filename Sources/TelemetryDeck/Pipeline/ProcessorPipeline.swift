@@ -14,6 +14,8 @@ public struct ProcessorPipeline: Sendable {
     }
 
     /// Runs the input through the processor chain and returns the finalised event.
+    ///
+    @concurrent
     public func process(_ input: EventInput, context: EventContext) async throws -> Event {
         try await runChain(input: input, context: context, index: 0)
     }

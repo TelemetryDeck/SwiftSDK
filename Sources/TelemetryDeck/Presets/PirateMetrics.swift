@@ -4,6 +4,7 @@ import Foundation
 
 extension TelemetryDeck {
     /// Sends an acquisition event recording the channel through which this user was acquired.
+    @concurrent
     public static func acquiredUser(
         channel: String,
         parameters: EventParameters = [:],
@@ -15,6 +16,7 @@ extension TelemetryDeck {
     }
 
     /// Sends an event indicating that a lead funnel has started for the given lead identifier.
+    @concurrent
     public static func leadStarted(
         leadID: String,
         parameters: EventParameters = [:],
@@ -26,6 +28,7 @@ extension TelemetryDeck {
     }
 
     /// Sends an event indicating that a lead has converted for the given lead identifier.
+    @concurrent
     public static func leadConverted(
         leadID: String,
         parameters: EventParameters = [:],
@@ -41,6 +44,7 @@ extension TelemetryDeck {
 
 extension TelemetryDeck {
     /// Sends an event indicating that the user has completed onboarding.
+    @concurrent
     public static func onboardingCompleted(
         parameters: EventParameters = [:],
         customUserID: String? = nil
@@ -49,6 +53,7 @@ extension TelemetryDeck {
     }
 
     /// Sends an event indicating that the user engaged with a core feature.
+    @concurrent
     public static func coreFeatureUsed(
         featureName: String,
         parameters: EventParameters = [:],
@@ -64,6 +69,7 @@ extension TelemetryDeck {
 
 extension TelemetryDeck {
     /// Sends an event recording that the user sent a referral to one or more recipients.
+    @concurrent
     public static func referralSent(
         receiversCount: Int,
         kind: String? = nil,
@@ -79,6 +85,7 @@ extension TelemetryDeck {
     }
 
     /// Sends an event recording a user-submitted rating (0–10) and optional comment.
+    @concurrent
     public static func userRatingSubmitted(
         rating: Int,
         comment: String? = nil,
@@ -102,6 +109,7 @@ extension TelemetryDeck {
 
 extension TelemetryDeck {
     /// Sends an event indicating that a paywall was shown to the user, including the reason it appeared.
+    @concurrent
     public static func paywallShown(
         reason: String,
         parameters: EventParameters = [:],
