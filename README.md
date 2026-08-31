@@ -5,6 +5,7 @@ Privacy-first analytics for Apple platforms. Send events to [TelemetryDeck](http
 * [Requirements](#requirements)
 * [Installation](#installation)
 * [Quick Start](#quick-start)
+* [Configuration Reference](#configuration-reference)
 * [Sending Events](#sending-events)
     * [Parameters](#parameters)
     * [Float Values](#float-values)
@@ -23,8 +24,8 @@ Privacy-first analytics for Apple platforms. Send events to [TelemetryDeck](http
     * [Custom Salt](#custom-salt)
     * [Custom Server](#custom-server)
     * [Custom Event Transmitter](#custom-event-transmitter)
-    * [In-memory-only mode (no local storage)](#in-memory-only-mode-no-local-storage)
-    * [Cache configuration](#cache-configuration)
+    * [In-Memory-Only Mode (No Local Storage)](#in-memory-only-mode-no-local-storage)
+    * [Cache Configuration](#cache-configuration)
     * [Custom Logging](#custom-logging)
     * [Default Event Processors](#default-event-processors)
     * [Custom Event Processors](#custom-event-processors)
@@ -81,6 +82,31 @@ TelemetryDeck.event("App.launchedRegularly")
 ```
 
 That's it. TelemetryDeck automatically enriches every event with device info, OS version, app version, accessibility settings, and more.
+
+## Configuration Reference
+
+**`TelemetryDeck.Config`**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `appID` | `String` | (required) | Your app ID from the dashboard |
+| `namespace` | `String` | (required) | Your namespace from the dashboard |
+| `apiBaseURL` | `URL` | `https://nom.telemetrydeck.com` | Ingestion server URL |
+| `salt` | `String` | `""` | Client-side salt for user ID hashing |
+
+A note regarding salt: We already anonymize the data on client and server side. You can still set custom salt to a random string of 64 letters, integers and special characters to prevent the unlikely possibility of uncovering the original user identifiers through calculation. Once you set the salt, it should not change. If you change the salt, every single one of your user identifiers will be different, so even existing users will look like new users to TelemetryDeck.
+
+
+**`TelemetryDeck.initialize()` parameters**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `defaultUser` | `String?` | `nil` | Initial user identity (hashed before transmission) |
+| `testMode` | `Bool?` | `nil` | Force test mode on/off |
+| `eventPrefix` | `String?` | `nil` | A prefix we will append to all event names |
+| `parameterPrefix` | `String?` | `nil` | A prefix we will append to all parameter keys |
+| `sendSessionStartedEvent` | `Bool` | `true` | If the SDK should report the session starting |
+| `defaultParameters` | `EventParameters` | `[:]` | Additional parameters to include with every event |
 
 ## Sending Events
 
@@ -197,31 +223,6 @@ To flush pending events and shut down the SDK:
 ```swift
 await TelemetryDeck.terminate()
 ```
-
-<details>
-<summary>Configuration Reference</summary>
-
-**`TelemetryDeck.Config`**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `appID` | `String` | (required) | Your app ID from the dashboard |
-| `namespace` | `String` | (required) | Your namespace from the dashboard |
-| `apiBaseURL` | `URL` | `https://nom.telemetrydeck.com` | Ingestion server URL |
-| `salt` | `String` | `""` | Client-side salt for user ID hashing |
-
-**`TelemetryDeck.initialize()` parameters**
-
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `defaultUser` | `String?` | `nil` | Initial user identifier (hashed before transmission) |
-| `testMode` | `Bool?` | `nil` | Force test mode on/off; `nil` auto-detects from build configuration |
-| `eventPrefix` | `String?` | `nil` | Auto-prefix for all event names |
-| `parameterPrefix` | `String?` | `nil` | Auto-prefix for all parameter keys |
-| `sendSessionStartedEvent` | `Bool` | `true` | Send an event when a new session begins |
-| `defaultParameters` | `EventParameters` | `[:]` | Parameters merged into every event |
-
-</details>
 
 ## Presets
 
@@ -345,7 +346,7 @@ try await TelemetryDeck.initialize(
 )
 ```
 
-### In-memory-only mode (no local storage)
+### In-Memory-Only Mode (No Local Storage)
 
 For situations where writing to disk is undesirable (sandboxed processes, privacy-sensitive deployments, etc), pass `inMemoryOnly: true` to the convenience initializer:
 
@@ -361,7 +362,7 @@ This tells the SDK to turn off features that require persistent storage and swit
 
 Features that become unavailable in this mode include: new-install detection and retention metrics (distinct days used, average session length, etc.). We are also unable to cache events for later transmission - any unsent events are discarded when the app is terminated. Duration signals are also not persisted across launches - a duration started in one app launch cannot be resumed or stopped in a later one.
 
-### Cache configuration
+### Cache Configuration
 
 `DefaultEventCache` and `DefaultEventTransmitter` expose parameters to control how many events are buffered in memory and how the SDK retries sending events in case of a problem:
 
