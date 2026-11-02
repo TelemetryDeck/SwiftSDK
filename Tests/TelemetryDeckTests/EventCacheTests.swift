@@ -255,6 +255,80 @@ struct EventCacheTests {
         #expect(popped[2].type == "Signal.4")
     }
 
+    @Test
+    func persistThenRestoreOnSameInstanceDoesNotDuplicateEvents() async {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-same-instance-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        await cache.add(createTestEvent(type: "Signal.A"))
+
+        await cache.persist()
+        await cache.restore()
+
+        #expect(await cache.count() == 1)
+        #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+    }
+
+    @Test
+    func restoreDoesNotBringBackEventsPoppedAfterPersist() async {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-popped-after-persist-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        await cache.add(createTestEvent(type: "Signal.A"))
+
+        await cache.persist()
+        _ = await cache.pop()
+        await cache.restore()
+
+        #expect(await cache.count() == 0)
+    }
+
+    @Test
+    func secondPersistKeepsEventsFromFirstPersist() async {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-second-persist-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        await cache.add(createTestEvent(type: "Signal.A"))
+        await cache.persist()
+        await cache.add(createTestEvent(type: "Signal.B"))
+        await cache.persist()
+
+        // A new instance stands in for the next launch after the process was killed.
+        let nextLaunchCache = DefaultEventCache(fileURL: fileURL)
+        await nextLaunchCache.restore()
+
+        let popped = await nextLaunchCache.pop()
+        #expect(popped.map(\.type) == ["Signal.A", "Signal.B"])
+    }
+
+    @Test
+    func persistWithEmptyCacheDoesNotCreateFile() async {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-empty-persist-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        await cache.persist()
+
+        #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+    }
+
+    @Test
+    func persistWithEmptyCacheRemovesStaleSnapshot() async {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-stale-snapshot-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        await cache.add(createTestEvent(type: "Signal.A"))
+        await cache.persist()
+        _ = await cache.pop()
+        await cache.persist()
+
+        #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+    }
+
     private func createTestEvent(type: String = "Test.signal") -> Event {
         Event(
             appID: "test-app",
