@@ -58,10 +58,14 @@ public actor DefaultEventTransmitter: EventTransmitting {
         }
     }
 
-    /// Cancels the repeating transmission timer.
-    public func stop() {
-        transmitTask?.cancel()
+    /// Cancels the repeating transmission timer and waits for it to finish.
+    ///
+    /// A timer batch that was in flight is back in the cache when this returns. A batch sent by ``flush()`` is not awaited.
+    public func stop() async {
+        let task = transmitTask
         transmitTask = nil
+        task?.cancel()
+        await task?.value
     }
 
     /// Sends the given events to the API, returning any that could not be delivered.

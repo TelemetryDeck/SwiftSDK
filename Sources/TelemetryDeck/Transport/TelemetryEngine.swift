@@ -102,8 +102,7 @@ actor TelemetryEngine: EventSending {
             await processor.stop()
         }
         await durationTracker.stop()
-        await transmitter.stop()
-        await cache.persist()
+        await stopAndPersist()
         lifecycleTask?.cancel()
         lifecycleTask = nil
         started = false
@@ -157,8 +156,6 @@ actor TelemetryEngine: EventSending {
 
     private func handleBackground() async {
         logger.log(.debug, "App entering background, persisting cache")
-        let cachedCount = await cache.count()
-        defer { logger.log(.info, "Persisted \(cachedCount) events to disk") }
         #if canImport(UIKit) && !os(watchOS)
             if !Environment.isAppExtension {
                 let app = await MainActor.run { UIApplication.shared }
@@ -168,19 +165,18 @@ actor TelemetryEngine: EventSending {
                         app.endBackgroundTask(holder.identifier)
                     }
                 }
-                await transmitter.stop()
-                await cache.persist()
+                await stopAndPersist()
                 await MainActor.run {
                     app.endBackgroundTask(holder.identifier)
                 }
             } else {
-                await transmitter.stop()
-                await cache.persist()
+                await stopAndPersist()
             }
         #else
-            await transmitter.stop()
-            await cache.persist()
+            await stopAndPersist()
         #endif
+        let cachedCount = await cache.count()
+        logger.log(.info, "Persisted \(cachedCount) events to disk")
     }
 
     private func handleForeground() async {
@@ -191,10 +187,22 @@ actor TelemetryEngine: EventSending {
         await transmitter.start()
     }
 
-    private func handleTermination() async {
+    func handleTermination() async {
         logger.log(.debug, "App terminating, persisting cache")
+        await stopAndPersist()
+    }
+
+    /// Stops the transmitter and backs up the cache.
+    ///
+    /// The first save protects the cached events if the app is suspended before a cancelled request returns.
+    /// The second only runs if stopping the transmitter put a batch back into the cache.
+    private func stopAndPersist() async {
         await cache.persist()
+        let countBeforeStop = await cache.count()
         await transmitter.stop()
+        if await cache.count() != countBeforeStop {
+            await cache.persist()
+        }
     }
 
     private func setupLifecycleObservers() {
