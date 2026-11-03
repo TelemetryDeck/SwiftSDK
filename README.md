@@ -20,6 +20,7 @@ Privacy-first analytics for Apple platforms. Send events to [TelemetryDeck](http
     * [Duration Tracking](#duration-tracking)
     * [Purchase Tracking](#purchase-tracking)
     * [Pirate Metrics (AARRR)](#pirate-metrics-aarrr)
+    * [MetricKit Reports](#metrickit-reports)
 * [Advanced](#advanced)
     * [Custom Salt](#custom-salt)
     * [Custom Server](#custom-server)
@@ -298,6 +299,18 @@ await TelemetryDeck.coreFeatureUsed(featureName: "export")
 await TelemetryDeck.referralSent(receiversCount: 3)
 await TelemetryDeck.paywallShown(reason: "feature-gate")
 ```
+
+### MetricKit Reports
+
+On iOS 27 / macOS 27 and later, forward a MetricKit `MetricReport` to TelemetryDeck:
+
+```swift
+if #available(iOS 27, macOS 27, *) {
+    await TelemetryDeck.send(metricReport: report)
+}
+```
+
+The report is sent as a single `TelemetryDeck.Performance.metricKitMetricReport` event with one parameter, `TelemetryDeck.Performance.metricKitMetricReport`, whose value is the report serialized to JSON.
 
 ## Advanced
 
