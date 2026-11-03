@@ -640,4 +640,32 @@ struct PresetIntegrationTests {
 
         await TelemetryDeck.terminate()
     }
+
+    // MARK: - Duration
+
+    @Test
+    func stopAndSendDurationEventLogsNoReservedPrefixError() async throws {
+        await TelemetryDeck.terminate()
+
+        let cache = InMemoryEventCache()
+        let logger = SpyLogger()
+        let config = TelemetryDeck.Config(appID: "duration-test", namespace: "test")
+        try await TelemetryDeck.initialize(
+            configuration: config,
+            processors: [ValidationProcessor()],
+            cache: cache,
+            transmitter: SpyEventTransmitter(),
+            logger: logger
+        )
+
+        await TelemetryDeck.startDurationEvent("Test.duration")
+        await TelemetryDeck.stopAndSendDurationEvent("Test.duration")
+
+        let events = await cache.pop()
+        #expect(events.count == 1)
+        #expect(events[0].payload["TelemetryDeck.Signal.durationInSeconds"] != nil)
+        #expect(logger.errorMessages().isEmpty)
+
+        await TelemetryDeck.terminate()
+    }
 }

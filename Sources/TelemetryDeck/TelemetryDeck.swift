@@ -400,7 +400,7 @@ public enum TelemetryDeck {
         mergedParams.merge(result.startParameters)
         mergedParams.merge(parameters)
 
-        await event(eventName, parameters: mergedParams, floatValue: roundedDuration)
+        await sdkEvent(eventName, parameters: mergedParams, floatValue: roundedDuration)
     }
 
     /// Cancels an in-progress duration measurement without sending an event.
