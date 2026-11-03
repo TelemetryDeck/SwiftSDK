@@ -3,7 +3,7 @@ import Testing
 
 @testable import TelemetryDeck
 
-private func createTestEvent(type: String = "test.event") -> Event {
+func createTestEvent(type: String = "test.event") -> Event {
     Event(
         appID: "test-app-id",
         type: type,
@@ -372,6 +372,28 @@ struct DefaultEventTransmitterTests {
     }
 
     @Test
+    func stopWaitsForInFlightBatchToReturnToCache() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = HangingHTTPClient()
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        await cache.add(createTestEvent())
+        await transmitter.start()
+        await stub.waitForRequest()
+
+        await transmitter.stop()
+
+        #expect(await cache.count() == 1)
+    }
+
+    @Test
     func consecutiveFailuresIncrementOnFailedBatch() async {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
@@ -532,6 +554,26 @@ private final class SwitchableHTTPClient: HTTPDataLoader, @unchecked Sendable {
         let code = statusCode
         let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: nil)!
         return (Data(), response)
+    }
+}
+
+/// Holds each request open until its task is cancelled, then fails it after a few suspension points.
+final class HangingHTTPClient: HTTPDataLoader, @unchecked Sendable {
+    private let didReceiveRequest = Locked<Bool>(false)
+
+    func waitForRequest() async {
+        for _ in 0..<10_000 {
+            if didReceiveRequest.withLock({ $0 }) { return }
+            await Task.yield()
+        }
+        Issue.record("No request arrived")
+    }
+
+    func data(for _: URLRequest) async throws -> (Data, URLResponse) {
+        didReceiveRequest.withLock { $0 = true }
+        try? await Task.sleep(nanoseconds: 60_000_000_000)
+        for _ in 0..<100 { await Task.yield() }
+        throw URLError(.cancelled)
     }
 }
 
