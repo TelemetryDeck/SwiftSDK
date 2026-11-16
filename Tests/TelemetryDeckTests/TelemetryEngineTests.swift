@@ -27,6 +27,67 @@ private actor NoOpEventTransmitter: EventTransmitting {
 @Suite
 struct TelemetryEngineTests {
     @Test
+    func flushInBackgroundRefreshesSnapshotSoSentEventsAreNotResent() async throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-background-flush-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        let client = await TelemetryEngine.create(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            processors: [],
+            cache: cache,
+            transmitter: NoOpEventTransmitter(cache: cache),
+            storage: InMemoryProcessorStorage()
+        )
+        await cache.add(makeEvent())
+
+        await client.handleBackground()
+        await client.flush()
+
+        // A new instance stands in for the next launch after the process was killed.
+        let nextLaunchCache = DefaultEventCache(fileURL: fileURL)
+        await nextLaunchCache.restore()
+        #expect(await nextLaunchCache.count() == 0)
+
+        await client.shutdown()
+    }
+
+    @Test
+    func flushInForegroundDoesNotWriteSnapshot() async throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-foreground-flush-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        let client = await TelemetryEngine.create(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            processors: [],
+            cache: cache,
+            transmitter: NoOpEventTransmitter(),
+            storage: InMemoryProcessorStorage()
+        )
+        await cache.add(makeEvent())
+
+        await client.flush()
+
+        #expect(!FileManager.default.fileExists(atPath: fileURL.path))
+
+        await client.shutdown()
+    }
+
+    private func makeEvent() -> Event {
+        Event(
+            appID: "test-app",
+            type: "Test.signal",
+            clientUser: "test-user-hash",
+            sessionID: UUID().uuidString,
+            receivedAt: Date(),
+            payload: [:],
+            floatValue: nil,
+            isTestMode: true
+        )
+    }
+
+    @Test
     func processorOfTypeReturnsCorrectProcessor() async throws {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()

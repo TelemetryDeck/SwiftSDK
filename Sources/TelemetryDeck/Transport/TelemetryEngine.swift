@@ -16,6 +16,7 @@ actor TelemetryEngine: EventSending {
     let durationTracker: DurationTracker
     private var analyticsDisabled = false
     private var started = false
+    private var isInBackground = false
     private var lifecycleTask: Task<Void, Never>?
 
     #if canImport(UIKit) && !os(watchOS)
@@ -143,6 +144,11 @@ actor TelemetryEngine: EventSending {
     func flush() async {
         logger.log(.debug, "TelemetryEngine client flush")
         await transmitter.flush()
+        // The snapshot taken on entering the background still holds the events just sent.
+        // Refresh it, or they would be sent again if the app is killed before returning to the foreground.
+        if isInBackground {
+            await cache.persist()
+        }
     }
 
     /// Returns the first processor in the pipeline that is exactly of the given concrete type.
@@ -155,7 +161,8 @@ actor TelemetryEngine: EventSending {
         processors.first { $0 is T } as? T
     }
 
-    private func handleBackground() async {
+    func handleBackground() async {
+        isInBackground = true
         logger.log(.debug, "App entering background, persisting cache")
         let cachedCount = await cache.count()
         defer { logger.log(.info, "Persisted \(cachedCount) events to disk") }
@@ -184,6 +191,7 @@ actor TelemetryEngine: EventSending {
     }
 
     private func handleForeground() async {
+        isInBackground = false
         logger.log(.debug, "App entering foreground")
         await cache.restore()
         let restoredCount = await cache.count()

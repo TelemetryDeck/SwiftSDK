@@ -6,6 +6,8 @@ public actor DefaultEventCache: EventCaching {
     private let maxBatchSize = 100
     private let fileURL: URL
     private let cacheLimit: Int
+    /// Whether this instance has written the cache file, which from then on only mirrors `events`.
+    private var hasWrittenSnapshot = false
 
     /// Creates a cache that stores events in the default caches directory.
     public init(cacheLimit: Int = 10_000) {
@@ -43,17 +45,32 @@ public actor DefaultEventCache: EventCaching {
         events.count
     }
 
-    /// Encodes and writes the current events to the cache file on disk.
+    /// Writes a snapshot of the current events to the cache file on disk, keeping them in memory.
+    ///
+    /// The snapshot is only a backup in case the process dies. An empty cache has nothing to back up,
+    /// so this removes any earlier snapshot rather than writing an empty file on every call.
     public func persist() async {
-        guard let data = try? JSONEncoder.telemetryEncoder.encode(events) else { return }
-        try? data.write(to: fileURL)
+        guard !events.isEmpty else {
+            try? FileManager.default.removeItem(at: fileURL)
+            return
+        }
+        guard let data = try? JSONEncoder.telemetryEncoder.encode(events),
+            (try? data.write(to: fileURL)) != nil
+        else { return }
+        hasWrittenSnapshot = true
     }
 
-    /// Reads previously persisted events from disk and prepends them to the in-memory queue.
+    /// Reads events persisted by an earlier process from disk and prepends them to the in-memory queue.
     ///
     /// Loaded events are older than in-memory events and occupy the front of the queue under FIFO.
     /// If the combined count exceeds `cacheLimit`, the oldest loaded events are trimmed first.
+    ///
+    /// A snapshot written by this instance is discarded instead, as its events are still in memory.
     public func restore() async {
+        guard !hasWrittenSnapshot else {
+            try? FileManager.default.removeItem(at: fileURL)
+            return
+        }
         guard let data = try? Data(contentsOf: fileURL),
             let loaded = try? JSONDecoder.telemetryDecoder.decode([Event].self, from: data)
         else { return }

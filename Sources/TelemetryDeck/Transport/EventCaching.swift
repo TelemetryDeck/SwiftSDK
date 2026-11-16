@@ -6,9 +6,15 @@ public protocol EventCaching: Sendable {
     func add(_ events: [Event]) async
     func pop() async -> [Event]
     func count() async -> Int
-    /// Persists the current in-memory events to disk.
+    /// Backs up the current in-memory events to disk.
+    ///
+    /// Called every time the app enters the background, so this can run many times in one process.
+    /// The events stay in memory and the transmitter can still send them afterwards.
     func persist() async
-    /// Restores previously persisted events from disk into memory.
+    /// Restores events persisted by an earlier process from disk into memory.
+    ///
+    /// Also called when the app returns to the foreground, possibly in the same process that called
+    /// ``persist()``. Implementations must not re-add events that are still in memory, or were already sent.
     func restore() async
 }
 
