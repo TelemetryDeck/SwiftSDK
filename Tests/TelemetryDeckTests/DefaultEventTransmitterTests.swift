@@ -372,6 +372,102 @@ struct DefaultEventTransmitterTests {
     }
 
     @Test
+    func flushSendsEveryBatchInCache() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = SequencedHTTPClient(statusCodes: [200])
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        for _ in 0..<250 {
+            await cache.add(createTestEvent())
+        }
+
+        await transmitter.flush()
+
+        #expect(await cache.count() == 0)
+        #expect(stub.requestCount == 3)
+    }
+
+    @Test
+    func flushStopsAtFirstFailedBatch() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = SequencedHTTPClient(statusCodes: [200, 503])
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        for _ in 0..<250 {
+            await cache.add(createTestEvent())
+        }
+
+        await transmitter.flush()
+
+        #expect(await cache.count() == 150)
+        #expect(stub.requestCount == 2)
+        #expect(await transmitter.currentBackoffFailures() == 1)
+    }
+
+    @Test
+    func flushSendsNothingWhenTaskIsAlreadyCancelled() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = SequencedHTTPClient(statusCodes: [200])
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        for _ in 0..<250 {
+            await cache.add(createTestEvent())
+        }
+
+        await Task {
+            withUnsafeCurrentTask { $0?.cancel() }
+            await transmitter.flush()
+        }.value
+
+        #expect(await cache.count() == 250)
+        #expect(stub.requestCount == 0)
+    }
+
+    @Test
+    func flushContinuesPastBatchRejectedByServer() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let stub = SequencedHTTPClient(statusCodes: [400, 200])
+
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        for _ in 0..<150 {
+            await cache.add(createTestEvent())
+        }
+
+        await transmitter.flush()
+
+        #expect(await cache.count() == 0)
+        #expect(stub.requestCount == 2)
+    }
+
+    @Test
     func consecutiveFailuresIncrementOnFailedBatch() async {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let cache = InMemoryEventCache()
@@ -531,6 +627,30 @@ private final class SwitchableHTTPClient: HTTPDataLoader, @unchecked Sendable {
     func data(for _: URLRequest) async throws -> (Data, URLResponse) {
         let code = statusCode
         let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: nil)!
+        return (Data(), response)
+    }
+}
+
+/// Answers each request with the next status code, repeating the last one when they run out.
+private final class SequencedHTTPClient: HTTPDataLoader, @unchecked Sendable {
+    private let statusCodes: [Int]
+    private let count = Locked<Int>(0)
+
+    var requestCount: Int {
+        count.withLock { $0 }
+    }
+
+    init(statusCodes: [Int]) {
+        self.statusCodes = statusCodes
+    }
+
+    func data(for request: URLRequest) async throws -> (Data, URLResponse) {
+        let index = count.withLock { value in
+            defer { value += 1 }
+            return value
+        }
+        let code = statusCodes[min(index, statusCodes.count - 1)]
+        let response = HTTPURLResponse(url: request.url!, statusCode: code, httpVersion: nil, headerFields: nil)!
         return (Data(), response)
     }
 }

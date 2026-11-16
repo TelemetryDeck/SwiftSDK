@@ -103,24 +103,30 @@ public actor DefaultEventTransmitter: EventTransmitting {
     }
 
     /// Immediately transmits all cached events without waiting for the next timer tick, resets the backoff counter to 0 before transmitting.
+    ///
+    /// Stops at the first batch that fails. Its events go back into the cache, so continuing would only retry them while offline.
     public func flush() async {
         consecutiveFailures = 0
-        await transmitBatch()
+        while !Task.isCancelled, await transmitBatch() {}
     }
 
-    private func transmitBatch() async {
+    /// Transmits one batch from the cache, returning `false` if the cache was empty or the batch failed.
+    @discardableResult
+    private func transmitBatch() async -> Bool {
         let events = await cache.pop()
-        guard !events.isEmpty else { return }
+        guard !events.isEmpty else { return false }
         let remainingCount = await cache.count()
         logger.log(.info, "Sending \(events.count) events, \(remainingCount) remain in cache")
         let failed = await transmit(events)
         if failed.isEmpty {
             consecutiveFailures = 0
+            return true
         } else {
             consecutiveFailures += 1
             for event in failed {
                 await cache.add(event)
             }
+            return false
         }
     }
 
