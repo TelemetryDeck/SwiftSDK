@@ -30,8 +30,10 @@ public actor DisplayProcessor: EventProcessor {
 
     /// Registers a screen-change observer so the cache is invalidated when displays are connected, disconnected, or reconfigured.
     public func start(storage: any ProcessorStorage, logger: any Logging, emitter: any EventSending) async {
+        // Created here, not in the task, so the observer exists by the time this function returns.
+        let screenChanges = ScreenChangeNotifier.events()
         screenChangeTask = Task { [weak self] in
-            for await _ in ScreenChangeNotifier.events() {
+            for await _ in screenChanges {
                 await self?.invalidateCache()
             }
         }
