@@ -90,7 +90,7 @@ That's it. TelemetryDeck automatically enriches every event with device info, OS
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `appID` | `String` | (required) | Your app ID from the dashboard |
-| `namespace` | `String` | (required) | Your namespace from the dashboard |
+| `namespace` | `String` | (required) | Your namespace from the dashboard; may only contain `A-Z`, `a-z`, digits, `.`, `_` and `-` |
 | `apiBaseURL` | `URL` | `https://nom.telemetrydeck.com` | Ingestion server URL |
 | `salt` | `String` | `""` | Client-side salt for user ID hashing |
 
@@ -140,6 +140,8 @@ TelemetryDeck.event("Database.updated", parameters: [
 ```
 
 Values are sent as native JSON types, with a few normalizations: `Float` is widened to a JSON number, `UUID` is sent as its `uuidString`, and `Date` is sent as an ISO 8601 string.
+
+Event names and parameter keys may only contain the letters `A-Z` and `a-z`, digits, `.`, `_` and `-`. If a rewritten key matches a key that is already valid, the valid one is kept. Parameters with an empty key are not sent.
 
 ### Float Values
 
@@ -370,7 +372,7 @@ Features that become unavailable in this mode include: new-install detection and
 |-----------|------|---------|-------------|
 | `DefaultEventCache(cacheLimit:)` | `Int` | `10_000` | Maximum events held in memory; oldest events are dropped first when the limit is reached |
 | `DefaultEventTransmitter(transmitInterval:)` | `TimeInterval` | `10` | Seconds between transmission attempts |
-| `DefaultEventTransmitter(maxBackoffInterval:)` | `TimeInterval` | `300` | Upper bound for exponential backoff after consecutive failed batches |
+| `DefaultEventTransmitter(maxBackoffInterval:)` | `TimeInterval` | `300` | Upper bound for exponential backoff after consecutive failed batches or respects `Retry-After` header |
 
 ```swift
 let cache = DefaultEventCache(cacheLimit: 5_000)
@@ -406,7 +408,7 @@ Events pass through a pipeline of `EventProcessor` middleware before transmissio
 | 1 | `PreviewFilterProcessor` | Drops events during SwiftUI previews |
 | 2 | `DefaultParametersProcessor` | Merges `defaultParameters` into every event |
 | 3 | `DefaultPrefixProcessor` | Applies `eventPrefix` and `parameterPrefix` |
-| 4 | `ValidationProcessor` | Warns when event names or parameter keys use reserved `TelemetryDeck.*` identifiers |
+| 4 | `ValidationProcessor` | Warns when event names or parameter keys are not legal |
 | 5 | `TestModeProcessor` | Marks events as test events in debug builds (override with `TestModeProcessor(override: true/false)`) |
 | 6 | `UserIdentifierProcessor` | Resolves and attaches the hashed user identifier |
 | 7 | `SessionTrackingProcessor` | Manages session IDs, retention metrics, and new-install detection |
@@ -417,7 +419,7 @@ Events pass through a pipeline of `EventProcessor` middleware before transmissio
 | 12 | `AccessibilityProcessor` | Adds accessibility settings (bold text, reduce motion, etc.) |
 | 13 | `DisplayProcessor` | Adds screen resolution, size, and multi-display metadata |
 
-To exclude a specific processor, remove it from the default list before initializing. 
+To exclude a specific processor, remove it from the default list before initializing.
 
 Please note that calling `defaultProcessors()` is synchronous so ideally do this in a `@concurrent` context rather than the main actor:
 

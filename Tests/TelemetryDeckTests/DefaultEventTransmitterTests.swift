@@ -43,8 +43,7 @@ struct DefaultEventTransmitterTests {
         #expect(capturedRequest != nil)
 
         if let url = capturedRequest?.url {
-            let expectedPath = "/v2/namespace/\(namespace)"
-            #expect(url.path == expectedPath)
+            #expect(url.absoluteString == "https://api.example.com/v3/\(namespace)/")
             #expect(url.scheme == baseURL.scheme)
             #expect(url.host == baseURL.host)
         }
@@ -75,7 +74,7 @@ struct DefaultEventTransmitterTests {
         #expect(capturedRequest != nil)
 
         if let url = capturedRequest?.url {
-            #expect(url.path == "/array/sensors/v2/namespace/\(namespace)")
+            #expect(url.absoluteString == "https://example.com/array/sensors/v3/\(namespace)/")
             #expect(url.scheme == "https")
             #expect(url.host == "example.com")
         }
@@ -106,7 +105,7 @@ struct DefaultEventTransmitterTests {
         #expect(capturedRequest != nil)
 
         if let url = capturedRequest?.url {
-            #expect(url.path == "/array/sensors/v2/namespace/\(namespace)")
+            #expect(url.absoluteString == "https://example.com/array/sensors/v3/\(namespace)/")
             #expect(url.scheme == "https")
             #expect(url.host == "example.com")
         }
@@ -573,6 +572,385 @@ struct DefaultEventTransmitterTests {
         let callCount = transmitCallCount.withLock { $0 }
         #expect(callCount == 0)
     }
+
+    @Test
+    func transmitSendsFlatEventObjects() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: InMemoryEventCache(),
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+        let event = Event(
+            appID: "test-app-id",
+            type: "test.event",
+            clientUser: "test-user",
+            sessionID: nil,
+            receivedAt: Date(timeIntervalSince1970: 1_609_459_200.5),
+            payload: [
+                "text": "value",
+                "count": 3,
+                "ratio": 0.5,
+                "flag": true,
+                "list": .array(["a", "b"]),
+                "type": "spoofed",
+                "appID": "spoofed",
+                "clientUser": "spoofed",
+                "receivedAt": "spoofed",
+                "isTestMode": "true",
+                "sessionID": "spoofed",
+                "floatValue": 1.0,
+            ],
+            floatValue: nil,
+            isTestMode: false
+        )
+
+        _ = await transmitter.transmit([event])
+
+        let sent = try sentEvents(stub.lastRequest)
+        #expect(sent.count == 1)
+        let fields = try #require(sent.first)
+        #expect(fields["payload"] == nil)
+        #expect(fields["text"] as? String == "value")
+        #expect(fields["count"] as? Int == 3)
+        #expect(fields["ratio"] as? Double == 0.5)
+        #expect(fields["flag"] as? Bool == true)
+        #expect(fields["list"] as? [String] == ["a", "b"])
+        #expect(fields["type"] as? String == "test.event")
+        #expect(fields["appID"] as? String == "test-app-id")
+        #expect(fields["clientUser"] as? String == "test-user")
+        #expect(fields["receivedAt"] as? String == "2021-01-01T00:00:00.500Z")
+        #expect(fields["isTestMode"] as? String == "false")
+        #expect(fields["sessionID"] == nil)
+        #expect(fields["floatValue"] == nil)
+        #expect(fields.count == 10)
+    }
+
+    @Test
+    func transmitSendsSessionIDAndFloatValueWhenPresent() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: InMemoryEventCache(),
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+        let event = Event(
+            appID: "test-app-id",
+            type: "test.event",
+            clientUser: "test-user",
+            sessionID: "test-session",
+            receivedAt: Date(),
+            payload: [:],
+            floatValue: 42.5,
+            isTestMode: true
+        )
+
+        _ = await transmitter.transmit([event])
+
+        let fields = try #require(try sentEvents(stub.lastRequest).first)
+        #expect(fields["sessionID"] as? String == "test-session")
+        #expect(fields["floatValue"] as? Double == 42.5)
+        #expect(fields["isTestMode"] as? String == "true")
+    }
+
+    @Test(arguments: [Double.nan, .infinity, -.infinity])
+    func transmitOmitsNonFiniteFloatValue(floatValue: Double) async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: InMemoryEventCache(),
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+        let event = Event(
+            appID: "test-app-id",
+            type: "test.event",
+            clientUser: "test-user",
+            sessionID: "test-session",
+            receivedAt: Date(),
+            payload: [:],
+            floatValue: floatValue,
+            isTestMode: false
+        )
+
+        let failed = await transmitter.transmit([event])
+
+        #expect(failed.isEmpty)
+        let fields = try #require(try sentEvents(stub.lastRequest).first)
+        #expect(fields["floatValue"] == nil)
+    }
+
+    @Test
+    func transmitReplacesCharactersTheServerRejects() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: InMemoryEventCache(),
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+        let event = Event(
+            appID: "test-app-id",
+            type: "Login Clicked:now",
+            clientUser: "test-user",
+            sessionID: "test-session",
+            receivedAt: Date(),
+            payload: [
+                "Purchase Type": "a",
+                "screen/name": "b",
+                "Größe": "c",
+                "Valid.key_1-2": "d",
+                "": "e",
+            ],
+            floatValue: nil,
+            isTestMode: false
+        )
+
+        _ = await transmitter.transmit([event])
+
+        let fields = try #require(try sentEvents(stub.lastRequest).first)
+        #expect(fields["type"] as? String == "Login_Clicked_now")
+        #expect(fields["Purchase_Type"] as? String == "a")
+        #expect(fields["screen_name"] as? String == "b")
+        #expect(fields["Gr__e"] as? String == "c")
+        #expect(fields["Valid.key_1-2"] as? String == "d")
+        #expect(fields[""] == nil)
+        #expect(fields.keys.allSatisfy(IngestIdentifier.isValid))
+    }
+
+    @Test
+    func transmitKeepsValidKeyWhenRewrittenKeyCollides() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: InMemoryEventCache(),
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+        let event = Event(
+            appID: "test-app-id",
+            type: "test.event",
+            clientUser: "test-user",
+            sessionID: "test-session",
+            receivedAt: Date(),
+            payload: ["a b": "rewritten-space", "a_b": "valid", "a:b": "rewritten-colon", "c d": "first", "c:d": "second"],
+            floatValue: nil,
+            isTestMode: false
+        )
+
+        _ = await transmitter.transmit([event])
+
+        let fields = try #require(try sentEvents(stub.lastRequest).first)
+        #expect(fields["a_b"] as? String == "valid")
+        #expect(fields["c_d"] as? String == "first")
+    }
+
+    @Test
+    func transmitOmitsTypeForEmptyEventName() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: InMemoryEventCache(),
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+        let event = Event(
+            appID: "test-app-id",
+            type: "",
+            clientUser: "test-user",
+            sessionID: "test-session",
+            receivedAt: Date(),
+            payload: ["type": "spoofed"],
+            floatValue: nil,
+            isTestMode: false
+        )
+
+        _ = await transmitter.transmit([event])
+
+        let fields = try #require(try sentEvents(stub.lastRequest).first)
+        #expect(fields["type"] == nil)
+    }
+
+    @Test
+    func transmitSendsEventsRestoredFromDiskCacheAsFlatObjects() async throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-restore-transmit-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+        let writerCache = DefaultEventCache(fileURL: fileURL)
+        await writerCache.add(createTestEvent(type: "restored.event"))
+        await writerCache.persist()
+
+        let cache = DefaultEventCache(fileURL: fileURL)
+        await cache.restore()
+        let stub = StubHTTPClient(statusCode: 200, url: URL(string: "https://nom.telemetrydeck.com")!)
+        let transmitter = DefaultEventTransmitter(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub
+        )
+
+        await transmitter.flush()
+
+        let fields = try #require(try sentEvents(stub.lastRequest).first)
+        #expect(fields["payload"] == nil)
+        #expect(fields["type"] as? String == "restored.event")
+        #expect(fields["key"] as? String == "value")
+        #expect(await cache.count() == 0)
+    }
+
+    @Test(arguments: [429, 503])
+    func retryAfterPausesFlushUntilElapsed(statusCode: Int) async {
+        let clock = MutableClock()
+        let cache = InMemoryEventCache()
+        let stub = SwitchableHTTPClient(
+            initialStatusCode: statusCode,
+            url: URL(string: "https://nom.telemetrydeck.com")!,
+            headerFields: ["Retry-After": "5"]
+        )
+        let transmitter = DefaultEventTransmitter(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub,
+            dateProvider: clock.dateProvider
+        )
+
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+        #expect(await cache.count() == 1)
+
+        stub.statusCode = 200
+        stub.headerFields = nil
+        clock.advance(by: 4.9)
+        await transmitter.flush()
+        #expect(await cache.count() == 1)
+
+        clock.advance(by: 0.1)
+        await transmitter.flush()
+        #expect(await cache.count() == 0)
+    }
+
+    @Test
+    func retryAfterExtendsTimerInterval() async {
+        let clock = MutableClock()
+        let cache = InMemoryEventCache()
+        let stub = StubHTTPClient(
+            statusCode: 503,
+            url: URL(string: "https://nom.telemetrydeck.com")!,
+            headerFields: ["Retry-After": "120"]
+        )
+        let transmitter = DefaultEventTransmitter(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub,
+            transmitInterval: 10,
+            maxBackoffInterval: 300,
+            dateProvider: clock.dateProvider
+        )
+
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+        #expect(await transmitter.nextInterval() == 120)
+
+        clock.advance(by: 110)
+        #expect(await transmitter.nextInterval() == 20)
+    }
+
+    @Test
+    func retryAfterPauseIsBoundedWhenClockMovesBack() async {
+        let clock = MutableClock()
+        let cache = InMemoryEventCache()
+        let stub = SwitchableHTTPClient(
+            initialStatusCode: 503,
+            url: URL(string: "https://nom.telemetrydeck.com")!,
+            headerFields: ["Retry-After": "5"]
+        )
+        let transmitter = DefaultEventTransmitter(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub,
+            transmitInterval: 10,
+            maxBackoffInterval: 300,
+            dateProvider: clock.dateProvider
+        )
+
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+        clock.advance(by: -86_400)
+        #expect(await transmitter.nextInterval() == 300)
+    }
+
+    @Test(arguments: [nil, "", "abc", "0", "-5", "1e400", "Wed, 21 Oct 2015 07:28:00 GMT"] as [String?])
+    func retryAfterIgnoredWhenMissingOrInvalid(header: String?) async {
+        let clock = MutableClock()
+        let cache = InMemoryEventCache()
+        let stub = SwitchableHTTPClient(
+            initialStatusCode: 503,
+            url: URL(string: "https://nom.telemetrydeck.com")!,
+            headerFields: header.map { ["Retry-After": $0] }
+        )
+        let transmitter = DefaultEventTransmitter(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub,
+            transmitInterval: 10,
+            dateProvider: clock.dateProvider
+        )
+
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+        #expect(await transmitter.nextInterval() == 20)
+
+        stub.statusCode = 200
+        await transmitter.flush()
+        #expect(await cache.count() == 0)
+    }
+
+    @Test
+    func retryAfterIsBoundedByMaxBackoffInterval() async {
+        let header = "99999999999999999999999"
+        let clock = MutableClock()
+        let cache = InMemoryEventCache()
+        let stub = SwitchableHTTPClient(
+            initialStatusCode: 503,
+            url: URL(string: "https://nom.telemetrydeck.com")!,
+            headerFields: ["Retry-After": header]
+        )
+        let transmitter = DefaultEventTransmitter(
+            configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+            cache: cache,
+            logger: DefaultLogger(),
+            httpClient: stub,
+            transmitInterval: 10,
+            maxBackoffInterval: 300,
+            dateProvider: clock.dateProvider
+        )
+
+        await cache.add(createTestEvent())
+        await transmitter.flush()
+        #expect(await transmitter.nextInterval() == 300)
+
+        stub.statusCode = 200
+        clock.advance(by: 300)
+        await transmitter.flush()
+        #expect(await cache.count() == 0)
+    }
+}
+
+private func sentEvents(_ request: URLRequest?) throws -> [[String: Any]] {
+    let body = try #require(request?.httpBody)
+    return try #require(try JSONSerialization.jsonObject(with: body) as? [[String: Any]])
 }
 
 private final class StubHTTPClient: HTTPDataLoader, @unchecked Sendable {
@@ -582,12 +960,12 @@ private final class StubHTTPClient: HTTPDataLoader, @unchecked Sendable {
     private let result: Result<(Data, URLResponse), Error>
     private let onRequest: (() -> Void)?
 
-    init(statusCode: Int, url: URL, onRequest: (() -> Void)? = nil) {
+    init(statusCode: Int, url: URL, headerFields: [String: String]? = nil, onRequest: (() -> Void)? = nil) {
         let response = HTTPURLResponse(
             url: url,
             statusCode: statusCode,
             httpVersion: nil,
-            headerFields: nil
+            headerFields: headerFields
         )!
         self.result = .success((Data(), response))
         self.onRequest = onRequest
@@ -613,20 +991,27 @@ private final class SwitchableHTTPClient: HTTPDataLoader, @unchecked Sendable {
     private let url: URL
     private let lock = NSLock()
     private var _statusCode: Int
+    private var _headerFields: [String: String]?
 
     var statusCode: Int {
         get { lock.withLock { _statusCode } }
         set { lock.withLock { _statusCode = newValue } }
     }
 
-    init(initialStatusCode: Int, url: URL) {
+    var headerFields: [String: String]? {
+        get { lock.withLock { _headerFields } }
+        set { lock.withLock { _headerFields = newValue } }
+    }
+
+    init(initialStatusCode: Int, url: URL, headerFields: [String: String]? = nil) {
         self._statusCode = initialStatusCode
+        self._headerFields = headerFields
         self.url = url
     }
 
     func data(for _: URLRequest) async throws -> (Data, URLResponse) {
-        let code = statusCode
-        let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: nil)!
+        let (code, headers) = lock.withLock { (_statusCode, _headerFields) }
+        let response = HTTPURLResponse(url: url, statusCode: code, httpVersion: nil, headerFields: headers)!
         return (Data(), response)
     }
 }

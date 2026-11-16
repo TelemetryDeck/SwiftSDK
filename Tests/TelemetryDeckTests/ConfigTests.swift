@@ -75,10 +75,27 @@ struct ConfigTests {
         }
     }
 
-    @Test
-    func validateSucceedsForValidConfig() throws {
-        let config = TelemetryDeck.Config(appID: "valid-app-id", namespace: "valid-namespace")
+    @Test(arguments: ["my namespace", "a/b", "ns?x", "names:pace", "über"])
+    func validateThrowsForNamespaceWithCharactersTheServerRejects(namespace: String) {
+        let config = TelemetryDeck.Config(appID: "valid-app-id", namespace: namespace)
+        #expect(throws: TelemetryDeckError.self) {
+            try config.validate()
+        }
+    }
+
+    @Test(arguments: ["valid-namespace", "Valid.Name_1-2", "W", "w.example", "com.w"])
+    func validateSucceedsForValidConfig(namespace: String) throws {
+        let config = TelemetryDeck.Config(appID: "valid-app-id", namespace: namespace)
         try config.validate()
+    }
+
+    @Test
+    func validateThrowsForReservedNamespace() {
+        let config = TelemetryDeck.Config(appID: "valid-app-id", namespace: "w")
+        let error = #expect(throws: TelemetryDeckError.self) {
+            try config.validate()
+        }
+        #expect(error?.code == .invalidConfiguration)
     }
 
     @Test

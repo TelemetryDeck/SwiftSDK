@@ -1,10 +1,10 @@
 import Foundation
 
-/// Warns when event names or parameter keys use reserved TelemetryDeck identifiers.
+/// Warns when event names or parameter keys are not legal.
 public actor ValidationProcessor: EventProcessor {
     private static let reservedKeysLowercased: Set<String> = Set(
         [
-            "type", "clientUser", "appID", "sessionID", "floatValue",
+            "type", "clientUser", "appID", "sessionID", "floatValue", "receivedAt", "isTestMode",
             "newSessionBegan", "platform", "systemVersion", "majorSystemVersion", "majorMinorSystemVersion",
             "appVersion", "buildNumber", "isSimulator", "isDebug", "isTestFlight", "isAppStore",
             "modelName", "architecture", "operatingSystem", "targetEnvironment",
@@ -23,7 +23,7 @@ public actor ValidationProcessor: EventProcessor {
         self.logger = logger
     }
 
-    /// Logs warnings for reserved event names or parameter keys, then passes through.
+    /// Logs warnings for illegal event names and parameter keys.
     public func process(
         _ input: EventInput,
         context: EventContext,
@@ -35,6 +35,9 @@ public actor ValidationProcessor: EventProcessor {
         } else if Self.reservedKeysLowercased.contains(nameLowercased) {
             logger.log(.error, "Event name '\(input.name)' is a reserved name")
         }
+        if !IngestIdentifier.isValid(input.name) {
+            logger.log(.error, "Event name '\(input.name)' may only contain letters, digits, '.', '_' and '-'")
+        }
 
         for key in input.parameters.keys {
             let keyLowercased = key.lowercased()
@@ -42,6 +45,9 @@ public actor ValidationProcessor: EventProcessor {
                 logger.log(.error, "Parameter key '\(key)' uses reserved prefix 'TelemetryDeck.'")
             } else if Self.reservedKeysLowercased.contains(keyLowercased) {
                 logger.log(.error, "Parameter key '\(key)' is a reserved name")
+            }
+            if !IngestIdentifier.isValid(key) {
+                logger.log(.error, "Parameter key '\(key)' may only contain letters, digits, '.', '_' and '-'")
             }
         }
 

@@ -39,6 +39,20 @@ extension TelemetryDeck {
                     localizedDescription: "namespace must not be empty."
                 )
             }
+
+            guard IngestIdentifier.isValid(namespace) else {
+                throw TelemetryDeckError(
+                    code: .invalidConfiguration,
+                    localizedDescription: "namespace may only contain letters A-Z and a-z, digits, '.', '_' and '-'."
+                )
+            }
+
+            guard namespace != "w" else {
+                throw TelemetryDeckError(
+                    code: .invalidConfiguration,
+                    localizedDescription: "namespace \"w\" is reserved by TelemetryDeck. Choose a different namespace."
+                )
+            }
         }
     }
 }

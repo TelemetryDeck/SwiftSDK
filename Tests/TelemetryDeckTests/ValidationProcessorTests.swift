@@ -133,6 +133,44 @@ struct ValidationProcessorTests {
         #expect(hasReservedName)
     }
 
+    @Test(arguments: ["receivedAt", "isTestMode"])
+    func parameterNamedAfterIngestFieldLogsError(key: String) async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("MyApp.event", parameters: [key: "value"])
+        _ = try await pipeline.process(input, context: EventContext())
+
+        #expect(logger.hasErrorContaining("'\(key)' is a reserved name"))
+    }
+
+    @Test
+    func nameAndParameterWithCharactersTheIngestAPIRejectsLogError() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("Login Clicked", parameters: ["Purchase Type": "a"])
+        _ = try await pipeline.process(input, context: EventContext())
+
+        #expect(logger.hasErrorContaining("Event name 'Login Clicked' may only contain"))
+        #expect(logger.hasErrorContaining("Parameter key 'Purchase Type' may only contain"))
+        #expect(logger.errorMessages().count == 2)
+    }
+
     @Test
     func validSignalAndParametersPassWithoutLogging() async throws {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
