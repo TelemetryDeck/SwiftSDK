@@ -409,4 +409,28 @@ public enum TelemetryDeck {
         guard let client = await storage.client else { return }
         await client.durationTracker.cancelDuration(eventName)
     }
+
+    // MARK: - Heartbeat Events
+
+    /// Starts sending a `TelemetryDeck.Session.heartbeat` event for every full interval of active use at the given frequency.
+    ///
+    /// Calling this while heartbeats are already running has no effect.
+    @concurrent
+    public static func startHeartbeatEvents(_ frequency: HeartbeatFrequency) async {
+        guard let client = await storage.client else {
+            await log(.error, "TelemetryDeck not initialized")
+            return
+        }
+        await client.heartbeatTracker.startHeartbeats(frequency)
+    }
+
+    /// Stops sending heartbeat events.
+    @concurrent
+    public static func stopHeartbeatEvents() async {
+        guard let client = await storage.client else {
+            await log(.error, "TelemetryDeck not initialized")
+            return
+        }
+        await client.heartbeatTracker.stopHeartbeats()
+    }
 }

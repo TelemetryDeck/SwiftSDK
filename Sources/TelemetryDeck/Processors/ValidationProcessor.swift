@@ -30,7 +30,9 @@ public actor ValidationProcessor: EventProcessor {
         next: @Sendable (EventInput, EventContext) async throws -> Event
     ) async throws -> Event {
         let nameLowercased = input.name.lowercased()
-        if !input.skipsReservedPrefixValidation && nameLowercased.hasPrefix("telemetrydeck.") {
+        if !input.skipsReservedPrefixValidation && nameLowercased.hasPrefix("telemetrydeck.")
+            && !nameLowercased.hasPrefix("telemetrydeck.diga.")
+        {
             logger.log(.error, "Event name '\(input.name)' uses reserved prefix 'TelemetryDeck.'")
         } else if Self.reservedKeysLowercased.contains(nameLowercased) {
             logger.log(.error, "Event name '\(input.name)' is a reserved name")

@@ -14,6 +14,7 @@ actor TelemetryEngine: EventSending {
     private let logger: any Logging
     private let storage: any ProcessorStorage
     let durationTracker: DurationTracker
+    let heartbeatTracker: HeartbeatTracker
     private var analyticsDisabled = false
     private var started = false
     private var isInBackground = false
@@ -40,6 +41,7 @@ actor TelemetryEngine: EventSending {
         self.logger = logger
         self.storage = storage
         self.durationTracker = DurationTracker()
+        self.heartbeatTracker = HeartbeatTracker()
         self.pipeline = ProcessorPipeline(
             processors: processors,
             finalizer: EventFinalizer(configuration: configuration),
@@ -92,17 +94,19 @@ actor TelemetryEngine: EventSending {
             await processor.start(storage: storage, logger: logger, emitter: self)
         }
         await durationTracker.start(storage: storage)
+        await heartbeatTracker.start(emitter: self)
         await transmitter.start()
         setupLifecycleObservers()
     }
 
-    /// Stops all processors and the transmitter, persists the cache, and cancels lifecycle observers.
+    /// Stops all processors, heartbeats, and the transmitter, persists the cache, and cancels lifecycle observers.
     func shutdown() async {
         logger.log(.debug, "TelemetryEngine client is shutting down")
         for processor in processors {
             await processor.stop()
         }
         await durationTracker.stop()
+        await heartbeatTracker.stop()
         await transmitter.stop()
         await cache.persist()
         lifecycleTask?.cancel()

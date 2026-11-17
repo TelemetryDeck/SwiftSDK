@@ -5,6 +5,7 @@ public enum DefaultEvents {
     /// Session lifecycle events.
     public enum Session: String {
         case started = "TelemetryDeck.Session.started"
+        case heartbeat = "TelemetryDeck.Session.heartbeat"
     }
 
     /// Navigation tracking events.

@@ -65,6 +65,64 @@ struct ValidationProcessorTests {
     }
 
     @Test
+    func digaSignalWithTelemetryDeckPrefixLogsNoError() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("TelemetryDeck.DIGA.Treatment.started")
+        let context = EventContext()
+        _ = try await pipeline.process(input, context: context)
+
+        #expect(logger.errorMessages().isEmpty)
+    }
+
+    @Test
+    func nonDigaSignalWithTelemetryDeckPrefixStillLogsError() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("TelemetryDeck.Foo.bar")
+        let context = EventContext()
+        _ = try await pipeline.process(input, context: context)
+
+        #expect(logger.hasErrorContaining("Event name 'TelemetryDeck.Foo.bar' uses reserved prefix"))
+    }
+
+    @Test
+    func digaParameterKeyWithTelemetryDeckPrefixStillLogsError() async throws {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let logger = SpyLogger()
+        let processor = ValidationProcessor()
+        await processor.start(storage: InMemoryProcessorStorage(), logger: logger, emitter: MockEventSender())
+
+        let pipeline = ProcessorPipeline(
+            processors: [processor],
+            finalizer: EventFinalizer(configuration: config)
+        )
+
+        let input = EventInput("MyApp.event", parameters: ["TelemetryDeck.DIGA.x": "value"])
+        let context = EventContext()
+        _ = try await pipeline.process(input, context: context)
+
+        #expect(logger.hasErrorContaining("Parameter key 'TelemetryDeck.DIGA.x' uses reserved prefix"))
+        #expect(logger.errorMessages().count == 1)
+    }
+
+    @Test
     func signalWithReservedNameLogsError() async throws {
         let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
         let logger = SpyLogger()
