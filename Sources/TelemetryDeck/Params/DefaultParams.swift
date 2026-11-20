@@ -138,6 +138,11 @@ public enum DefaultParams {
         case durationInSeconds = "TelemetryDeck.Signal.durationInSeconds"
     }
 
+    /// Performance report parameters.
+    public enum Performance: String {
+        case metricKitMetricReport = "TelemetryDeck.Performance.metricKitMetricReport"
+    }
+
     /// Display dimensions for connected screens.
     public enum Screens: String {
         case primaryWidth = "TelemetryDeck.Device.Screens.Primary.width"

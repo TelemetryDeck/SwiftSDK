@@ -48,4 +48,9 @@ public enum DefaultEvents {
     public enum Error: String {
         case occurred = "TelemetryDeck.Error.occurred"
     }
+
+    /// Performance and MetricKit events.
+    public enum Performance: String {
+        case metricKitMetricReport = "TelemetryDeck.Performance.metricKitMetricReport"
+    }
 }
