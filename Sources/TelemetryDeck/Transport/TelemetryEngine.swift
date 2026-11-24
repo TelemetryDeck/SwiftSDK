@@ -102,6 +102,8 @@ actor TelemetryEngine: EventSending {
     /// Stops all processors, heartbeats, and the transmitter, persists the cache, and cancels lifecycle observers.
     func shutdown() async {
         logger.log(.debug, "TelemetryEngine client is shutting down")
+        lifecycleTask?.cancel()
+        lifecycleTask = nil
         for processor in processors {
             await processor.stop()
         }
@@ -109,8 +111,6 @@ actor TelemetryEngine: EventSending {
         await heartbeatTracker.stop()
         await transmitter.stop()
         await cache.persist()
-        lifecycleTask?.cancel()
-        lifecycleTask = nil
         started = false
     }
 
@@ -179,18 +179,15 @@ actor TelemetryEngine: EventSending {
                         app.endBackgroundTask(holder.identifier)
                     }
                 }
-                await transmitter.stop()
-                await cache.persist()
+                await stopTransmittingAndPersist()
                 await MainActor.run {
                     app.endBackgroundTask(holder.identifier)
                 }
             } else {
-                await transmitter.stop()
-                await cache.persist()
+                await stopTransmittingAndPersist()
             }
         #else
-            await transmitter.stop()
-            await cache.persist()
+            await stopTransmittingAndPersist()
         #endif
     }
 
@@ -205,8 +202,13 @@ actor TelemetryEngine: EventSending {
 
     private func handleTermination() async {
         logger.log(.debug, "App terminating, persisting cache")
+        await stopTransmittingAndPersist()
+    }
+
+    private func stopTransmittingAndPersist() async {
         await cache.persist()
         await transmitter.stop()
+        await cache.persist()
     }
 
     private func setupLifecycleObservers() {

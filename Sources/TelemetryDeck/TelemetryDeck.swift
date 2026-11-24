@@ -4,9 +4,59 @@ private actor TelemetryDeckStorage {
     var client: TelemetryEngine?
     var logger: any Logging = DefaultLogger()
     private var buffer: [EventInput] = []
+    private var isChangingClient = false
+    private var clientChangeWaiters: [CheckedContinuation<Void, Never>] = []
 
-    func setClient(_ client: TelemetryEngine?) {
+    var clientChangeWaiterCount: Int {
+        clientChangeWaiters.count
+    }
+
+    /// Waits until no other initialization or termination is in progress, then reserves the client for initialization.
+    ///
+    /// Returns `false` without reserving when a client already exists.
+    func reserveInitialization() async -> Bool {
+        await waitForClientChange()
+        guard client == nil else { return false }
+        isChangingClient = true
+        return true
+    }
+
+    /// Installs the initialized client, sends the buffered events through it, and releases the reservation.
+    func completeInitialization(with client: TelemetryEngine) async {
+        assert(isChangingClient)
         self.client = client
+        await drainBuffer()
+        releaseClientChange()
+    }
+
+    /// Waits until no other initialization or termination is in progress, then reserves the current client for termination.
+    func reserveTermination() async -> TelemetryEngine? {
+        await waitForClientChange()
+        isChangingClient = true
+        return client
+    }
+
+    /// Clears the client and the buffer, and releases the reservation.
+    func completeTermination() {
+        assert(isChangingClient)
+        client = nil
+        buffer = []
+        releaseClientChange()
+    }
+
+    private func waitForClientChange() async {
+        while isChangingClient {
+            await withCheckedContinuation { clientChangeWaiters.append($0) }
+        }
+    }
+
+    private func releaseClientChange() {
+        isChangingClient = false
+        let waiters = clientChangeWaiters
+        clientChangeWaiters = []
+        for waiter in waiters {
+            waiter.resume()
+        }
     }
 
     func setLogger(_ logger: any Logging) {
@@ -21,7 +71,7 @@ private actor TelemetryDeckStorage {
         }
     }
 
-    func drainBuffer() async {
+    private func drainBuffer() async {
         guard let client, !buffer.isEmpty else { return }
         let pending = buffer
         buffer = []
@@ -29,10 +79,6 @@ private actor TelemetryDeckStorage {
         for input in pending {
             await client.send(input)
         }
-    }
-
-    func clearBuffer() {
-        buffer = []
     }
 }
 
@@ -166,7 +212,7 @@ public enum TelemetryDeck {
         try configuration.validate()
         let processors = processors ?? defaultProcessors()
 
-        guard await storage.client == nil else {
+        guard await storage.reserveInitialization() else {
             await log(.error, "TelemetryDeck.initialize() called more than once. Ignoring subsequent call. Remove the duplicate initialization.")
             return
         }
@@ -182,12 +228,15 @@ public enum TelemetryDeck {
             logger: resolvedLogger,
             storage: processorStorage
         )
-        await storage.setClient(client)
-        await storage.drainBuffer()
+        await storage.completeInitialization(with: client)
     }
 
     static func client() async -> TelemetryEngine? {
         await storage.client
+    }
+
+    static func clientChangeWaiterCount() async -> Int {
+        await storage.clientChangeWaiterCount
     }
 
     // Not @concurrent: the @autoclosure message parameter is non-Sendable, so call sites may capture actor-isolated state.
@@ -280,12 +329,11 @@ public enum TelemetryDeck {
     /// Flushes pending events, shuts down the engine, and clears the shared instance.
     @concurrent
     public static func terminate() async {
-        if let client = await storage.client {
+        if let client = await storage.reserveTermination() {
             await client.flush()
             await client.shutdown()
         }
-        await storage.setClient(nil)
-        await storage.clearBuffer()
+        await storage.completeTermination()
     }
 
     // MARK: - Analytics Disabled
@@ -412,9 +460,8 @@ public enum TelemetryDeck {
 
     // MARK: - Heartbeat Events
 
-    /// Starts sending a `TelemetryDeck.Session.heartbeat` event for every full interval of active use at the given frequency.
+    /// Starts sending a `TelemetryDeck.Session.heartbeat` event at the beginning of every interval of active use at the given frequency.
     ///
-    /// Calling this while heartbeats are already running has no effect.
     @concurrent
     public static func startHeartbeatEvents(_ frequency: HeartbeatFrequency) async {
         guard let client = await storage.client else {

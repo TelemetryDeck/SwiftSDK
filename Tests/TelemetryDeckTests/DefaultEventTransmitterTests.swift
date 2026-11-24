@@ -16,6 +16,15 @@ private func createTestEvent(type: String = "test.event") -> Event {
     )
 }
 
+private func makeTransmitter(cache: any EventCaching, client: ScriptedHTTPClient) -> DefaultEventTransmitter {
+    DefaultEventTransmitter(
+        configuration: TelemetryDeck.Config(appID: "test-app", namespace: "test"),
+        cache: cache,
+        logger: NoOpLogger(),
+        httpClient: client
+    )
+}
+
 @Suite("DefaultEventTransmitter Tests")
 struct DefaultEventTransmitterTests {
     @Test
@@ -519,6 +528,109 @@ struct DefaultEventTransmitterTests {
 
         let failuresAfter = await transmitter.currentBackoffFailures()
         #expect(failuresAfter == 0)
+    }
+
+    @Test(arguments: [(200, 0, 0), (503, 2, 1)])
+    func stoppingDuringSendLetsTheRequestComplete(statusCode: Int, cachedCount: Int, failures: Int) async throws {
+        let cache = InMemoryEventCache()
+        let client = ScriptedHTTPClient()
+        let transmitter = makeTransmitter(cache: cache, client: client)
+        await cache.add(createTestEvent(type: "event.one"))
+        await cache.add(createTestEvent(type: "event.two"))
+
+        await transmitter.start()
+        await client.waitForRequests(1)
+        let stopping = Task { await transmitter.stop() }
+        client.respond(statusCode: statusCode)
+        await stopping.value
+
+        #expect(client.cancelledRequestCount == 0)
+        #expect(try client.sentEventTypes() == [["event.one", "event.two"]])
+        #expect(await cache.count() == cachedCount)
+        #expect(await transmitter.currentBackoffFailures() == failures)
+    }
+
+    @Test
+    func flushJoinsTheBatchInFlightAndSendsEachEventOnce() async throws {
+        let cache = InMemoryEventCache()
+        let client = ScriptedHTTPClient()
+        let transmitter = makeTransmitter(cache: cache, client: client)
+        for index in 0..<150 {
+            await cache.add(createTestEvent(type: "event.\(index)"))
+        }
+
+        await transmitter.start()
+        await client.waitForRequests(1)
+        let flush = Task { await transmitter.flush() }
+        client.respond(statusCode: 200)
+        client.respond(statusCode: 200)
+        await flush.value
+        await transmitter.stop()
+
+        let sent = try client.sentEventTypes()
+        #expect(sent.map(\.count) == [100, 50])
+        #expect(Set(sent.joined()).count == 150)
+        #expect(await cache.count() == 0)
+    }
+
+    @Test
+    func flushFromCancelledTaskLetsTheRequestInFlightCompleteAndStartsNoFurtherBatch() async throws {
+        let cache = InMemoryEventCache()
+        let client = ScriptedHTTPClient()
+        let transmitter = makeTransmitter(cache: cache, client: client)
+        for _ in 0..<150 {
+            await cache.add(createTestEvent())
+        }
+
+        let flush = Task { await transmitter.flush() }
+        await client.waitForRequests(1)
+        flush.cancel()
+        client.respond(statusCode: 200)
+        await flush.value
+
+        #expect(client.cancelledRequestCount == 0)
+        #expect(try client.sentEventTypes().map(\.count) == [100])
+        #expect(await cache.count() == 50)
+    }
+
+    @Test
+    func transmitFromCancelledTaskDoesNotCancelTheRequest() async {
+        let client = ScriptedHTTPClient()
+        let transmitter = makeTransmitter(cache: InMemoryEventCache(), client: client)
+
+        let transmit = Task { await transmitter.transmit([createTestEvent()]) }
+        await client.waitForRequests(1)
+        transmit.cancel()
+        client.respond(statusCode: 200)
+
+        #expect(await transmit.value.isEmpty)
+        #expect(client.cancelledRequestCount == 0)
+    }
+
+    @Test
+    func failedSendFromTimerCountsAFailure() async {
+        let config = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = InMemoryEventCache()
+        let logger = SpyLogger()
+        let stub = StubHTTPClient(error: URLError(.notConnectedToInternet))
+        let transmitter = DefaultEventTransmitter(
+            configuration: config,
+            cache: cache,
+            logger: logger,
+            httpClient: stub
+        )
+        await cache.add(createTestEvent())
+
+        await transmitter.start()
+        for _ in 0..<250 {
+            if await transmitter.currentBackoffFailures() > 0 { break }
+            try? await Task.sleep(nanoseconds: 2_000_000)
+        }
+        await transmitter.stop()
+
+        #expect(await transmitter.currentBackoffFailures() == 1)
+        #expect(await cache.count() == 1)
+        #expect(logger.hasErrorContaining("Transmit failed"))
     }
 
     @Test

@@ -125,15 +125,25 @@ private final class Checkpoint: @unchecked Sendable {
 
 private actor GatedEventSender: EventSending {
     private(set) var sentEvents: [EventInput] = []
-    private let gate: Checkpoint?
+    private var gate: Checkpoint?
 
     init(gate: Checkpoint?) {
         self.gate = gate
     }
 
+    func gateSends(with gate: Checkpoint) {
+        self.gate = gate
+    }
+
+    private(set) var cancelledSendCount = 0
+
     func send(_ input: EventInput) async {
+        let gate = gate
         sentEvents.append(input)
         await gate?.pass()
+        if Task.isCancelled {
+            cancelledSendCount += 1
+        }
     }
 }
 
@@ -229,19 +239,19 @@ struct HeartbeatTrackerTests {
     }
 
     @Test
-    func firstHeartbeatIsSentOnlyAfterAFullInterval() async {
+    func firstHeartbeatIsSentImmediatelyWhenStartedWhileActive() async {
         let harness = await Harness()
         await harness.tracker.startHeartbeats(.minute)
 
+        #expect(await harness.eventCount() == 1)
         #expect(await harness.sleeper.nextSleep() == 60)
-        #expect(await harness.eventCount() == 0)
-
-        await harness.elapse(30)
-        #expect(await harness.eventCount() == 0)
-        #expect(await harness.sleeper.nextSleep() == 30)
 
         await harness.elapse(30)
         #expect(await harness.eventCount() == 1)
+        #expect(await harness.sleeper.nextSleep() == 30)
+
+        await harness.elapse(30)
+        #expect(await harness.eventCount() == 2)
         #expect(await harness.sleeper.nextSleep() == 60)
 
         await harness.tracker.stop()
@@ -257,7 +267,7 @@ struct HeartbeatTrackerTests {
         await harness.elapse(60)
         await harness.elapse(60)
 
-        #expect(await harness.eventCount() == 3)
+        #expect(await harness.eventCount() == 4)
 
         await harness.tracker.stop()
     }
@@ -266,9 +276,6 @@ struct HeartbeatTrackerTests {
     func heartbeatUsesSessionHeartbeatEventAndSkipsReservedPrefixValidation() async throws {
         let harness = await Harness()
         await harness.tracker.startHeartbeats(.minute)
-        _ = await harness.sleeper.nextSleep()
-
-        await harness.elapse(60)
 
         let event = try #require(await harness.sender.sentEvents.first)
         #expect(event.name == "TelemetryDeck.Session.heartbeat")
@@ -287,15 +294,16 @@ struct HeartbeatTrackerTests {
 
         #expect(harness.probe.queryCount == 1)
         #expect(harness.sleeper.pendingCount == 1)
+        #expect(await harness.eventCount() == 1)
 
         await harness.elapse(60)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         await harness.tracker.stop()
     }
 
     @Test
-    func stopThenStartRestartsHeartbeats() async {
+    func stopThenStartBeginsAFreshSequence() async {
         let harness = await Harness()
         await harness.tracker.startHeartbeats(.minute)
         _ = await harness.sleeper.nextSleep()
@@ -304,13 +312,15 @@ struct HeartbeatTrackerTests {
         await harness.tracker.stopHeartbeats()
         #expect(await harness.tracker.isRunning == false)
         #expect(harness.sleeper.pendingCount == 0)
+        #expect(await harness.eventCount() == 1)
 
         await harness.tracker.startHeartbeats(.minute)
         #expect(await harness.tracker.isRunning)
+        #expect(await harness.eventCount() == 2)
         #expect(await harness.sleeper.nextSleep() == 60)
 
         await harness.elapse(60)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 3)
 
         await harness.tracker.stop()
     }
@@ -326,13 +336,14 @@ struct HeartbeatTrackerTests {
         #expect(harness.sleeper.pendingCount == 0)
 
         harness.clock.advance(by: 600)
-        #expect(await harness.eventCount() == 0)
+        #expect(await harness.eventCount() == 1)
 
         await harness.tracker.handleForeground()
         #expect(await harness.sleeper.nextSleep() == 10)
+        #expect(await harness.eventCount() == 1)
 
         await harness.elapse(10)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         await harness.tracker.stop()
     }
@@ -348,10 +359,26 @@ struct HeartbeatTrackerTests {
         #expect(await harness.eventCount() == 0)
 
         await harness.tracker.handleForeground()
+        #expect(await harness.eventCount() == 1)
         #expect(await harness.sleeper.nextSleep() == 60)
 
         await harness.elapse(60)
+        #expect(await harness.eventCount() == 2)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func foregroundWhileAlreadyActiveSendsNothing() async {
+        let harness = await Harness()
+        await harness.tracker.startHeartbeats(.minute)
+        _ = await harness.sleeper.nextSleep()
+
+        harness.clock.advance(by: 20)
+        await harness.tracker.handleForeground()
+
         #expect(await harness.eventCount() == 1)
+        #expect(harness.sleeper.pendingCount == 1)
 
         await harness.tracker.stop()
     }
@@ -364,11 +391,11 @@ struct HeartbeatTrackerTests {
 
         await harness.elapse(gap)
 
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
         #expect(await harness.sleeper.nextSleep() == 60)
 
         await harness.settle()
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         await harness.tracker.stop()
     }
@@ -388,11 +415,11 @@ struct HeartbeatTrackerTests {
             delay = await harness.sleeper.nextSleep()
 
             #expect(delay == 56.25)
-            #expect(await harness.eventCount() == Int(activeTime / 60))
+            #expect(await harness.eventCount() == 1 + Int(activeTime / 60))
         }
 
         #expect(activeTime == 1_203.75)
-        #expect(await harness.eventCount() == 20)
+        #expect(await harness.eventCount() == 21)
 
         await harness.tracker.stop()
     }
@@ -405,11 +432,11 @@ struct HeartbeatTrackerTests {
 
         await harness.elapse(119.5)
 
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
         #expect(await harness.sleeper.nextSleep() == 0.5)
 
         await harness.elapse(0.5)
-        #expect(await harness.eventCount() == 2)
+        #expect(await harness.eventCount() == 3)
         #expect(await harness.sleeper.nextSleep() == 60)
 
         await harness.tracker.stop()
@@ -423,7 +450,7 @@ struct HeartbeatTrackerTests {
 
         harness.clock.advance(by: 75)
         await harness.tracker.handleBackground()
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         harness.clock.advance(by: 600)
         await harness.tracker.handleForeground()
@@ -431,13 +458,13 @@ struct HeartbeatTrackerTests {
 
         harness.clock.advance(by: 50)
         await harness.tracker.handleBackground()
-        #expect(await harness.eventCount() == 2)
+        #expect(await harness.eventCount() == 3)
 
         await harness.tracker.handleForeground()
         #expect(await harness.sleeper.nextSleep() == 55)
 
         await harness.elapse(55)
-        #expect(await harness.eventCount() == 3)
+        #expect(await harness.eventCount() == 4)
 
         await harness.tracker.stop()
     }
@@ -450,12 +477,12 @@ struct HeartbeatTrackerTests {
 
         harness.clock.advance(by: 60)
         await harness.tracker.handleBackground()
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
         #expect(harness.sleeper.pendingCount == 0)
 
         await harness.tracker.handleForeground()
         #expect(await harness.sleeper.nextSleep() == 60)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         await harness.tracker.stop()
     }
@@ -463,16 +490,17 @@ struct HeartbeatTrackerTests {
     @Test
     func backgroundLifecycleEventSendsEarnedHeartbeatAndStopsTimer() async {
         let sendGate = Checkpoint()
-        let harness = await Harness(sendGate: sendGate)
+        let harness = await Harness()
         await harness.tracker.startHeartbeats(.minute)
         _ = await harness.sleeper.nextSleep()
+        await harness.sender.gateSends(with: sendGate)
 
         harness.clock.advance(by: 60)
         harness.lifecycle.post(.background)
         await sendGate.waitForArrival()
 
         #expect(harness.sleeper.pendingCount == 0)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         sendGate.open()
         await harness.tracker.stop()
@@ -497,10 +525,10 @@ struct HeartbeatTrackerTests {
         await harness.settle()
 
         #expect(harness.sleeper.pendingCount == 1)
-        #expect(await harness.eventCount() == 0)
+        #expect(await harness.eventCount() == 1)
 
         await harness.elapse(30)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         await harness.tracker.stop()
     }
@@ -508,9 +536,10 @@ struct HeartbeatTrackerTests {
     @Test
     func backgroundWhileHeartbeatIsBeingSentDoesNotRescheduleTimer() async {
         let sendGate = Checkpoint()
-        let harness = await Harness(sendGate: sendGate)
+        let harness = await Harness()
         await harness.tracker.startHeartbeats(.minute)
         _ = await harness.sleeper.nextSleep()
+        await harness.sender.gateSends(with: sendGate)
 
         harness.clock.advance(by: 60)
         harness.sleeper.fire()
@@ -521,11 +550,187 @@ struct HeartbeatTrackerTests {
         await harness.settle()
 
         #expect(harness.sleeper.pendingCount == 0)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         await harness.tracker.handleForeground()
         #expect(await harness.sleeper.nextSleep() == 60)
         #expect(harness.sleeper.pendingCount == 1)
+        #expect(await harness.eventCount() == 2)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func backgroundWhileFirstHeartbeatIsBeingSentLeavesNoTimer() async {
+        let sendGate = Checkpoint()
+        let harness = await Harness(sendGate: sendGate)
+        let start = Task { await harness.tracker.startHeartbeats(.minute) }
+        await sendGate.waitForArrival()
+
+        harness.clock.advance(by: 5)
+        await harness.tracker.handleBackground()
+        sendGate.open()
+        await start.value
+        await harness.settle()
+
+        #expect(harness.sleeper.pendingCount == 0)
+        #expect(await harness.eventCount() == 1)
+
+        await harness.tracker.handleForeground()
+        #expect(await harness.sleeper.nextSleep() == 55)
+        #expect(await harness.eventCount() == 1)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func stopWhileFirstHeartbeatIsBeingSentLeavesTrackerStopped() async {
+        let sendGate = Checkpoint()
+        let harness = await Harness(sendGate: sendGate)
+        let start = Task { await harness.tracker.startHeartbeats(.minute) }
+        await sendGate.waitForArrival()
+
+        await harness.tracker.stopHeartbeats()
+        sendGate.open()
+        await start.value
+        await harness.settle()
+
+        #expect(await harness.tracker.isRunning == false)
+        #expect(harness.sleeper.pendingCount == 0)
+        #expect(await harness.eventCount() == 1)
+
+        await harness.tracker.handleForeground()
+        #expect(harness.sleeper.pendingCount == 0)
+        #expect(await harness.eventCount() == 1)
+    }
+
+    @Test
+    func backgroundAndForegroundWhileFirstHeartbeatIsBeingSentSendItOnce() async {
+        let sendGate = Checkpoint()
+        let harness = await Harness(sendGate: sendGate)
+        let start = Task { await harness.tracker.startHeartbeats(.minute) }
+        await sendGate.waitForArrival()
+        let laterSends = Checkpoint()
+        laterSends.open()
+        await harness.sender.gateSends(with: laterSends)
+
+        harness.clock.advance(by: 5)
+        await harness.tracker.handleBackground()
+        await harness.tracker.handleForeground()
+        sendGate.open()
+        await start.value
+
+        #expect(await harness.eventCount() == 1)
+        #expect(await harness.sleeper.nextSleep() == 55)
+        #expect(harness.sleeper.pendingCount == 1)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func backgroundAndForegroundWhileFirstHeartbeatFromLifecycleIsBeingSentSendItOnce() async {
+        let sendGate = Checkpoint()
+        let harness = await Harness(active: false, sendGate: sendGate)
+        await harness.tracker.startHeartbeats(.minute)
+        harness.lifecycle.post(.foreground)
+        await sendGate.waitForArrival()
+        let laterSends = Checkpoint()
+        laterSends.open()
+        await harness.sender.gateSends(with: laterSends)
+
+        harness.clock.advance(by: 5)
+        await harness.tracker.handleBackground()
+        await harness.tracker.handleForeground()
+        sendGate.open()
+        await harness.settle()
+
+        #expect(await harness.eventCount() == 1)
+        #expect(await harness.sleeper.nextSleep() == 55)
+        #expect(harness.sleeper.pendingCount == 1)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func cancellingTheStartingTaskDoesNotCancelTheFirstHeartbeat() async {
+        let activityGate = Checkpoint()
+        let harness = await Harness(activityGate: activityGate)
+        let start = Task { await harness.tracker.startHeartbeats(.minute) }
+        await activityGate.waitForArrival()
+
+        start.cancel()
+        activityGate.open()
+        await start.value
+
+        #expect(await harness.eventCount() == 1)
+        #expect(await harness.sender.cancelledSendCount == 0)
+        #expect(await harness.sleeper.nextSleep() == 60)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func stoppingWhileBackgroundHeartbeatIsBeingSentDoesNotCancelIt() async {
+        let sendGate = Checkpoint()
+        let harness = await Harness()
+        await harness.tracker.startHeartbeats(.minute)
+        _ = await harness.sleeper.nextSleep()
+        await harness.sender.gateSends(with: sendGate)
+
+        harness.clock.advance(by: 60)
+        harness.lifecycle.post(.background)
+        await sendGate.waitForArrival()
+
+        await harness.tracker.stopHeartbeats()
+        sendGate.open()
+        await harness.settle()
+
+        #expect(await harness.eventCount() == 2)
+        #expect(await harness.sender.cancelledSendCount == 0)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func secondStartWhileFirstHeartbeatIsBeingSentHasNoEffect() async {
+        let sendGate = Checkpoint()
+        let harness = await Harness(sendGate: sendGate)
+        let start = Task { await harness.tracker.startHeartbeats(.minute) }
+        await sendGate.waitForArrival()
+
+        await harness.tracker.startHeartbeats(.minute)
+        sendGate.open()
+        await start.value
+        await harness.settle()
+
+        #expect(harness.probe.queryCount == 1)
+        #expect(harness.sleeper.pendingCount == 1)
+        #expect(await harness.eventCount() == 1)
+
+        await harness.tracker.stop()
+    }
+
+    @Test
+    func stopAndStartWhileFirstHeartbeatIsBeingSentBeginsOneFreshSequence() async {
+        let sendGate = Checkpoint()
+        let harness = await Harness(sendGate: sendGate)
+        let firstStart = Task { await harness.tracker.startHeartbeats(.minute) }
+        await sendGate.waitForArrival()
+
+        await harness.tracker.stopHeartbeats()
+        let secondStart = Task { await harness.tracker.startHeartbeats(.minute) }
+        sendGate.open()
+        await firstStart.value
+        await secondStart.value
+        await harness.settle()
+
+        #expect(await harness.tracker.isRunning)
+        #expect(harness.probe.queryCount == 2)
+        #expect(harness.sleeper.pendingCount == 1)
+        #expect(await harness.eventCount() == 2)
+
+        await harness.elapse(60)
+        #expect(await harness.eventCount() == 3)
 
         await harness.tracker.stop()
     }
@@ -543,8 +748,10 @@ struct HeartbeatTrackerTests {
 
         #expect(await harness.tracker.isRunning)
         #expect(harness.sleeper.pendingCount == 0)
+        #expect(await harness.eventCount() == 0)
 
         await harness.tracker.handleForeground()
+        #expect(await harness.eventCount() == 1)
         #expect(await harness.sleeper.nextSleep() == 60)
 
         await harness.tracker.stop()
@@ -561,9 +768,10 @@ struct HeartbeatTrackerTests {
         activityGate.open()
         await start.value
 
+        #expect(await harness.eventCount() == 1)
         #expect(await harness.sleeper.nextSleep() == 60)
         await harness.elapse(60)
-        #expect(await harness.eventCount() == 1)
+        #expect(await harness.eventCount() == 2)
 
         await harness.tracker.stop()
     }
@@ -581,6 +789,7 @@ struct HeartbeatTrackerTests {
 
         #expect(await harness.tracker.isRunning == false)
         #expect(harness.sleeper.pendingCount == 0)
+        #expect(await harness.eventCount() == 0)
     }
 
     @Test

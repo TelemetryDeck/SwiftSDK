@@ -10,6 +10,7 @@ actor HeartbeatTracker {
     private var interval: TimeInterval?
     private var accumulatedActiveTime: TimeInterval = 0
     private var activeSince: TimeInterval?
+    private var isFirstHeartbeatPending = false
     private var stateGeneration = 0
     private var lifecycleTask: Task<Void, Never>?
     private var timerTask: Task<Void, Never>?
@@ -51,6 +52,7 @@ actor HeartbeatTracker {
         guard emitter != nil, interval == nil else { return }
         interval = frequency.interval
         accumulatedActiveTime = 0
+        isFirstHeartbeatPending = true
         stateGeneration += 1
         let generation = stateGeneration
         lifecycleTask = LifecycleSubscription.start(
@@ -60,7 +62,7 @@ actor HeartbeatTracker {
         )
         let isActive = await isAppActive()
         guard isActive, stateGeneration == generation else { return }
-        handleForeground()
+        await handleForeground()
     }
 
     func stopHeartbeats() {
@@ -72,13 +74,17 @@ actor HeartbeatTracker {
         interval = nil
         activeSince = nil
         accumulatedActiveTime = 0
+        isFirstHeartbeatPending = false
     }
 
-    func handleForeground() {
+    func handleForeground() async {
         stateGeneration += 1
         guard interval != nil, activeSince == nil else { return }
         activeSince = uptime()
         scheduleNextHeartbeat()
+        guard isFirstHeartbeatPending else { return }
+        isFirstHeartbeatPending = false
+        await sendHeartbeat()
     }
 
     func handleBackground() async {
@@ -126,13 +132,12 @@ actor HeartbeatTracker {
     }
 
     private func sendHeartbeat() async {
-        await emitter?.send(EventInput(DefaultEvents.Session.heartbeat.rawValue, skipsReservedPrefixValidation: true))
+        guard let emitter else { return }
+        await Task {
+            await emitter.send(EventInput(DefaultEvents.Session.heartbeat.rawValue, skipsReservedPrefixValidation: true))
+        }.value
     }
 
-    /// Returns the active time that counts toward the next heartbeat once a heartbeat has been sent for `totalActiveTime`.
-    ///
-    /// Time beyond the interval is kept, so late timer wakes do not lose active time. When two or more intervals have
-    /// passed, the tracker was suspended rather than late, and the excess is dropped to avoid catch-up heartbeats.
     private static func activeTimeCarriedOver(after totalActiveTime: TimeInterval, interval: TimeInterval) -> TimeInterval {
         assert(interval > 0 && totalActiveTime >= interval)
         let excess = totalActiveTime - interval

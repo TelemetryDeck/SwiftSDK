@@ -33,7 +33,7 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
 
     private var isNewInstall = false
 
-    private var pendingPersistTasks: [Task<Void, Never>] = []
+    private var persistTask: Task<Void, Never>?
 
     /// Creates a session tracking processor.
     public init(sendSessionStartedEvent: Bool = true) {
@@ -119,14 +119,12 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
         }
     }
 
-    /// Cancels the lifecycle subscription, awaits all pending persistence tasks, and releases the event emitter reference.
+    /// Cancels the lifecycle subscription, awaits pending persistence, and releases the event emitter reference.
     public func stop() async {
         lifecycleTask?.cancel()
         lifecycleTask = nil
-        for task in pendingPersistTasks {
-            await task.value
-        }
-        pendingPersistTasks.removeAll()
+        await persistTask?.value
+        persistTask = nil
         emitter = nil
     }
 
@@ -182,8 +180,11 @@ public actor SessionTrackingProcessor: EventProcessor, SessionManaging {
     }
 
     private func schedulePersist(_ work: @Sendable @escaping () async -> Void) {
-        pendingPersistTasks.removeAll { $0.isCancelled }
-        pendingPersistTasks.append(Task { await work() })
+        let previous = persistTask
+        persistTask = Task {
+            await previous?.value
+            await work()
+        }
     }
 
     private func recordSessionStart() {

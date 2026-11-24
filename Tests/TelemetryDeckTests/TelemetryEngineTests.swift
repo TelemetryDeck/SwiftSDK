@@ -74,17 +74,75 @@ struct TelemetryEngineTests {
         await client.shutdown()
     }
 
-    private func makeEvent() -> Event {
-        Event(
-            appID: "test-app",
-            type: "Test.signal",
-            clientUser: "test-user-hash",
-            sessionID: UUID().uuidString,
-            receivedAt: Date(),
-            payload: [:],
-            floatValue: nil,
-            isTestMode: true
+    @Test(arguments: [(200, ["Queued"]), (503, ["In.flight", "Queued"])])
+    func backgroundSnapshotKeepsTheBatchInFlightOnlyIfItFails(statusCode: Int, snapshot: [String]) async throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-background-in-flight-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+        let (cache, client, engine) = await makeEngineWithRequestInFlight(fileURL: fileURL)
+        await cache.add(makeEvent(type: "Queued"))
+
+        let background = Task { await engine.handleBackground() }
+        #expect(await eventually { (try? snapshotEventTypes(at: fileURL)) == ["Queued"] })
+        client.respond(statusCode: statusCode)
+        await background.value
+
+        #expect(client.cancelledRequestCount == 0)
+        #expect(try snapshotEventTypes(at: fileURL).sorted() == snapshot)
+        #expect(await cache.count() == snapshot.count)
+
+        await engine.shutdown()
+    }
+
+    @Test
+    func shutdownReturnsOnlyAfterTheBatchInFlightIsBackInCacheAndSnapshot() async throws {
+        let fileURL = FileManager.default.temporaryDirectory.appendingPathComponent("test-shutdown-in-flight-\(UUID().uuidString).json")
+        defer { try? FileManager.default.removeItem(at: fileURL) }
+        let (cache, client, engine) = await makeEngineWithRequestInFlight(fileURL: fileURL)
+
+        let shutdown = Task { await engine.shutdown() }
+        client.respond(statusCode: 503)
+        await shutdown.value
+
+        #expect(try snapshotEventTypes(at: fileURL) == ["In.flight"])
+        #expect(try client.sentEventTypes() == [["In.flight"]])
+        #expect(client.cancelledRequestCount == 0)
+        #expect(await cache.count() == 1)
+    }
+
+    private func makeEngineWithRequestInFlight(fileURL: URL) async -> (DefaultEventCache, ScriptedHTTPClient, TelemetryEngine) {
+        let configuration = TelemetryDeck.Config(appID: "test-app", namespace: "test")
+        let cache = DefaultEventCache(fileURL: fileURL)
+        let client = ScriptedHTTPClient()
+        let transmitter = DefaultEventTransmitter(
+            configuration: configuration,
+            cache: cache,
+            logger: NoOpLogger(),
+            httpClient: client
         )
+        await cache.add(makeEvent(type: "In.flight"))
+        let engine = await TelemetryEngine.create(
+            configuration: configuration,
+            processors: [],
+            cache: cache,
+            transmitter: transmitter,
+            logger: NoOpLogger(),
+            storage: InMemoryProcessorStorage()
+        )
+        await client.waitForRequests(1)
+        return (cache, client, engine)
+    }
+
+    private func snapshotEventTypes(at fileURL: URL) throws -> [String] {
+        let data = try Data(contentsOf: fileURL)
+        return try JSONDecoder.telemetryDecoder.decode([Event].self, from: data).map(\.type)
+    }
+
+    private func eventually(_ condition: () -> Bool) async -> Bool {
+        for _ in 0..<15_000 {
+            if condition() { return true }
+            try? await Task.sleep(nanoseconds: 2_000_000)
+        }
+        return condition()
     }
 
     @Test

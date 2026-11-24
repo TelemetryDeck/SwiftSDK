@@ -17,14 +17,14 @@ public struct ProcessorPipeline: Sendable {
     ///
     @concurrent
     public func process(_ input: EventInput, context: EventContext) async throws -> Event {
-        try await runChain(input: input, context: context, index: 0)
+        logger.log(.debug, "Processing event '\(input.name)' through \(processors.count) processors")
+        return try await runChain(input: input, context: context, index: 0)
     }
 
     private func runChain(input: EventInput, context: EventContext, index: Int) async throws -> Event {
         guard index < processors.count else {
             return finalizer.finalize(input, context: context)
         }
-        logger.log(.debug, "\(String(describing: type(of: processors[index]))) handling event '\(input.name)'")
         return try await processors[index].process(input, context: context) { @Sendable inp, ctx in
             try await runChain(input: inp, context: ctx, index: index + 1)
         }

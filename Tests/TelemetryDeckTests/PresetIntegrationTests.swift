@@ -3,6 +3,48 @@ import Testing
 
 @testable import TelemetryDeck
 
+private actor InitializationProbeProcessor: EventProcessor {
+    nonisolated let starts: AsyncStream<Void>
+    private let startsContinuation: AsyncStream<Void>.Continuation
+    private(set) var startCount = 0
+    private(set) var stopCount = 0
+    private var isStartReleased: Bool
+    private var heldStarts: [CheckedContinuation<Void, Never>] = []
+
+    init(holdsStart: Bool) {
+        isStartReleased = !holdsStart
+        (starts, startsContinuation) = AsyncStream.makeStream()
+    }
+
+    func process(
+        _ input: EventInput,
+        context: EventContext,
+        next: @Sendable (EventInput, EventContext) async throws -> Event
+    ) async throws -> Event {
+        try await next(input, context)
+    }
+
+    func start(storage: any ProcessorStorage, logger: any Logging, emitter: any EventSending) async {
+        startCount += 1
+        startsContinuation.yield()
+        guard !isStartReleased else { return }
+        await withCheckedContinuation { heldStarts.append($0) }
+    }
+
+    func stop() async {
+        stopCount += 1
+    }
+
+    func releaseStart() {
+        isStartReleased = true
+        let held = heldStarts
+        heldStarts = []
+        for continuation in held {
+            continuation.resume()
+        }
+    }
+}
+
 @Suite(.serialized)
 struct PresetIntegrationTests {
 
@@ -667,5 +709,137 @@ struct PresetIntegrationTests {
         #expect(logger.errorMessages().isEmpty)
 
         await TelemetryDeck.terminate()
+    }
+
+    // MARK: - Initialization
+
+    private static func initialize(with processor: InitializationProbeProcessor, logger: SpyLogger) async throws {
+        try await TelemetryDeck.initialize(
+            configuration: TelemetryDeck.Config(appID: "initialize-test", namespace: "test"),
+            processors: [processor],
+            cache: InMemoryEventCache(),
+            transmitter: SpyEventTransmitter(),
+            logger: logger,
+            storage: InMemoryProcessorStorage()
+        )
+    }
+
+    private static func waitUntilAClientChangeIsWaiting() async throws {
+        var attempts = 0
+        while await TelemetryDeck.clientChangeWaiterCount() == 0, attempts < 100 {
+            attempts += 1
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+    }
+
+    @Test
+    func overlappingInitializeCallsStartASingleEngine() async throws {
+        await TelemetryDeck.terminate()
+
+        let processor = InitializationProbeProcessor(holdsStart: true)
+        let logger = SpyLogger()
+        var starts = processor.starts.makeAsyncIterator()
+        let first = Task { try await Self.initialize(with: processor, logger: logger) }
+        await starts.next()
+        let duplicate = Task {
+            try await Self.initialize(with: processor, logger: logger)
+            return await TelemetryDeck.client() != nil
+        }
+        try await Self.waitUntilAClientChangeIsWaiting()
+        await processor.releaseStart()
+        try await first.value
+        let isReadyAfterDuplicate = try await duplicate.value
+
+        #expect(await processor.startCount == 1)
+        #expect(isReadyAfterDuplicate)
+        #expect(logger.hasErrorContaining("called more than once"))
+
+        await TelemetryDeck.terminate()
+    }
+
+    @Test
+    func duplicateInitializeCallerCanStartHeartbeatsRightAway() async throws {
+        await TelemetryDeck.terminate()
+
+        let processor = InitializationProbeProcessor(holdsStart: true)
+        let logger = SpyLogger()
+        var starts = processor.starts.makeAsyncIterator()
+        let first = Task { try await Self.initialize(with: processor, logger: logger) }
+        await starts.next()
+        let duplicate = Task {
+            try await Self.initialize(with: processor, logger: logger)
+            await TelemetryDeck.startHeartbeatEvents(.minute)
+            return await TelemetryDeck.client()?.heartbeatTracker.isRunning ?? false
+        }
+        try await Self.waitUntilAClientChangeIsWaiting()
+        await processor.releaseStart()
+        try await first.value
+        let areHeartbeatsRunning = try await duplicate.value
+
+        #expect(areHeartbeatsRunning)
+        #expect(!logger.hasErrorContaining("not initialized"))
+
+        await TelemetryDeck.terminate()
+    }
+
+    @Test
+    func terminateDuringInitializeLeavesNoEngineRunning() async throws {
+        await TelemetryDeck.terminate()
+
+        let processor = InitializationProbeProcessor(holdsStart: true)
+        var starts = processor.starts.makeAsyncIterator()
+        let initialization = Task { try await Self.initialize(with: processor, logger: SpyLogger()) }
+        await starts.next()
+        let termination = Task { await TelemetryDeck.terminate() }
+        try await Self.waitUntilAClientChangeIsWaiting()
+        await processor.releaseStart()
+        try await initialization.value
+        await termination.value
+
+        #expect(await TelemetryDeck.client() == nil)
+        #expect(await processor.stopCount == 1)
+
+        let laterProcessor = InitializationProbeProcessor(holdsStart: false)
+        try await Self.initialize(with: laterProcessor, logger: SpyLogger())
+
+        #expect(await TelemetryDeck.client() != nil)
+        #expect(await laterProcessor.startCount == 1)
+
+        await TelemetryDeck.terminate()
+    }
+
+    @Test
+    func terminateFromCancelledTaskLetsTheRequestInFlightComplete() async throws {
+        await TelemetryDeck.terminate()
+
+        let configuration = TelemetryDeck.Config(appID: "terminate-test", namespace: "test")
+        let cache = InMemoryEventCache()
+        let client = ScriptedHTTPClient()
+        let transmitter = DefaultEventTransmitter(
+            configuration: configuration,
+            cache: cache,
+            logger: NoOpLogger(),
+            httpClient: client
+        )
+        await cache.add(makeEvent(type: "Before.terminate"))
+        try await TelemetryDeck.initialize(
+            configuration: configuration,
+            processors: [],
+            cache: cache,
+            transmitter: transmitter,
+            logger: NoOpLogger(),
+            storage: InMemoryProcessorStorage()
+        )
+        await client.waitForRequests(1)
+
+        let termination = Task { await TelemetryDeck.terminate() }
+        termination.cancel()
+        client.respond(statusCode: 200)
+        await termination.value
+
+        #expect(client.cancelledRequestCount == 0)
+        #expect(try client.sentEventTypes() == [["Before.terminate"]])
+        #expect(await cache.count() == 0)
+        #expect(await TelemetryDeck.client() == nil)
     }
 }

@@ -7,6 +7,7 @@ public actor DefaultEventTransmitter: EventTransmitting {
     private let logger: any Logging
     private let httpClient: any HTTPDataLoader
     private var transmitTask: Task<Void, Never>?
+    private var batchInFlight: Task<Bool, Never>?
     private let transmitInterval: TimeInterval
     private let maxBackoffInterval: TimeInterval
     private let dateProvider: DateProvider
@@ -63,14 +64,24 @@ public actor DefaultEventTransmitter: EventTransmitting {
     }
 
     /// Cancels the repeating transmission timer.
-    public func stop() {
+    public func stop() async {
         transmitTask?.cancel()
         transmitTask = nil
+        _ = await batchInFlight?.value
     }
 
     /// Sends the given events to the API, returning any that could not be delivered.
     public func transmit(_ events: [Event]) async -> [Event] {
-        guard let url = serviceURL else { return events }
+        switch await deliver(events) {
+        case .settled:
+            return []
+        case .failed:
+            return events
+        }
+    }
+
+    private func deliver(_ events: [Event]) async -> DeliveryOutcome {
+        guard let url = serviceURL else { return .failed }
 
         var request = URLRequest(url: url)
         request.httpMethod = "POST"
@@ -80,34 +91,34 @@ public actor DefaultEventTransmitter: EventTransmitting {
         guard let body = try? JSONEncoder().encode(events.map { $0.ingestFields(timestampFormatter: timestampFormatter) }) else {
             logger.log(.error, "Failed to encode \(events.count) events, dropping batch")
             assertionFailure("Failed to encode events for transmission")
-            return []
+            return .settled
         }
         request.httpBody = body
 
         do {
-            let (_, response) = try await httpClient.data(for: request)
+            let (_, response) = try await Task { [request] in try await httpClient.data(for: request) }.value
             guard let http = response as? HTTPURLResponse else {
                 logger.log(.error, "Transmit failed: response was not HTTP, retrying \(events.count) events")
-                return events
+                return .failed
             }
             switch http.disposition {
             case .success:
                 logger.log(.debug, "Transmitted \(events.count) events (HTTP \(http.statusCode))")
-                return []
+                return .settled
             case .drop(let reason):
                 logger.log(.error, "Dropping \(events.count) events: rejected by server — \(reason)")
-                return []
+                return .settled
             case .retry:
                 logger.log(.error, "Transmit failed with HTTP \(http.statusCode), retrying \(events.count) events")
                 if let delay = http.retryAfter(maximum: maxBackoffInterval) {
                     pausedUntil = dateProvider.now().addingTimeInterval(delay)
                     logger.log(.info, "Server asked to retry after \(delay) seconds, pausing transmission")
                 }
-                return events
+                return .failed
             }
         } catch {
             logger.log(.error, "Transmit failed: \(error.localizedDescription), retrying \(events.count) events")
-            return events
+            return .failed
         }
     }
 
@@ -123,26 +134,37 @@ public actor DefaultEventTransmitter: EventTransmitting {
     /// Transmits one batch from the cache, returning `false` if the cache was empty or the batch failed.
     @discardableResult
     private func transmitBatch() async -> Bool {
+        guard !Task.isCancelled else { return false }
+        if let batchInFlight {
+            return await batchInFlight.value
+        }
         let pause = remainingPause()
         guard pause == 0 else {
             logger.log(.debug, "Transmission paused for \(pause) more seconds")
             return false
         }
+        let batch = Task { await sendBatch() }
+        batchInFlight = batch
+        return await batch.value
+    }
+
+    private func sendBatch() async -> Bool {
+        defer { batchInFlight = nil }
         let events = await cache.pop()
         guard !events.isEmpty else { return false }
         let remainingCount = await cache.count()
         logger.log(.info, "Sending \(events.count) events, \(remainingCount) remain in cache")
-        let failed = await transmit(events)
-        if failed.isEmpty {
+        switch await deliver(events) {
+        case .settled:
             consecutiveFailures = 0
             return true
-        } else {
+        case .failed:
             consecutiveFailures += 1
-            for event in failed {
-                await cache.add(event)
-            }
-            return false
         }
+        for event in events {
+            await cache.add(event)
+        }
+        return false
     }
 
     /// Returns the current consecutive failure count, used by tests to verify backoff state.
@@ -175,6 +197,11 @@ public actor DefaultEventTransmitter: EventTransmitting {
         assert(url != nil, "Failed to construct service URL from base: \(configuration.apiBaseURL)")
         return url
     }
+}
+
+private enum DeliveryOutcome {
+    case settled
+    case failed
 }
 
 private enum ResponseDisposition {
