@@ -64,6 +64,9 @@ final class SignalManager: SignalManageable, @unchecked Sendable {
     init(configuration: TelemetryManagerConfiguration) {
         self.configuration = configuration
 
+        // Read the receipt kind off the main thread before the first signal needs it.
+        DefaultSignalPayload.warmUpRuntimeContext()
+
         // We automatically load any old signals from disk on initialisation
         signalCache = SignalCache(logHandler: configuration.swiftUIPreviewMode ? nil : configuration.logHandler, cacheLimit: configuration.cacheLimit)
 

@@ -108,8 +108,28 @@ extension DefaultSignalPayload {
     /// - Returns: `true` if running in TestFlight, `false` otherwise
     static var isTestFlight: Bool {
         guard !isDebug, !isSimulator else { return false }
+        return hasSandboxReceipt
+    }
+
+    /// Whether the app's receipt is a sandbox (TestFlight) receipt, read once per process.
+    ///
+    /// `Bundle.appStoreReceiptURL` makes a synchronous XPC call to Launch Services on every read,
+    /// and the default parameters are built on the main queue for every signal (several reads each),
+    /// so an uncached check can block the main thread long enough for the watchdog to kill the app
+    /// when the system is busy. The receipt's kind cannot change while the process runs.
+    /// `warmUpRuntimeContext()` computes it off the main thread when the SDK starts.
+    static let hasSandboxReceipt: Bool = {
         guard let receiptURL = Bundle.main.appStoreReceiptURL else { return false }
         return receiptURL.lastPathComponent == "sandboxReceipt" || receiptURL.path.contains("sandboxReceipt")
+    }()
+
+    /// Computes the cached runtime context on a background queue, so the first signal does not
+    /// pay for the Launch Services lookup on the main thread.
+    static func warmUpRuntimeContext() {
+        guard !isDebug, !isSimulator else { return }
+        DispatchQueue.global(qos: .utility).async {
+            _ = hasSandboxReceipt
+        }
     }
 
     /// Detects if the app is running in an App Store production environment.
